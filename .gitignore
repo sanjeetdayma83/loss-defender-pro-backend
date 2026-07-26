@@ -1,0 +1,29 @@
+# Dependencies and generated builds
+node_modules/
+dist/
+coverage/
+*.log
+
+# Secrets - never commit
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+service-account*.json
+
+# Local data, videos and temporary files
+uploads/
+storage/
+tmp/
+data/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
