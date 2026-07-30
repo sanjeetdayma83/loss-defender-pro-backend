@@ -1,13 +1,460 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// ======================================================
+// Loss Defender Pro
+// Enterprise Warehouse Intelligence Platform
+// Prisma Schema v1
+// ======================================================
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "postgresql"
+}
+
+enum CompanyStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum UserRole {
+  SUPER_ADMIN
+  COMPANY_ADMIN
+  WAREHOUSE_MANAGER
+  SUPERVISOR
+  OPERATOR
+  VIEWER
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING
+}
+
+enum Marketplace {
+  AMAZON
+  FLIPKART
+  MEESHO
+  SHOPIFY
+  WOOCOMMERCE
+  MANUAL
+}
+
+enum OrderStatus {
+  PENDING
+  ASSIGNED
+  RECORDING
+  VERIFIED
+  DISPATCHED
+  DELIVERED
+  RETURNED
+  CANCELLED
+}
+
+enum RecordingStatus {
+  CREATED
+  STARTED
+  PAUSED
+  RESUMED
+  STOPPED
+  UPLOADING
+  UPLOADED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum VerificationStatus {
+  PENDING
+  IN_PROGRESS
+  PASSED
+  FAILED
+}
+
+
+enum EvidenceStatus {
+  CREATED
+  GENERATING
+  GENERATED
+  VERIFIED
+  ARCHIVED
+  FAILED
+}
+
+enum EvidenceType {
+  PACKING_VIDEO
+  THUMBNAIL
+  FRAME_CAPTURE
+  AI_REPORT
+  PDF_REPORT
+}
+
+
+enum UploadStatus {
+  PENDING
+  UPLOADING
+  UPLOADED
+  PROCESSING
+  COMPLETED
+  FAILED
+  CANCELLED
+  DELETED
+}
+
+enum UploadCategory {
+  RECORDING
+  THUMBNAIL
+  EVIDENCE
+  REPORT
+  DOCUMENT
+  AVATAR
+  OTHER
+}
+
+enum UploadVisibility {
+  PRIVATE
+  PUBLIC
+}
+
+model Company {
+  id String @id @default(uuid())
+
+  code String @unique @db.VarChar(30)
+
+  name String @db.VarChar(150)
+
+  email String? @unique @db.VarChar(150)
+
+  phone String? @db.VarChar(20)
+
+  status CompanyStatus @default(ACTIVE)
+
+  users User[]
+
+  warehouses Warehouse[]
+
+  orders Order[]
+
+  recordings RecordingSession[]
+
+  evidences Evidence[]
+  uploads Upload[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  isDeleted Boolean @default(false)
+
+  @@map("companies")
+}
+
+model User {
+  id String @id @default(uuid())
+
+  companyId String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  firstName String @db.VarChar(100)
+
+  lastName String @db.VarChar(100)
+
+  email String @unique @db.VarChar(150)
+
+  passwordHash String
+
+  refreshTokenHash String?
+
+  role UserRole @default(OPERATOR)
+
+  status UserStatus @default(PENDING)
+
+  lastLoginAt DateTime?
+
+  ordersCreated Order[] @relation("OrderCreatedBy")
+
+  recordings RecordingSession[] @relation("RecordingOperator")
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  isDeleted Boolean @default(false)
+
+  @@index([companyId])
+  @@index([email])
+  @@map("users")
+}
+
+model Warehouse {
+  id String @id @default(uuid())
+
+  companyId String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  code String @db.VarChar(30)
+
+  name String @db.VarChar(150)
+
+  description String? @db.VarChar(500)
+
+  address String? @db.VarChar(500)
+
+  city String? @db.VarChar(100)
+
+  state String? @db.VarChar(100)
+
+  country String? @db.VarChar(100)
+
+  pincode String? @db.VarChar(20)
+
+  phone String? @db.VarChar(20)
+
+  email String? @db.VarChar(150)
+
+  isActive Boolean @default(true)
+
+  orders Order[]
+
+  recordings RecordingSession[]
+
+  evidences Evidence[]
+  uploads Upload[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  isDeleted Boolean @default(false)
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([name])
+  @@map("warehouses")
+}
+
+model Order {
+  id String @id @default(uuid())
+
+  companyId String
+
+  warehouseId String
+
+  createdById String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  createdBy User @relation("OrderCreatedBy", fields: [createdById], references: [id])
+
+  marketplace Marketplace
+
+  marketplaceOrderId String? @db.VarChar(100)
+
+  marketplaceShipmentId String? @db.VarChar(100)
+
+  orderNumber String @db.VarChar(100)
+
+  awbNumber String? @db.VarChar(100)
+
+  customerName String? @db.VarChar(150)
+
+  customerPhone String? @db.VarChar(30)
+
+  status OrderStatus @default(PENDING)
+
+  verificationStatus VerificationStatus @default(PENDING)
+
+  expectedItemCount Int @default(0)
+
+  verifiedItemCount Int @default(0)
+
+  recordings RecordingSession[]
+
+  evidences Evidence[]
+  uploads Upload[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+
+  isDeleted Boolean @default(false)
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([createdById])
+  @@index([status])
+  @@index([marketplace])
+  @@index([orderNumber])
+  @@index([awbNumber])
+  @@map("orders")
+  aiJobs          AIJob[]
+}
+
+model RecordingSession {
+  id String @id @default(uuid())
+
+  companyId   String
+  warehouseId String
+  orderId     String
+  operatorId  String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  operator User @relation("RecordingOperator", fields: [operatorId], references: [id], onDelete: Cascade)
+
+  status RecordingStatus @default(CREATED)
+
+  startedAt DateTime?
+  pausedAt  DateTime?
+  resumedAt DateTime?
+  stoppedAt DateTime?
+
+  durationSeconds Int @default(0)
+
+  localFileName    String?
+  originalFileName String?
+
+  fileUrl      String?
+  thumbnailUrl String?
+
+  fileSize BigInt?
+
+  evidences Evidence[]
+  uploads Upload[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+  isDeleted Boolean   @default(false)
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([operatorId])
+  @@index([status])
+  @@map("recording_sessions")
+
+  aiJobs           AIJob[]
+
+}
+
+
+
+model Evidence {
+  id String @id @default(uuid())
+
+  companyId String
+  warehouseId String
+  orderId String
+  recordingId String
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recording RecordingSession @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+
+  status EvidenceStatus @default(CREATED)
+  type EvidenceType @default(PACKING_VIDEO)
+
+  originalVideoUrl String?
+  processedVideoUrl String?
+  thumbnailUrl String?
+
+  hash String?
+  checksum String?
+
+  durationSeconds Int @default(0)
+  fileSize BigInt?
+
+  metadata Json?
+
+  generatedAt DateTime?
+  verifiedAt DateTime?
+  archivedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  deletedAt DateTime?
+  isDeleted Boolean @default(false)
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([recordingId])
+  @@index([status])
+
+  @@map("evidence")
+
+  aiJobs           AIJob[]
+
+}
+
+
+
+model Upload {
+  id String @id @default(uuid())
+  companyId String
+  warehouseId String
+  orderId String?
+  recordingId String?
+  evidenceId String?
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recording RecordingSession? @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  evidence Evidence? @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  originalName String
+  fileName String
+  storageKey String @unique
+  bucket String
+  provider String
+  mimeType String
+  extension String
+  category UploadCategory
+  visibility UploadVisibility @default(PRIVATE)
+  status UploadStatus @default(PENDING)
+  size BigInt @default(0)
+  checksum String?
+  hash String?
+  etag String?
+  metadata Json?
+  uploadedAt DateTime?
+  expiresAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  deletedAt DateTime?
+  isDeleted Boolean @default(false)
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([recordingId])
+  @@index([evidenceId])
+  @@index([status])
+  @@index([category])
+  @@index([storageKey])
+  @@map("uploads")
+
+  aiJobs           AIJob[]
+
 }

@@ -1,12 +1,15 @@
 import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+
 import helmet from 'helmet';
-import { setupSwagger } from './config/swagger.setup';
 
 import { AppModule } from './app.module';
+import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
+import { ResponseInterceptor } from './common/interceptors/response.interceptor';
+import { setupSwagger } from './config/swagger.setup';
 
-async function bootstrap() {
+async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
 
   const config = app.get(ConfigService);
@@ -18,7 +21,9 @@ async function bootstrap() {
     credentials: true,
   });
 
-  app.setGlobalPrefix(config.get<string>('app.apiPrefix') ?? 'api');
+  app.setGlobalPrefix(
+    config.get<string>('app.apiPrefix') ?? 'api',
+  );
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -30,9 +35,21 @@ async function bootstrap() {
       },
     }),
   );
+
+  app.useGlobalInterceptors(
+    new ResponseInterceptor(),
+  );
+
+  app.useGlobalFilters(
+    new GlobalExceptionFilter(),
+  );
+
   setupSwagger(app, config);
 
-  const port = config.get<number>('app.port') ?? 3000;
+  app.enableShutdownHooks();
+
+  const port =
+    config.get<number>('app.port') ?? 3000;
 
   await app.listen(port);
 
