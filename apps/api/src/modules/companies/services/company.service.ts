@@ -1,10 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 
-import { Company } from '@prisma/client';
+import { Company, Prisma } from '@prisma/client';
 
 import { CompanyRepository } from '../repositories/company.repository';
 
@@ -22,12 +18,9 @@ import {
 
 @Injectable()
 export class CompanyService {
-  private readonly logger =
-    new Logger(CompanyService.name);
+  private readonly logger = new Logger(CompanyService.name);
 
-  constructor(
-    private readonly repository: CompanyRepository,
-  ) {}
+  constructor(private readonly repository: CompanyRepository) {}
 
   /**
    * -------------------------------------------------------
@@ -35,54 +28,24 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async create(
-    dto: CreateCompanyDto,
-  ): Promise<Company> {
-    if (
-      await this.repository.emailExists(
-        dto.email,
-      )
-    ) {
-      throw new BadRequestException(
-        'Company email already exists.',
-      );
+  async create(dto: CreateCompanyDto): Promise<Company> {
+    if (await this.repository.emailExists(dto.email)) {
+      throw new BadRequestException('Company email already exists.');
     }
 
-    if (
-      await this.repository.isDuplicate(
-        dto.companyCode,
-      )
-    ) {
-      throw new BadRequestException(
-        'Company code already exists.',
-      );
+    if (await this.repository.isDuplicate(dto.companyCode)) {
+      throw new BadRequestException('Company code already exists.');
     }
 
-    if (
-      dto.gstNumber &&
-      (await this.repository.gstExists(
-        dto.gstNumber,
-      ))
-    ) {
-      throw new BadRequestException(
-        'GST number already exists.',
-      );
+    if (dto.gstNumber && (await this.repository.gstExists(dto.gstNumber))) {
+      throw new BadRequestException('GST number already exists.');
     }
 
-    if (
-      dto.panNumber &&
-      (await this.repository.panExists(
-        dto.panNumber,
-      ))
-    ) {
-      throw new BadRequestException(
-        'PAN number already exists.',
-      );
+    if (dto.panNumber && (await this.repository.panExists(dto.panNumber))) {
+      throw new BadRequestException('PAN number already exists.');
     }
 
-    this.logger.log(
-      `Creating company ${dto.companyName}`,
-    );
+    this.logger.log(`Creating company ${dto.companyName}`);
 
     return this.repository.create(dto);
   }
@@ -93,9 +56,7 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async findById(
-    id: string,
-  ): Promise<Company> {
+  async findById(id: string): Promise<Company> {
     return this.repository.findById(id);
   }
 
@@ -105,14 +66,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async findAll(
-    query: CompanyQueryDto,
-  ): Promise<
-    CompanySearchResult<Company>
-  > {
-    return this.repository.findAll(
-      query,
-    );
+  async findAll(query: CompanyQueryDto): Promise<CompanySearchResult<Company>> {
+    return this.repository.findAll(query);
   }
 
   /**
@@ -121,9 +76,7 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async exists(
-    id: string,
-  ): Promise<boolean> {
+  async exists(id: string): Promise<boolean> {
     return this.repository.exists(id);
   }
 
@@ -133,12 +86,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async findByEmail(
-    email: string,
-  ): Promise<Company | null> {
-    return this.repository.findByEmail(
-      email,
-    );
+  async findByEmail(email: string): Promise<Company | null> {
+    return this.repository.findByEmail(email);
   }
 
   /**
@@ -147,12 +96,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async findByGST(
-    gst: string,
-  ): Promise<Company | null> {
-    return this.repository.findByGST(
-      gst,
-    );
+  async findByGST(gst: string): Promise<Company | null> {
+    return this.repository.findByGST(gst);
   }
 
   /**
@@ -161,87 +106,45 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async findByPAN(
-    pan: string,
-  ): Promise<Company | null> {
-    return this.repository.findByPAN(
-      pan,
-    );
+  async findByPAN(pan: string): Promise<Company | null> {
+    return this.repository.findByPAN(pan);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * UPDATE COMPANY
    * -------------------------------------------------------
    */
 
-  async update(
-    id: string,
-    dto: UpdateCompanyDto,
-  ): Promise<Company> {
+  async update(id: string, dto: UpdateCompanyDto): Promise<Company> {
     await this.repository.findById(id);
 
-    if (
-      dto.email &&
-      (await this.repository.emailExists(
-        dto.email,
-      ))
-    ) {
-      const existing =
-        await this.repository.findByEmail(
-          dto.email,
-        );
+    if (dto.email && (await this.repository.emailExists(dto.email))) {
+      const existing = await this.repository.findByEmail(dto.email);
 
       if (existing && existing.id !== id) {
-        throw new BadRequestException(
-          'Company email already exists.',
-        );
+        throw new BadRequestException('Company email already exists.');
       }
     }
 
-    if (
-      dto.gstNumber &&
-      (await this.repository.gstExists(
-        dto.gstNumber,
-      ))
-    ) {
-      const existing =
-        await this.repository.findByGST(
-          dto.gstNumber,
-        );
+    if (dto.gstNumber && (await this.repository.gstExists(dto.gstNumber))) {
+      const existing = await this.repository.findByGST(dto.gstNumber);
 
       if (existing && existing.id !== id) {
-        throw new BadRequestException(
-          'GST number already exists.',
-        );
+        throw new BadRequestException('GST number already exists.');
       }
     }
 
-    if (
-      dto.panNumber &&
-      (await this.repository.panExists(
-        dto.panNumber,
-      ))
-    ) {
-      const existing =
-        await this.repository.findByPAN(
-          dto.panNumber,
-        );
+    if (dto.panNumber && (await this.repository.panExists(dto.panNumber))) {
+      const existing = await this.repository.findByPAN(dto.panNumber);
 
       if (existing && existing.id !== id) {
-        throw new BadRequestException(
-          'PAN number already exists.',
-        );
+        throw new BadRequestException('PAN number already exists.');
       }
     }
 
-    this.logger.log(
-      `Updating company ${id}`,
-    );
+    this.logger.log(`Updating company ${id}`);
 
-    return this.repository.update(
-      id,
-      dto,
-    );
+    return this.repository.update(id, dto);
   }
 
   /**
@@ -250,16 +153,10 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async remove(
-    id: string,
-  ): Promise<Company> {
-    this.logger.warn(
-      `Soft deleting company ${id}`,
-    );
+  async remove(id: string): Promise<Company> {
+    this.logger.warn(`Soft deleting company ${id}`);
 
-    return this.repository.softDelete(
-      id,
-    );
+    return this.repository.softDelete(id);
   }
 
   /**
@@ -268,16 +165,10 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async restore(
-    id: string,
-  ): Promise<Company> {
-    this.logger.log(
-      `Restoring company ${id}`,
-    );
+  async restore(id: string): Promise<Company> {
+    this.logger.log(`Restoring company ${id}`);
 
-    return this.repository.restore(
-      id,
-    );
+    return this.repository.restore(id);
   }
 
   /**
@@ -286,16 +177,10 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async activate(
-    id: string,
-  ): Promise<Company> {
-    this.logger.log(
-      `Activating company ${id}`,
-    );
+  async activate(id: string): Promise<Company> {
+    this.logger.log(`Activating company ${id}`);
 
-    return this.repository.activate(
-      id,
-    );
+    return this.repository.activate(id);
   }
 
   /**
@@ -304,16 +189,10 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async deactivate(
-    id: string,
-  ): Promise<Company> {
-    this.logger.log(
-      `Deactivating company ${id}`,
-    );
+  async deactivate(id: string): Promise<Company> {
+    this.logger.log(`Deactivating company ${id}`);
 
-    return this.repository.deactivate(
-      id,
-    );
+    return this.repository.deactivate(id);
   }
 
   /**
@@ -322,18 +201,10 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async suspend(
-    id: string,
-    reason?: string,
-  ): Promise<Company> {
-    this.logger.warn(
-      `Suspending company ${id}`,
-    );
+  async suspend(id: string, reason?: string): Promise<Company> {
+    this.logger.warn(`Suspending company ${id}`);
 
-    return this.repository.suspend(
-      id,
-      reason,
-    );
+    return this.repository.suspend(id, reason);
   }
 
   /**
@@ -342,20 +213,12 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async block(
-    id: string,
-    reason?: string,
-  ): Promise<Company> {
-    this.logger.warn(
-      `Blocking company ${id}`,
-    );
+  async block(id: string, reason?: string): Promise<Company> {
+    this.logger.warn(`Blocking company ${id}`);
 
-    return this.repository.block(
-      id,
-      reason,
-    );
+    return this.repository.block(id, reason);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * UPDATE SUBSCRIPTION
    * -------------------------------------------------------
@@ -367,22 +230,17 @@ export class CompanyService {
   ): Promise<Company> {
     await this.repository.findById(id);
 
-    if (
-      subscription.expiryDate <=
-      subscription.startDate
-    ) {
+    if (subscription.expiryDate <= subscription.startDate) {
       throw new BadRequestException(
         'Subscription expiry date must be after the start date.',
       );
     }
 
-    this.logger.log(
-      `Updating subscription for company ${id}`,
-    );
+    this.logger.log(`Updating subscription for company ${id}`);
 
     return this.repository.updateSubscription(
       id,
-      subscription as any,
+      subscription as unknown as Prisma.InputJsonValue,
     );
   }
 
@@ -398,13 +256,11 @@ export class CompanyService {
   ): Promise<Company> {
     await this.repository.findById(id);
 
-    this.logger.log(
-      `Updating settings for company ${id}`,
-    );
+    this.logger.log(`Updating settings for company ${id}`);
 
     return this.repository.updateSettings(
       id,
-      settings as any,
+      settings as unknown as Prisma.InputJsonValue,
     );
   }
 
@@ -414,24 +270,14 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async increaseStorage(
-    id: string,
-    gb: number,
-  ): Promise<Company> {
+  async increaseStorage(id: string, gb: number): Promise<Company> {
     if (gb <= 0) {
-      throw new BadRequestException(
-        'Storage value must be greater than zero.',
-      );
+      throw new BadRequestException('Storage value must be greater than zero.');
     }
 
-    this.logger.log(
-      `Increasing storage for company ${id} by ${gb} GB`,
-    );
+    this.logger.log(`Increasing storage for company ${id} by ${gb} GB`);
 
-    return this.repository.increaseStorage(
-      id,
-      gb,
-    );
+    return this.repository.increaseStorage(id, gb);
   }
 
   /**
@@ -440,24 +286,14 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async decreaseStorage(
-    id: string,
-    gb: number,
-  ): Promise<Company> {
+  async decreaseStorage(id: string, gb: number): Promise<Company> {
     if (gb <= 0) {
-      throw new BadRequestException(
-        'Storage value must be greater than zero.',
-      );
+      throw new BadRequestException('Storage value must be greater than zero.');
     }
 
-    this.logger.log(
-      `Decreasing storage for company ${id} by ${gb} GB`,
-    );
+    this.logger.log(`Decreasing storage for company ${id} by ${gb} GB`);
 
-    return this.repository.decreaseStorage(
-      id,
-      gb,
-    );
+    return this.repository.decreaseStorage(id, gb);
   }
 
   /**
@@ -466,14 +302,10 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async storageSummary(
-    id: string,
-  ) {
+  async storageSummary(id: string) {
     await this.repository.findById(id);
 
-    return this.repository.storageUsage(
-      id,
-    );
+    return this.repository.storageUsage(id);
   }
 
   /**
@@ -482,29 +314,21 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async subscriptionSummary(
-    id: string,
-  ) {
+  async subscriptionSummary(id: string) {
     await this.repository.findById(id);
 
-    return this.repository.subscriptionSummary(
-      id,
-    );
+    return this.repository.subscriptionSummary(id);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * COMPANY STATISTICS
    * -------------------------------------------------------
    */
 
-  async getStatistics(
-    id: string,
-  ): Promise<CompanyStatistics> {
+  async getStatistics(id: string): Promise<CompanyStatistics> {
     await this.repository.findById(id);
 
-    return this.repository.getStatistics(
-      id,
-    );
+    return this.repository.getStatistics(id);
   }
 
   /**
@@ -513,29 +337,23 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async getDashboard(
-  id: string,
-): Promise<CompanyDashboardSummary> {
-  await this.repository.findById(id);
+  async getDashboard(id: string): Promise<CompanyDashboardSummary> {
+    await this.repository.findById(id);
 
-  return this.repository.getDashboardSummary(
-    id,
-  ) as unknown as CompanyDashboardSummary;
-}
+    return this.repository.getDashboardSummary(
+      id,
+    ) as unknown as CompanyDashboardSummary;
+  }
   /**
    * -------------------------------------------------------
    * COMPANY OVERVIEW
    * -------------------------------------------------------
    */
 
-  async companyOverview(
-    id: string,
-  ) {
+  async companyOverview(id: string) {
     await this.repository.findById(id);
 
-    return this.repository.companyOverview(
-      id,
-    );
+    return this.repository.companyOverview(id);
   }
 
   /**
@@ -544,14 +362,10 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async companyHealth(
-    id: string,
-  ) {
+  async companyHealth(id: string) {
     await this.repository.findById(id);
 
-    return this.repository.companyHealth(
-      id,
-    );
+    return this.repository.companyHealth(id);
   }
 
   /**
@@ -610,25 +424,17 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async recentCompanies(
-    limit = 10,
-  ): Promise<Company[]> {
-    return this.repository.recentCompanies(
-      limit,
-    );
+  async recentCompanies(limit = 10): Promise<Company[]> {
+    return this.repository.recentCompanies(limit);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * FIND BY COUNTRY
    * -------------------------------------------------------
    */
 
-  async findByCountry(
-    country: string,
-  ): Promise<Company[]> {
-    return this.repository.findByCountry(
-      country,
-    );
+  async findByCountry(country: string): Promise<Company[]> {
+    return this.repository.findByCountry(country);
   }
 
   /**
@@ -637,12 +443,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async findByState(
-    state: string,
-  ): Promise<Company[]> {
-    return this.repository.findByState(
-      state,
-    );
+  async findByState(state: string): Promise<Company[]> {
+    return this.repository.findByState(state);
   }
 
   /**
@@ -651,12 +453,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async findByCity(
-    city: string,
-  ): Promise<Company[]> {
-    return this.repository.findByCity(
-      city,
-    );
+  async findByCity(city: string): Promise<Company[]> {
+    return this.repository.findByCity(city);
   }
 
   /**
@@ -665,12 +463,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async companiesByStatus(
-    status: string,
-  ): Promise<Company[]> {
-    return this.repository.companiesByStatus(
-      status,
-    );
+  async companiesByStatus(status: string): Promise<Company[]> {
+    return this.repository.companiesByStatus(status);
   }
 
   /**
@@ -679,12 +473,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async companiesByPlan(
-    plan: string,
-  ): Promise<Company[]> {
-    return this.repository.companiesByPlan(
-      plan,
-    );
+  async companiesByPlan(plan: string): Promise<Company[]> {
+    return this.repository.companiesByPlan(plan);
   }
 
   /**
@@ -693,9 +483,7 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async healthyCompanies(): Promise<
-    Company[]
-  > {
+  async healthyCompanies(): Promise<Company[]> {
     return this.repository.healthyCompanies();
   }
 
@@ -705,12 +493,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async companiesNearStorageLimit(
-    threshold = 90,
-  ): Promise<Company[]> {
-    return this.repository.companiesNearStorageLimit(
-      threshold,
-    );
+  async companiesNearStorageLimit(threshold = 90): Promise<Company[]> {
+    return this.repository.companiesNearStorageLimit(threshold);
   }
 
   /**
@@ -719,12 +503,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async expiringSubscriptions(
-    expiryDate: Date,
-  ): Promise<Company[]> {
-    return this.repository.expiringSubscriptions(
-      expiryDate,
-    );
+  async expiringSubscriptions(expiryDate: Date): Promise<Company[]> {
+    return this.repository.expiringSubscriptions(expiryDate);
   }
 
   /**
@@ -733,12 +513,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async trialCompaniesExpiring(
-    expiryDate: Date,
-  ): Promise<Company[]> {
-    return this.repository.trialCompaniesExpiring(
-      expiryDate,
-    );
+  async trialCompaniesExpiring(expiryDate: Date): Promise<Company[]> {
+    return this.repository.trialCompaniesExpiring(expiryDate);
   }
 
   /**
@@ -747,9 +523,7 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async inactiveCompaniesList(): Promise<
-    Company[]
-  > {
+  async inactiveCompaniesList(): Promise<Company[]> {
     return this.repository.inactiveCompaniesList();
   }
 
@@ -759,35 +533,23 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async latestCompanies(
-    take = 20,
-  ): Promise<Company[]> {
-    return this.repository.latestCompanies(
-      take,
-    );
+  async latestCompanies(take = 20): Promise<Company[]> {
+    return this.repository.latestCompanies(take);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * BULK ACTIVATE
    * -------------------------------------------------------
    */
 
-  async bulkActivate(
-    ids: string[],
-  ) {
+  async bulkActivate(ids: string[]) {
     if (!ids.length) {
-      throw new BadRequestException(
-        'No companies selected.',
-      );
+      throw new BadRequestException('No companies selected.');
     }
 
-    this.logger.log(
-      `Bulk activate ${ids.length} companies`,
-    );
+    this.logger.log(`Bulk activate ${ids.length} companies`);
 
-    return this.repository.bulkActivate(
-      ids,
-    );
+    return this.repository.bulkActivate(ids);
   }
 
   /**
@@ -796,18 +558,12 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async bulkDeactivate(
-    ids: string[],
-  ) {
+  async bulkDeactivate(ids: string[]) {
     if (!ids.length) {
-      throw new BadRequestException(
-        'No companies selected.',
-      );
+      throw new BadRequestException('No companies selected.');
     }
 
-    return this.repository.bulkDeactivate(
-      ids,
-    );
+    return this.repository.bulkDeactivate(ids);
   }
 
   /**
@@ -816,20 +572,12 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async bulkSuspend(
-    ids: string[],
-    reason?: string,
-  ) {
+  async bulkSuspend(ids: string[], reason?: string) {
     if (!ids.length) {
-      throw new BadRequestException(
-        'No companies selected.',
-      );
+      throw new BadRequestException('No companies selected.');
     }
 
-    return this.repository.bulkSuspend(
-      ids,
-      reason,
-    );
+    return this.repository.bulkSuspend(ids, reason);
   }
 
   /**
@@ -838,18 +586,12 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async bulkRemove(
-    ids: string[],
-  ) {
+  async bulkRemove(ids: string[]) {
     if (!ids.length) {
-      throw new BadRequestException(
-        'No companies selected.',
-      );
+      throw new BadRequestException('No companies selected.');
     }
 
-    return this.repository.bulkSoftDelete(
-      ids,
-    );
+    return this.repository.bulkSoftDelete(ids);
   }
 
   /**
@@ -858,18 +600,12 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async bulkRestore(
-    ids: string[],
-  ) {
+  async bulkRestore(ids: string[]) {
     if (!ids.length) {
-      throw new BadRequestException(
-        'No companies selected.',
-      );
+      throw new BadRequestException('No companies selected.');
     }
 
-    return this.repository.bulkRestore(
-      ids,
-    );
+    return this.repository.bulkRestore(ids);
   }
 
   /**
@@ -878,12 +614,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async companyCodeExists(
-    companyCode: string,
-  ): Promise<boolean> {
-    return this.repository.isDuplicate(
-      companyCode,
-    );
+  async companyCodeExists(companyCode: string): Promise<boolean> {
+    return this.repository.isDuplicate(companyCode);
   }
 
   /**
@@ -892,12 +624,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async emailExists(
-    email: string,
-  ): Promise<boolean> {
-    return this.repository.emailExists(
-      email,
-    );
+  async emailExists(email: string): Promise<boolean> {
+    return this.repository.emailExists(email);
   }
 
   /**
@@ -906,12 +634,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async gstExists(
-    gstNumber: string,
-  ): Promise<boolean> {
-    return this.repository.gstExists(
-      gstNumber,
-    );
+  async gstExists(gstNumber: string): Promise<boolean> {
+    return this.repository.gstExists(gstNumber);
   }
 
   /**
@@ -920,12 +644,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async panExists(
-    panNumber: string,
-  ): Promise<boolean> {
-    return this.repository.panExists(
-      panNumber,
-    );
+  async panExists(panNumber: string): Promise<boolean> {
+    return this.repository.panExists(panNumber);
   }
 
   /**
@@ -935,13 +655,11 @@ export class CompanyService {
    */
 
   async executeTransaction<T>(
-    operations: any[],
+    operations: Prisma.PrismaPromise<T>[],
   ): Promise<T[]> {
-    return this.repository.executeTransaction(
-      operations,
-    );
+    return this.repository.executeTransaction(operations);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * HEALTH CHECK
    * -------------------------------------------------------
@@ -992,13 +710,9 @@ export class CompanyService {
    */
 
   async findFirst(
-    where: Parameters<
-      CompanyRepository['findFirst']
-    >[0],
+    where: Parameters<CompanyRepository['findFirst']>[0],
   ): Promise<Company | null> {
-    return this.repository.findFirst(
-      where,
-    );
+    return this.repository.findFirst(where);
   }
 
   /**
@@ -1007,12 +721,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async existsByEmail(
-    email: string,
-  ): Promise<boolean> {
-    return this.repository.emailExists(
-      email,
-    );
+  async existsByEmail(email: string): Promise<boolean> {
+    return this.repository.emailExists(email);
   }
 
   /**
@@ -1021,12 +731,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async existsByGST(
-    gstNumber: string,
-  ): Promise<boolean> {
-    return this.repository.gstExists(
-      gstNumber,
-    );
+  async existsByGST(gstNumber: string): Promise<boolean> {
+    return this.repository.gstExists(gstNumber);
   }
 
   /**
@@ -1035,12 +741,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async existsByPAN(
-    panNumber: string,
-  ): Promise<boolean> {
-    return this.repository.panExists(
-      panNumber,
-    );
+  async existsByPAN(panNumber: string): Promise<boolean> {
+    return this.repository.panExists(panNumber);
   }
 
   /**
@@ -1049,12 +751,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async existsByCompanyCode(
-    companyCode: string,
-  ): Promise<boolean> {
-    return this.repository.isDuplicate(
-      companyCode,
-    );
+  async existsByCompanyCode(companyCode: string): Promise<boolean> {
+    return this.repository.isDuplicate(companyCode);
   }
 
   /**
@@ -1063,9 +761,7 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async validateCompany(
-    id: string,
-  ): Promise<Company> {
+  async validateCompany(id: string): Promise<Company> {
     return this.repository.findById(id);
   }
 
@@ -1076,21 +772,15 @@ export class CompanyService {
    */
 
   async adminOverview() {
-    const [
-      total,
-      active,
-      suspended,
-      trial,
-      enterprise,
-      recent,
-    ] = await Promise.all([
-      this.repository.totalCompanies(),
-      this.repository.activeCompanies(),
-      this.repository.suspendedCompanies(),
-      this.repository.trialCompanies(),
-      this.repository.enterpriseCompanies(),
-      this.repository.recentCompanies(10),
-    ]);
+    const [total, active, suspended, trial, enterprise, recent] =
+      await Promise.all([
+        this.repository.totalCompanies(),
+        this.repository.activeCompanies(),
+        this.repository.suspendedCompanies(),
+        this.repository.trialCompanies(),
+        this.repository.enterpriseCompanies(),
+        this.repository.recentCompanies(10),
+      ]);
 
     return {
       totalCompanies: total,
@@ -1101,28 +791,18 @@ export class CompanyService {
       recentCompanies: recent,
     };
   }
-    /**
+  /**
    * -------------------------------------------------------
    * UPSERT COMPANY
    * -------------------------------------------------------
    */
 
   async upsert(
-    where: Parameters<
-      CompanyRepository['upsert']
-    >[0],
-    create: Parameters<
-      CompanyRepository['upsert']
-    >[1],
-    update: Parameters<
-      CompanyRepository['upsert']
-    >[2],
+    where: Parameters<CompanyRepository['upsert']>[0],
+    create: Parameters<CompanyRepository['upsert']>[1],
+    update: Parameters<CompanyRepository['upsert']>[2],
   ): Promise<Company> {
-    return this.repository.upsert(
-      where,
-      create,
-      update,
-    );
+    return this.repository.upsert(where, create, update);
   }
 
   /**
@@ -1131,20 +811,12 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async createMany(
-    data: Parameters<
-      CompanyRepository['createMany']
-    >[0],
-  ) {
+  async createMany(data: Parameters<CompanyRepository['createMany']>[0]) {
     if (!data.length) {
-      throw new BadRequestException(
-        'No company records supplied.',
-      );
+      throw new BadRequestException('No company records supplied.');
     }
 
-    return this.repository.createMany(
-      data,
-    );
+    return this.repository.createMany(data);
   }
 
   /**
@@ -1154,17 +826,10 @@ export class CompanyService {
    */
 
   async updateMany(
-    where: Parameters<
-      CompanyRepository['updateMany']
-    >[0],
-    data: Parameters<
-      CompanyRepository['updateMany']
-    >[1],
+    where: Parameters<CompanyRepository['updateMany']>[0],
+    data: Parameters<CompanyRepository['updateMany']>[1],
   ) {
-    return this.repository.updateMany(
-      where,
-      data,
-    );
+    return this.repository.updateMany(where, data);
   }
 
   /**
@@ -1173,14 +838,8 @@ export class CompanyService {
    * -------------------------------------------------------
    */
 
-  async deleteMany(
-    where: Parameters<
-      CompanyRepository['deleteMany']
-    >[0],
-  ) {
-    return this.repository.deleteMany(
-      where,
-    );
+  async deleteMany(where: Parameters<CompanyRepository['deleteMany']>[0]) {
+    return this.repository.deleteMany(where);
   }
 
   /**

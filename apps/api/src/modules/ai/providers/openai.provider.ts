@@ -1,62 +1,41 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
 import { AIProvider } from '@prisma/client';
 import { AiProvider } from './ai.provider';
 
-import {
-  AIProviderRequest,
-  AIProviderResponse,
-} from '../types/ai.types';
+import { AIProviderRequest, AIProviderResponse } from '../types/ai.types';
 
 @Injectable()
 export class OpenAIProvider extends AiProvider {
   readonly name = AIProvider.OPENAI;
 
-  private readonly logger = new Logger(
-    OpenAIProvider.name,
-  );
+  private readonly logger = new Logger(OpenAIProvider.name);
 
   private readonly apiKey: string;
 
   private readonly defaultModel: string;
 
-  constructor(
-    private readonly configService: ConfigService,
-  ) {
+  constructor(private readonly configService: ConfigService) {
     super();
 
-    this.apiKey =
-      this.configService.get<string>(
-        'OPENAI_API_KEY',
-      ) ?? '';
+    this.apiKey = this.configService.get<string>('OPENAI_API_KEY') ?? '';
 
     this.defaultModel =
-      this.configService.get<string>(
-        'OPENAI_MODEL',
-      ) ?? 'gpt-5';
+      this.configService.get<string>('OPENAI_MODEL') ?? 'gpt-5';
   }
 
-  async analyze(
-    request: AIProviderRequest,
-  ): Promise<AIProviderResponse> {
+  async analyze(request: AIProviderRequest): Promise<AIProviderResponse> {
     this.logger.debug('OpenAI analyze request');
 
     return this.execute(request);
   }
 
-  async analyzeVideo(
-    request: AIProviderRequest,
-  ): Promise<AIProviderResponse> {
+  async analyzeVideo(request: AIProviderRequest): Promise<AIProviderResponse> {
     return this.execute(request);
   }
 
-  async analyzeImage(
-    request: AIProviderRequest,
-  ): Promise<AIProviderResponse> {
+  async analyzeImage(request: AIProviderRequest): Promise<AIProviderResponse> {
     return this.execute(request);
   }
 
@@ -66,9 +45,7 @@ export class OpenAIProvider extends AiProvider {
     return this.execute(request);
   }
 
-  async performOCR(
-    request: AIProviderRequest,
-  ): Promise<AIProviderResponse> {
+  async performOCR(request: AIProviderRequest): Promise<AIProviderResponse> {
     return this.execute(request);
   }
 
@@ -84,41 +61,37 @@ export class OpenAIProvider extends AiProvider {
     return this.execute(request);
   }
 
-  async healthCheck(): Promise<boolean> {
-    return this.apiKey.length > 0;
+  healthCheck(): Promise<boolean> {
+    return Promise.resolve(this.apiKey.length > 0);
   }
 
-  private async execute(
-    request: AIProviderRequest,
-  ): Promise<AIProviderResponse> {
+  private execute(request: AIProviderRequest): Promise<AIProviderResponse> {
     /**
      * TODO:
      * Replace this implementation with the official
      * OpenAI Responses API integration.
      */
 
-    return {
-  success: true,
+    return Promise.resolve({
+      success: true,
 
-  provider: this.name,
+      provider: this.name,
 
-  model:
-    request.model ??
-    this.defaultModel,
+      model: request.model ?? this.defaultModel,
 
-  confidence: 1,
+      confidence: 1,
 
-  processingTime: 0,
+      processingTime: 0,
 
-  data: {},
+      data: {},
 
-  result: {},
+      result: {},
 
-  usage: {
-    promptTokens: 0,
-    completionTokens: 0,
-    totalTokens: 0,
-  },
-};
+      usage: {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      },
+    });
   }
 }

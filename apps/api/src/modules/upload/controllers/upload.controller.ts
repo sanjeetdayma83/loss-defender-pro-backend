@@ -19,9 +19,7 @@ import { UploadService } from '../services/upload.service';
 
 @Controller('uploads')
 export class UploadController {
-  constructor(
-    private readonly uploadService: UploadService,
-  ) {}
+  constructor(private readonly uploadService: UploadService) {}
 
   @Post()
   create(
@@ -36,9 +34,7 @@ export class UploadController {
     @Query()
     query: UploadQueryDto,
   ) {
-    return this.uploadService.findAll(
-      query,
-    );
+    return this.uploadService.findAll(query);
   }
 
   @Get(':id')
@@ -46,9 +42,7 @@ export class UploadController {
     @Param('id')
     id: string,
   ) {
-    return this.uploadService.findById(
-      id,
-    );
+    return this.uploadService.findById(id);
   }
 
   @Patch(':id')
@@ -59,10 +53,7 @@ export class UploadController {
     @Body()
     dto: UpdateUploadDto,
   ) {
-    return this.uploadService.update(
-      id,
-      dto,
-    );
+    return this.uploadService.update(id, dto);
   }
 
   @Delete(':id')
@@ -70,9 +61,7 @@ export class UploadController {
     @Param('id')
     id: string,
   ) {
-    return this.uploadService.delete(
-      id,
-    );
+    return this.uploadService.delete(id);
   }
 
   @Patch(':id/status/:status')
@@ -83,10 +72,7 @@ export class UploadController {
     @Param('status')
     status: UploadStatus,
   ) {
-    return this.uploadService.changeStatus(
-      id,
-      status,
-    );
+    return this.uploadService.changeStatus(id, status);
   }
 
   @Post(':id/uploading')
@@ -94,9 +80,7 @@ export class UploadController {
     @Param('id')
     id: string,
   ) {
-    return this.uploadService.markUploading(
-      id,
-    );
+    return this.uploadService.markUploading(id);
   }
 
   @Post(':id/uploaded')
@@ -104,9 +88,7 @@ export class UploadController {
     @Param('id')
     id: string,
   ) {
-    return this.uploadService.markUploaded(
-      id,
-    );
+    return this.uploadService.markUploaded(id);
   }
 
   @Post(':id/processing')
@@ -114,9 +96,7 @@ export class UploadController {
     @Param('id')
     id: string,
   ) {
-    return this.uploadService.markProcessing(
-      id,
-    );
+    return this.uploadService.markProcessing(id);
   }
 
   @Post(':id/completed')
@@ -124,9 +104,7 @@ export class UploadController {
     @Param('id')
     id: string,
   ) {
-    return this.uploadService.markCompleted(
-      id,
-    );
+    return this.uploadService.markCompleted(id);
   }
 
   @Post(':id/failed')
@@ -134,9 +112,7 @@ export class UploadController {
     @Param('id')
     id: string,
   ) {
-    return this.uploadService.markFailed(
-      id,
-    );
+    return this.uploadService.markFailed(id);
   }
 
   @Post(':id/cancel')
@@ -144,9 +120,7 @@ export class UploadController {
     @Param('id')
     id: string,
   ) {
-    return this.uploadService.cancel(
-      id,
-    );
+    return this.uploadService.cancel(id);
   }
 
   @Get('download-url/:key')
@@ -154,9 +128,7 @@ export class UploadController {
     @Param('key')
     key: string,
   ) {
-    return this.uploadService.generateDownloadUrl(
-      key,
-    );
+    return this.uploadService.generateDownloadUrl(key);
   }
 
   @Get('upload-url/:key')
@@ -164,8 +136,6 @@ export class UploadController {
     @Param('key')
     key: string,
   ) {
-    return this.uploadService.generateUploadUrl(
-      key,
-    );
+    return this.uploadService.generateUploadUrl(key);
   }
 }

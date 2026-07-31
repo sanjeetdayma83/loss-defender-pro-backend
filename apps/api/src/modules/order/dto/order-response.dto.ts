@@ -1,9 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  Marketplace,
-  OrderStatus,
-  VerificationStatus,
-} from '@prisma/client';
+import { Marketplace, OrderStatus, VerificationStatus } from '@prisma/client';
 
 export class OrderResponseDto {
   @ApiProperty()

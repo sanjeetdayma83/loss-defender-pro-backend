@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { AIJobStatus } from '@prisma/client';
 
@@ -13,14 +10,8 @@ export class AiStateMachine {
       AIJobStatus.PROCESSING,
       AIJobStatus.CANCELLED,
     ],
-    [AIJobStatus.QUEUED]: [
-      AIJobStatus.PROCESSING,
-      AIJobStatus.CANCELLED,
-    ],
-    [AIJobStatus.PROCESSING]: [
-      AIJobStatus.COMPLETED,
-      AIJobStatus.FAILED,
-    ],
+    [AIJobStatus.QUEUED]: [AIJobStatus.PROCESSING, AIJobStatus.CANCELLED],
+    [AIJobStatus.PROCESSING]: [AIJobStatus.COMPLETED, AIJobStatus.FAILED],
     [AIJobStatus.COMPLETED]: [],
     [AIJobStatus.FAILED]: [AIJobStatus.PENDING],
     [AIJobStatus.CANCELLED]: [],

@@ -21,29 +21,20 @@ export class AuthService {
     private readonly tokenService: TokenService,
   ) {}
 
-  async login(
-    dto: LoginDto,
-  ): Promise<LoginResponseDto> {
-    const user = await this.users.findByEmailActive(
-      dto.email,
-    );
+  async login(dto: LoginDto): Promise<LoginResponseDto> {
+    const user = await this.users.findByEmailActive(dto.email);
 
     if (!user) {
-      throw new UnauthorizedException(
-        'Invalid email or password',
-      );
+      throw new UnauthorizedException('Invalid email or password');
     }
 
-    const passwordValid =
-      await this.passwordService.verify(
-        user.passwordHash,
-        dto.password,
-      );
+    const passwordValid = await this.passwordService.verify(
+      user.passwordHash,
+      dto.password,
+    );
 
     if (!passwordValid) {
-      throw new UnauthorizedException(
-        'Invalid email or password',
-      );
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     if (user.status !== UserStatus.ACTIVE) {
@@ -55,15 +46,11 @@ export class AuthService {
     return this.issueTokens(user);
   }
 
-  async getProfile(
-    userId: string,
-  ): Promise<ProfileResponseDto> {
+  async getProfile(userId: string): Promise<ProfileResponseDto> {
     const user = await this.users.findById(userId);
 
     if (!user || user.isDeleted) {
-      throw new UnauthorizedException(
-        'User not found',
-      );
+      throw new UnauthorizedException('User not found');
     }
 
     return {
@@ -76,71 +63,46 @@ export class AuthService {
     };
   }
 
-  async refresh(
-    dto: RefreshTokenDto,
-  ): Promise<LoginResponseDto> {
-    const payload =
-      await this.tokenService.verifyRefreshToken(
-        dto.refreshToken,
-      );
-
-    const user = await this.users.findById(
-      payload.sub,
+  async refresh(dto: RefreshTokenDto): Promise<LoginResponseDto> {
+    const payload = await this.tokenService.verifyRefreshToken(
+      dto.refreshToken,
     );
 
-    if (
-      !user ||
-      user.isDeleted ||
-      !user.refreshTokenHash
-    ) {
-      throw new UnauthorizedException(
-        'Invalid refresh token',
-      );
+    const user = await this.users.findById(payload.sub);
+
+    if (!user || user.isDeleted || !user.refreshTokenHash) {
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
-    const valid =
-      await this.passwordService.verify(
-        user.refreshTokenHash,
-        dto.refreshToken,
-      );
+    const valid = await this.passwordService.verify(
+      user.refreshTokenHash,
+      dto.refreshToken,
+    );
 
     if (!valid) {
-      throw new UnauthorizedException(
-        'Invalid refresh token',
-      );
+      throw new UnauthorizedException('Invalid refresh token');
     }
 
     return this.issueTokens(user);
   }
 
-  async logout(
-    userId: string,
-  ): Promise<void> {
-    const user = await this.users.findById(
-      userId,
-    );
+  async logout(userId: string): Promise<void> {
+    const user = await this.users.findById(userId);
 
     if (!user || user.isDeleted) {
-      throw new UnauthorizedException(
-        'User not found',
-      );
+      throw new UnauthorizedException('User not found');
     }
 
-    await this.users.updateRefreshToken(
-      userId,
-      null,
-    );
+    await this.users.updateRefreshToken(userId, null);
   }
 
-  private async issueTokens(
-    user: {
-      id: string;
-      companyId: string;
-      email: string;
-      role: string;
-      status: UserStatus;
-    },
-  ): Promise<LoginResponseDto> {
+  private async issueTokens(user: {
+    id: string;
+    companyId: string;
+    email: string;
+    role: string;
+    status: UserStatus;
+  }): Promise<LoginResponseDto> {
     if (user.status !== UserStatus.ACTIVE) {
       throw new ForbiddenException(
         `User account is ${user.status.toLowerCase()}`,
@@ -154,29 +116,15 @@ export class AuthService {
       role: user.role,
     };
 
-    const accessToken =
-      await this.tokenService.generateAccessToken(
-        payload,
-      );
+    const accessToken = await this.tokenService.generateAccessToken(payload);
 
-    const refreshToken =
-      await this.tokenService.generateRefreshToken(
-        payload,
-      );
+    const refreshToken = await this.tokenService.generateRefreshToken(payload);
 
-    const refreshTokenHash =
-      await this.passwordService.hash(
-        refreshToken,
-      );
+    const refreshTokenHash = await this.passwordService.hash(refreshToken);
 
-    await this.users.updateRefreshToken(
-      user.id,
-      refreshTokenHash,
-    );
+    await this.users.updateRefreshToken(user.id, refreshTokenHash);
 
-    await this.users.updateLastLogin(
-      user.id,
-    );
+    await this.users.updateLastLogin(user.id);
 
     return {
       accessToken,

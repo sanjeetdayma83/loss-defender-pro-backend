@@ -17,10 +17,7 @@ export interface ClaimTimelineEvent {
 
   createdBy: string;
 
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ClaimAuditLog {
@@ -38,10 +35,7 @@ export interface ClaimAuditLog {
 
   currentState: ClaimStatus;
 
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ClaimEvidenceSummary {
@@ -61,19 +55,13 @@ export interface ClaimEvidenceSummary {
 export interface ClaimAIAnalysis {
   confidence: number;
 
-  recommendation:
-    | 'APPROVE'
-    | 'REJECT'
-    | 'MANUAL_REVIEW';
+  recommendation: 'APPROVE' | 'REJECT' | 'MANUAL_REVIEW';
 
   summary: string;
 
   detectedIssues: string[];
 
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ClaimResolution {
@@ -85,10 +73,7 @@ export interface ClaimResolution {
 
   resolvedAt: Date;
 
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ClaimStatistics {
@@ -136,10 +121,7 @@ export interface ClaimNotificationPayload {
 
   recipients: string[];
 
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ClaimSearchResult {

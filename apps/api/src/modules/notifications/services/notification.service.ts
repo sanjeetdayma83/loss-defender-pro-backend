@@ -1,11 +1,9 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import {
   Notification,
-  NotificationStatus,
+  NotificationChannel,
+  NotificationPriority,
 } from '@prisma/client';
 
 import { CreateNotificationDto } from '../dto/create-notification.dto';
@@ -22,67 +20,42 @@ import {
 import { NotificationDispatcher } from '../utils/notification-dispatcher';
 
 @Injectable()
-export class NotificationService
-  implements INotificationService
-{
+export class NotificationService implements INotificationService {
   constructor(
     private readonly repository: NotificationRepository,
     private readonly dispatcher: NotificationDispatcher,
   ) {}
 
-  async create(
-    dto: CreateNotificationDto,
-  ): Promise<Notification> {
+  async create(dto: CreateNotificationDto): Promise<Notification> {
     return this.repository.create(dto);
   }
 
-  async update(
-    id: string,
-    dto: UpdateNotificationDto,
-  ): Promise<Notification> {
+  async update(id: string, dto: UpdateNotificationDto): Promise<Notification> {
     await this.findById(id);
 
-    return this.repository.update(
-      id,
-      dto,
-    );
+    return this.repository.update(id, dto);
   }
 
-  async remove(
-    id: string,
-  ): Promise<Notification> {
+  async remove(id: string): Promise<Notification> {
     await this.findById(id);
 
-    return this.repository.softDelete(
-      id,
-    );
+    return this.repository.softDelete(id);
   }
 
-  async findById(
-    id: string,
-  ): Promise<Notification> {
-    const notification =
-      await this.repository.findById(id);
+  async findById(id: string): Promise<Notification> {
+    const notification = await this.repository.findById(id);
 
     if (!notification) {
-      throw new NotFoundException(
-        'Notification not found.',
-      );
+      throw new NotFoundException('Notification not found.');
     }
 
     return notification;
   }
 
-  async findAll(
-    query: NotificationQueryDto,
-  ) {
-    const items =
-      await this.repository.findAll(
-        query,
-      );
+  async findAll(query: NotificationQueryDto) {
+    const items = await this.repository.findAll(query);
 
-    const total =
-      await this.repository.count();
+    const total = await this.repository.count();
 
     return {
       items,
@@ -92,116 +65,70 @@ export class NotificationService
     };
   }
 
-  async send(
-    id: string,
-  ): Promise<NotificationDeliveryResult> {
-    const notification =
-      await this.findById(id);
+  async send(id: string): Promise<NotificationDeliveryResult> {
+    const notification = await this.findById(id);
 
-    return this.dispatcher.dispatch(
-      notification,
-    );
+    return this.dispatcher.dispatch(notification);
   }
 
   async sendBulk(
     request: BulkNotificationRequest,
-  ): Promise<
-    NotificationDeliveryResult[]
-  > {
-    const results: NotificationDeliveryResult[] =
-      [];
+  ): Promise<NotificationDeliveryResult[]> {
+    const results: NotificationDeliveryResult[] = [];
 
     for (const recipient of request.recipients) {
-      const notification =
-        await this.repository.create({
-          title: request.payload.title,
-          body: request.payload.body,
-          channel:
-            request.channels[0] as any,
-          priority:
-            request.priority as any,
-          recipient:
-            recipient.email ??
-            recipient.phone ??
-            recipient.userId ??
-            '',
-          template:
-            request.template,
-          data: request.payload.data,
-        } as CreateNotificationDto);
+      const notification = await this.repository.create({
+        title: request.payload.title,
+        body: request.payload.body,
+        channel: request.channels[0] as unknown as NotificationChannel,
+        priority: request.priority as unknown as NotificationPriority,
+        recipient: recipient.email ?? recipient.phone ?? recipient.userId ?? '',
+        template: request.template,
+        data: request.payload.data,
+      } as CreateNotificationDto);
 
-      results.push(
-        await this.dispatcher.dispatch(
-          notification,
-        ),
-      );
+      results.push(await this.dispatcher.dispatch(notification));
     }
 
     return results;
   }
 
-  async schedule(
-    id: string,
-    scheduledAt: Date,
-  ): Promise<Notification> {
+  async schedule(id: string, scheduledAt: Date): Promise<Notification> {
     await this.findById(id);
 
-    return this.repository.schedule(
-      id,
-      scheduledAt,
-    );
+    return this.repository.schedule(id, scheduledAt);
   }
 
-  async retry(
-    id: string,
-  ): Promise<NotificationDeliveryResult> {
-    await this.repository.incrementRetry(
-      id,
-    );
+  async retry(id: string): Promise<NotificationDeliveryResult> {
+    await this.repository.incrementRetry(id);
 
     return this.send(id);
   }
 
-  async cancel(
-    id: string,
-  ): Promise<Notification> {
+  async cancel(id: string): Promise<Notification> {
     await this.findById(id);
 
     return this.repository.cancel(id);
   }
 
-  async markAsRead(
-    id: string,
-  ): Promise<Notification> {
+  async markAsRead(id: string): Promise<Notification> {
     await this.findById(id);
 
-    return this.repository.markAsRead(
-      id,
-    );
+    return this.repository.markAsRead(id);
   }
 
-  async markAsUnread(
-    id: string,
-  ): Promise<Notification> {
+  async markAsUnread(id: string): Promise<Notification> {
     await this.findById(id);
 
-    return this.repository.markAsUnread(
-      id,
-    );
+    return this.repository.markAsUnread(id);
   }
 
-  async markAllAsRead(
-    userId: string,
-  ): Promise<number> {
-    return this.repository.markAllAsRead(
-      userId,
-    );
+  async markAllAsRead(userId: string): Promise<number> {
+    return this.repository.markAllAsRead(userId);
   }
 
-  async getUserPreferences(
-    userId: string,
-  ): Promise<UserNotificationPreferences> {
-    return {
+  getUserPreferences(userId: string): Promise<UserNotificationPreferences> {
+    return Promise.resolve({
       userId,
       emailEnabled: true,
       pushEnabled: true,
@@ -209,17 +136,17 @@ export class NotificationService
       whatsappEnabled: false,
       inAppEnabled: true,
       quietHoursEnabled: false,
-    };
+    });
   }
 
-  async updateUserPreferences(
+  updateUserPreferences(
     userId: string,
     preferences: UserNotificationPreferences,
   ): Promise<UserNotificationPreferences> {
-    return {
+    return Promise.resolve({
       ...preferences,
       userId,
-    };
+    });
   }
 
   async getStatistics(): Promise<NotificationStatistics> {

@@ -8,10 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
-import {
-  ClaimPriority,
-  ClaimStatus,
-} from '@prisma/client';
+import { ClaimPriority, ClaimStatus } from '@prisma/client';
 
 export class CreateClaimDto {
   @IsUUID()
@@ -66,8 +63,5 @@ export class CreateClaimDto {
 
   @IsOptional()
   @IsObject()
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }

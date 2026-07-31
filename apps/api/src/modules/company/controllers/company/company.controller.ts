@@ -18,15 +18,11 @@ import { UpdateCompanyDto } from '../../dto/update-company.dto';
 @ApiTags('Companies')
 @Controller('companies')
 export class CompanyController {
-  constructor(
-    private readonly companyService: CompanyService,
-  ) {}
+  constructor(private readonly companyService: CompanyService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create Company' })
-  create(
-    @Body() dto: CreateCompanyDto,
-  ) {
+  create(@Body() dto: CreateCompanyDto) {
     return this.companyService.create(dto);
   }
 
@@ -38,26 +34,19 @@ export class CompanyController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get Company By Id' })
-  findOne(
-    @Param('id') id: string,
-  ) {
+  findOne(@Param('id') id: string) {
     return this.companyService.findOne(id);
   }
 
   @Patch(':id')
   @ApiOperation({ summary: 'Update Company' })
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateCompanyDto,
-  ) {
+  update(@Param('id') id: string, @Body() dto: UpdateCompanyDto) {
     return this.companyService.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete Company' })
-  remove(
-    @Param('id') id: string,
-  ) {
+  remove(@Param('id') id: string) {
     return this.companyService.remove(id);
   }
 }

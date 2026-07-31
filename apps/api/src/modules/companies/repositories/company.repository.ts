@@ -1,13 +1,6 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
-import {
-  Company,
-  CompanyStatus,
-  Prisma,
-} from '@prisma/client';
+import { Company, CompanyStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
 
@@ -15,19 +8,13 @@ import { CreateCompanyDto } from '../dto/create-company.dto';
 import { UpdateCompanyDto } from '../dto/update-company.dto';
 import { CompanyQueryDto } from '../dto/company-query.dto';
 
-import {
-  CompanySearchResult,
-} from '../types/company.types';
+import { CompanySearchResult } from '../types/company.types';
 
 @Injectable()
 export class CompanyRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  private buildWhereClause(
-    query: CompanyQueryDto,
-  ): Prisma.CompanyWhereInput {
+  private buildWhereClause(query: CompanyQueryDto): Prisma.CompanyWhereInput {
     const where: Prisma.CompanyWhereInput = {
       isDeleted: false,
     };
@@ -130,9 +117,7 @@ export class CompanyRepository {
     return company;
   }
 
-  async findAll(
-    query: CompanyQueryDto,
-  ): Promise<CompanySearchResult<Company>> {
+  async findAll(query: CompanyQueryDto): Promise<CompanySearchResult<Company>> {
     const where = this.buildWhereClause(query);
 
     const [data, total] = await this.prisma.$transaction([
@@ -311,10 +296,7 @@ export class CompanyRepository {
     });
   }
 
-  async increaseStorage(
-    id: string,
-    usedStorageGB: number,
-  ): Promise<Company> {
+  async increaseStorage(id: string, usedStorageGB: number): Promise<Company> {
     const company = await this.findById(id);
     const storage = (company.storage as Record<string, unknown>) ?? {};
     const current = Number(storage.usedStorageGB ?? 0);
@@ -325,15 +307,12 @@ export class CompanyRepository {
         storage: {
           ...storage,
           usedStorageGB: current + usedStorageGB,
-        } as Prisma.InputJsonValue,
+        },
       },
     });
   }
 
-  async decreaseStorage(
-    id: string,
-    usedStorageGB: number,
-  ): Promise<Company> {
+  async decreaseStorage(id: string, usedStorageGB: number): Promise<Company> {
     const company = await this.findById(id);
     const storage = (company.storage as Record<string, unknown>) ?? {};
     const current = Number(storage.usedStorageGB ?? 0);
@@ -344,7 +323,7 @@ export class CompanyRepository {
         storage: {
           ...storage,
           usedStorageGB: Math.max(0, current - usedStorageGB),
-        } as Prisma.InputJsonValue,
+        },
       },
     });
   }
@@ -420,23 +399,30 @@ export class CompanyRepository {
   async getStatistics(companyId: string) {
     await this.findById(companyId);
 
-    const [warehouses, users, orders, claims, returns, activeOrders, completedOrders] =
-      await this.prisma.$transaction([
-        this.prisma.warehouse.count({ where: { companyId } }),
-        this.prisma.user.count({ where: { companyId } }),
-        this.prisma.order.count({ where: { companyId } }),
-        this.prisma.claim.count({ where: { companyId } }),
-        this.prisma.return.count({ where: { companyId } }),
-        this.prisma.order.count({
-          where: {
-            companyId,
-            status: { notIn: ['DELIVERED', 'CANCELLED', 'RETURNED'] },
-          },
-        }),
-        this.prisma.order.count({
-          where: { companyId, status: 'DELIVERED' },
-        }),
-      ]);
+    const [
+      warehouses,
+      users,
+      orders,
+      claims,
+      returns,
+      activeOrders,
+      completedOrders,
+    ] = await this.prisma.$transaction([
+      this.prisma.warehouse.count({ where: { companyId } }),
+      this.prisma.user.count({ where: { companyId } }),
+      this.prisma.order.count({ where: { companyId } }),
+      this.prisma.claim.count({ where: { companyId } }),
+      this.prisma.return.count({ where: { companyId } }),
+      this.prisma.order.count({
+        where: {
+          companyId,
+          status: { notIn: ['DELIVERED', 'CANCELLED', 'RETURNED'] },
+        },
+      }),
+      this.prisma.order.count({
+        where: { companyId, status: 'DELIVERED' },
+      }),
+    ]);
 
     return {
       totalWarehouses: warehouses,
@@ -508,7 +494,10 @@ export class CompanyRepository {
     });
   }
 
-  async bulkSuspend(ids: string[], reason?: string): Promise<Prisma.BatchPayload> {
+  async bulkSuspend(
+    ids: string[],
+    reason?: string,
+  ): Promise<Prisma.BatchPayload> {
     return this.prisma.company.updateMany({
       where: { id: { in: ids }, isDeleted: false },
       data: {
@@ -608,6 +597,7 @@ export class CompanyRepository {
   }
 
   async trialCompaniesExpiring(_expiryDate: Date): Promise<Company[]> {
+    void _expiryDate;
     return this.prisma.company.findMany({
       where: {
         isDeleted: false,
@@ -676,9 +666,7 @@ export class CompanyRepository {
     return this.prisma.company.findMany({ where });
   }
 
-  async findFirst(
-    where: Prisma.CompanyWhereInput,
-  ): Promise<Company | null> {
+  async findFirst(where: Prisma.CompanyWhereInput): Promise<Company | null> {
     return this.prisma.company.findFirst({ where });
   }
 

@@ -1,17 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  Marketplace,
-  OrderStatus,
-  VerificationStatus,
-} from '@prisma/client';
-import {
-  IsEnum,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { Marketplace, OrderStatus, VerificationStatus } from '@prisma/client';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
 export class OrderQueryDto {
@@ -38,7 +27,8 @@ export class OrderQueryDto {
   limit = 20;
 
   @ApiPropertyOptional({
-    description: 'Search by order number, marketplace order ID, AWB or customer name',
+    description:
+      'Search by order number, marketplace order ID, AWB or customer name',
   })
   @IsOptional()
   @IsString()
@@ -96,8 +86,6 @@ export class OrderQueryDto {
     default: 'desc',
   })
   @IsOptional()
-  @Transform(({ value }) =>
-    String(value).toLowerCase(),
-  )
+  @Transform(({ value }) => String(value).toLowerCase())
   sortOrder: 'asc' | 'desc' = 'desc';
 }

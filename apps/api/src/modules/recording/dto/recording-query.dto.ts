@@ -67,21 +67,12 @@ export class RecordingQueryDto {
   limit = 20;
 
   @ApiPropertyOptional({
-    enum: [
-      'createdAt',
-      'updatedAt',
-      'startedAt',
-      'stoppedAt',
-    ],
+    enum: ['createdAt', 'updatedAt', 'startedAt', 'stoppedAt'],
     default: 'createdAt',
   })
   @IsOptional()
   @IsString()
-  sortBy:
-    | 'createdAt'
-    | 'updatedAt'
-    | 'startedAt'
-    | 'stoppedAt' = 'createdAt';
+  sortBy: 'createdAt' | 'updatedAt' | 'startedAt' | 'stoppedAt' = 'createdAt';
 
   @ApiPropertyOptional({
     enum: ['asc', 'desc'],

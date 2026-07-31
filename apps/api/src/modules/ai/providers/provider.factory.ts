@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { AIProvider } from '@prisma/client';
 
@@ -31,7 +28,7 @@ export class ProviderFactory {
 
       default:
         throw new NotFoundException(
-          `Unsupported AI provider: ${provider}`,
+          `Unsupported AI provider: ${String(provider)}`,
         );
     }
   }
@@ -41,23 +38,16 @@ export class ProviderFactory {
   }
 
   getAvailableProviders(): AIProvider[] {
-    return [
-      AIProvider.GEMINI,
-      AIProvider.OPENAI,
-      AIProvider.LOCAL,
-    ];
+    return [AIProvider.GEMINI, AIProvider.OPENAI, AIProvider.LOCAL];
   }
 
   async healthCheck(): Promise<Record<AIProvider, boolean>> {
     return {
-      [AIProvider.GEMINI]:
-        await this.geminiProvider.healthCheck(),
+      [AIProvider.GEMINI]: await this.geminiProvider.healthCheck(),
 
-      [AIProvider.OPENAI]:
-        await this.openAIProvider.healthCheck(),
+      [AIProvider.OPENAI]: await this.openAIProvider.healthCheck(),
 
-      [AIProvider.LOCAL]:
-        await this.localProvider.healthCheck(),
+      [AIProvider.LOCAL]: await this.localProvider.healthCheck(),
     };
   }
 }

@@ -8,11 +8,7 @@ import {
   Min,
 } from 'class-validator';
 
-import {
-  Marketplace,
-  OrderStatus,
-  VerificationStatus,
-} from '@prisma/client';
+import { Marketplace, OrderStatus, VerificationStatus } from '@prisma/client';
 
 export class CreateOrderDto {
   @ApiProperty({

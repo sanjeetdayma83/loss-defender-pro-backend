@@ -1,11 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import {
-  AIJob,
-  AIJobStatus,
-  AIProvider,
-  Prisma,
-} from '@prisma/client';
+import { AIJob, AIJobStatus, AIProvider, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
 
@@ -15,9 +10,7 @@ import { AiQueryDto } from '../dto/ai-query.dto';
 
 @Injectable()
 export class AiRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateAiJobDto): Promise<AIJob> {
     return this.prisma.aIJob.create({
@@ -46,11 +39,13 @@ export class AiRepository {
   }
 
   async findMany(query: AiQueryDto): Promise<AIJob[]> {
-    const { page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc', ...filters } =
-      query;
+    const page = Number(query.page ?? 1);
+    const limit = Number(query.limit ?? 10);
+    const sortBy = String(query.sortBy ?? 'createdAt');
+    const sortOrder = query.sortOrder ?? 'desc';
 
     return this.prisma.aIJob.findMany({
-      where: this.buildWhere(filters),
+      where: this.buildWhere(query),
       skip: (page - 1) * limit,
       take: limit,
       orderBy: { [sortBy]: sortOrder },
@@ -58,9 +53,8 @@ export class AiRepository {
   }
 
   async count(query: AiQueryDto): Promise<number> {
-    const { page, limit, sortBy, sortOrder, ...filters } = query;
     return this.prisma.aIJob.count({
-      where: this.buildWhere(filters),
+      where: this.buildWhere(query),
     });
   }
 
@@ -141,16 +135,14 @@ export class AiRepository {
     });
   }
 
-  private buildWhere(
-    filters: Partial<AiQueryDto>,
-  ): Prisma.AIJobWhereInput {
+  private buildWhere(filters: Partial<AiQueryDto>): Prisma.AIJobWhereInput {
     const where: Prisma.AIJobWhereInput = {};
 
     if (filters.orderId) where.orderId = filters.orderId;
     if (filters.uploadId) where.uploadId = filters.uploadId;
     if (filters.recordingId) where.recordingId = filters.recordingId;
     if (filters.evidenceId) where.evidenceId = filters.evidenceId;
-    if (filters.status) where.status = filters.status as AIJobStatus;
+    if (filters.status) where.status = filters.status;
     if (filters.provider) {
       where.provider = this.normalizeProvider(filters.provider);
     }
@@ -158,7 +150,23 @@ export class AiRepository {
     return where;
   }
 
-  private normalizeProvider(provider?: string | AIProvider): AIProvider {
-  return String(provider ?? 'OPENAI').toUpperCase() as AIProvider;
-}
+  private normalizeProvider(provider?: string): AIProvider {
+    if (!provider) {
+      return AIProvider.OPENAI;
+    }
+
+    switch (provider.toUpperCase()) {
+      case 'OPENAI':
+        return AIProvider.OPENAI;
+
+      case 'GEMINI':
+        return AIProvider.GEMINI;
+
+      case 'LOCAL':
+        return AIProvider.LOCAL;
+
+      default:
+        return AIProvider.OPENAI;
+    }
+  }
 }

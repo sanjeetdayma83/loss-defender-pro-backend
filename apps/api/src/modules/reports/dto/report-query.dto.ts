@@ -1,11 +1,4 @@
-import {
-  IsIn,
-  IsInt,
-  IsOptional,
-  IsString,
-  Max,
-  Min,
-} from 'class-validator';
+import { IsInt, IsOptional, IsString, Max, Min } from 'class-validator';
 
 import { Transform } from 'class-transformer';
 
@@ -45,5 +38,5 @@ export class ReportQueryDto {
 
   @IsOptional()
   @IsString()
- to?: string;
+  to?: string;
 }

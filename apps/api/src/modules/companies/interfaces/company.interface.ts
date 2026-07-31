@@ -19,32 +19,17 @@ export interface ICompanyService {
    * -------------------------------------------------------
    */
 
-  create(
-    dto: CreateCompanyDto,
-  ): Promise<Company>;
+  create(dto: CreateCompanyDto): Promise<Company>;
 
-  update(
-    id: string,
-    dto: UpdateCompanyDto,
-  ): Promise<Company>;
+  update(id: string, dto: UpdateCompanyDto): Promise<Company>;
 
-  remove(
-    id: string,
-  ): Promise<Company>;
+  remove(id: string): Promise<Company>;
 
-  restore(
-    id: string,
-  ): Promise<Company>;
+  restore(id: string): Promise<Company>;
 
-  findById(
-    id: string,
-  ): Promise<Company>;
+  findById(id: string): Promise<Company>;
 
-  findAll(
-    query: CompanyQueryDto,
-  ): Promise<
-    CompanySearchResult<Company>
-  >;
+  findAll(query: CompanyQueryDto): Promise<CompanySearchResult<Company>>;
 
   /**
    * -------------------------------------------------------
@@ -52,21 +37,13 @@ export interface ICompanyService {
    * -------------------------------------------------------
    */
 
-  findByEmail(
-    email: string,
-  ): Promise<Company | null>;
+  findByEmail(email: string): Promise<Company | null>;
 
-  findByGST(
-    gstNumber: string,
-  ): Promise<Company | null>;
+  findByGST(gstNumber: string): Promise<Company | null>;
 
-  findByPAN(
-    panNumber: string,
-  ): Promise<Company | null>;
+  findByPAN(panNumber: string): Promise<Company | null>;
 
-  exists(
-    id: string,
-  ): Promise<boolean>;
+  exists(id: string): Promise<boolean>;
 
   /**
    * -------------------------------------------------------
@@ -74,23 +51,13 @@ export interface ICompanyService {
    * -------------------------------------------------------
    */
 
-  activate(
-    id: string,
-  ): Promise<Company>;
+  activate(id: string): Promise<Company>;
 
-  deactivate(
-    id: string,
-  ): Promise<Company>;
+  deactivate(id: string): Promise<Company>;
 
-  suspend(
-    id: string,
-    reason?: string,
-  ): Promise<Company>;
+  suspend(id: string, reason?: string): Promise<Company>;
 
-  block(
-    id: string,
-    reason?: string,
-  ): Promise<Company>;
+  block(id: string, reason?: string): Promise<Company>;
 
   /**
    * -------------------------------------------------------
@@ -109,10 +76,7 @@ export interface ICompanyService {
    * -------------------------------------------------------
    */
 
-  updateSettings(
-    id: string,
-    settings: CompanySettings,
-  ): Promise<Company>;
+  updateSettings(id: string, settings: CompanySettings): Promise<Company>;
 
   /**
    * -------------------------------------------------------
@@ -120,13 +84,9 @@ export interface ICompanyService {
    * -------------------------------------------------------
    */
 
-  getStatistics(
-    id: string,
-  ): Promise<CompanyStatistics>;
+  getStatistics(id: string): Promise<CompanyStatistics>;
 
-  getDashboard(
-    id: string,
-  ): Promise<CompanyDashboardSummary>;
+  getDashboard(id: string): Promise<CompanyDashboardSummary>;
 
   /**
    * -------------------------------------------------------
@@ -134,15 +94,9 @@ export interface ICompanyService {
    * -------------------------------------------------------
    */
 
-  increaseStorage(
-    id: string,
-    gb: number,
-  ): Promise<Company>;
+  increaseStorage(id: string, gb: number): Promise<Company>;
 
-  decreaseStorage(
-    id: string,
-    gb: number,
-  ): Promise<Company>;
+  decreaseStorage(id: string, gb: number): Promise<Company>;
 
   /**
    * -------------------------------------------------------

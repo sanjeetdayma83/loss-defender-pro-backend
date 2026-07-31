@@ -1,19 +1,10 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { RecordingStatus } from '@prisma/client';
 
 @Injectable()
 export class RecordingStateMachine {
-  private readonly transitions: Record<
-    RecordingStatus,
-    RecordingStatus[]
-  > = {
-    CREATED: [
-      RecordingStatus.STARTED,
-      RecordingStatus.FAILED,
-    ],
+  private readonly transitions: Record<RecordingStatus, RecordingStatus[]> = {
+    CREATED: [RecordingStatus.STARTED, RecordingStatus.FAILED],
 
     STARTED: [
       RecordingStatus.PAUSED,
@@ -33,42 +24,24 @@ export class RecordingStateMachine {
       RecordingStatus.FAILED,
     ],
 
-    STOPPED: [
-      RecordingStatus.UPLOADING,
-      RecordingStatus.FAILED,
-    ],
+    STOPPED: [RecordingStatus.UPLOADING, RecordingStatus.FAILED],
 
-    UPLOADING: [
-      RecordingStatus.UPLOADED,
-      RecordingStatus.FAILED,
-    ],
+    UPLOADING: [RecordingStatus.UPLOADED, RecordingStatus.FAILED],
 
-    UPLOADED: [
-      RecordingStatus.PROCESSING,
-      RecordingStatus.FAILED,
-    ],
+    UPLOADED: [RecordingStatus.PROCESSING, RecordingStatus.FAILED],
 
-    PROCESSING: [
-      RecordingStatus.COMPLETED,
-      RecordingStatus.FAILED,
-    ],
+    PROCESSING: [RecordingStatus.COMPLETED, RecordingStatus.FAILED],
 
     COMPLETED: [],
 
     FAILED: [],
   };
 
-  canTransition(
-    current: RecordingStatus,
-    next: RecordingStatus,
-  ): boolean {
+  canTransition(current: RecordingStatus, next: RecordingStatus): boolean {
     return this.transitions[current]?.includes(next) ?? false;
   }
 
-  validateTransition(
-    current: RecordingStatus,
-    next: RecordingStatus,
-  ): void {
+  validateTransition(current: RecordingStatus, next: RecordingStatus): void {
     if (!this.canTransition(current, next)) {
       throw new BadRequestException(
         `Invalid recording status transition: ${current} -> ${next}`,

@@ -1,8 +1,4 @@
-import {
-  MiddlewareConsumer,
-  Module,
-  NestModule,
-} from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 
 import appConfig from './config/app.config';
@@ -31,15 +27,9 @@ import { UserModule } from './modules/user/user.module';
       cache: true,
       expandVariables: true,
 
-      load: [
-        appConfig,
-        authConfig,
-        databaseConfig,
-        storageConfig,
-      ],
+      load: [appConfig, authConfig, databaseConfig, storageConfig],
 
-      validate: (config) =>
-        envSchema.parse(config),
+      validate: (config) => envSchema.parse(config),
     }),
 
     LoggerModule,
@@ -62,11 +52,7 @@ import { UserModule } from './modules/user/user.module';
   ],
 })
 export class AppModule implements NestModule {
-  configure(
-    consumer: MiddlewareConsumer,
-  ): void {
-    consumer
-      .apply(RequestIdMiddleware)
-      .forRoutes('*');
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestIdMiddleware).forRoutes('*');
   }
 }

@@ -17,9 +17,7 @@ import { WarehouseQueryDto } from '../dto/warehouse-query.dto';
 
 @Controller('warehouses')
 export class WarehousesController {
-  constructor(
-    private readonly warehouseService: WarehouseService,
-  ) {}
+  constructor(private readonly warehouseService: WarehouseService) {}
 
   /**
    * -------------------------------------------------------
@@ -58,10 +56,7 @@ export class WarehousesController {
     @Body()
     dto: UpdateWarehouseDto,
   ) {
-    return this.warehouseService.update(
-      id,
-      dto,
-    );
+    return this.warehouseService.update(id, dto);
   }
 
   @Delete(':id')
@@ -113,12 +108,9 @@ export class WarehousesController {
     @Param('id')
     id: string,
     @Body('capacity')
-    capacity: any,
+    capacity: Record<string, unknown>,
   ) {
-    return this.warehouseService.updateCapacity(
-      id,
-      capacity,
-    );
+    return this.warehouseService.updateCapacity(id, capacity);
   }
 
   /**
@@ -132,9 +124,7 @@ export class WarehousesController {
     @Param('id')
     id: string,
   ) {
-    return this.warehouseService.getDashboard(
-      id,
-    );
+    return this.warehouseService.getDashboard(id);
   }
 
   @Get(':id/statistics')
@@ -142,9 +132,7 @@ export class WarehousesController {
     @Param('id')
     id: string,
   ) {
-    return this.warehouseService.getStatistics(
-      id,
-    );
+    return this.warehouseService.getStatistics(id);
   }
 
   /**
@@ -158,9 +146,7 @@ export class WarehousesController {
     @Param('companyId')
     companyId: string,
   ) {
-    return this.warehouseService.findByCompany(
-      companyId,
-    );
+    return this.warehouseService.findByCompany(companyId);
   }
 
   @Get('code/:code')
@@ -168,11 +154,9 @@ export class WarehousesController {
     @Param('code')
     code: string,
   ) {
-    return this.warehouseService.findByCode(
-      code,
-    );
+    return this.warehouseService.findByCode(code);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * BULK OPERATIONS
    * -------------------------------------------------------
@@ -183,9 +167,7 @@ export class WarehousesController {
     @Body('ids')
     ids: string[],
   ) {
-    return this.warehouseService.bulkActivate(
-      ids,
-    );
+    return this.warehouseService.bulkActivate(ids);
   }
 
   @Post('bulk/deactivate')
@@ -193,9 +175,7 @@ export class WarehousesController {
     @Body('ids')
     ids: string[],
   ) {
-    return this.warehouseService.bulkDeactivate(
-      ids,
-    );
+    return this.warehouseService.bulkDeactivate(ids);
   }
 
   @Post('bulk/delete')
@@ -203,9 +183,7 @@ export class WarehousesController {
     @Body('ids')
     ids: string[],
   ) {
-    return this.warehouseService.bulkDelete(
-      ids,
-    );
+    return this.warehouseService.bulkDelete(ids);
   }
 
   /**
@@ -219,9 +197,7 @@ export class WarehousesController {
     @Param('warehouseCode')
     warehouseCode: string,
   ) {
-    return this.warehouseService.existsByCode(
-      warehouseCode,
-    );
+    return this.warehouseService.existsByCode(warehouseCode);
   }
 
   /**

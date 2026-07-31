@@ -21,7 +21,7 @@ export class AiResponseDto {
 
   prompt: string | null;
 
-  response: unknown | null;
+  response?: unknown;
 
   error: string | null;
 

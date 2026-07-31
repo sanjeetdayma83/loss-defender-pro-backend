@@ -9,11 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 import { Permissions } from '../../auth/decorators/permissions.decorator';
@@ -37,15 +33,9 @@ interface AuthenticatedUser {
 @ApiTags('Orders')
 @ApiBearerAuth()
 @Controller('orders')
-@UseGuards(
-  JwtAuthGuard,
-  RolesGuard,
-  PermissionsGuard,
-)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 export class OrderController {
-  constructor(
-    private readonly orderService: OrderService,
-  ) {}
+  constructor(private readonly orderService: OrderService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create order' })
@@ -55,15 +45,8 @@ export class OrderController {
     UserRole.WAREHOUSE_MANAGER,
   )
   @Permissions(PERMISSIONS.ORDER_CREATE)
-  create(
-    @CurrentUser() user: AuthenticatedUser,
-    @Body() dto: CreateOrderDto,
-  ) {
-    return this.orderService.create(
-      user.companyId,
-      user.id,
-      dto,
-    );
+  create(@CurrentUser() user: AuthenticatedUser, @Body() dto: CreateOrderDto) {
+    return this.orderService.create(user.companyId, user.id, dto);
   }
 
   @Get()
@@ -77,9 +60,7 @@ export class OrderController {
     UserRole.VIEWER,
   )
   @Permissions(PERMISSIONS.ORDER_VIEW)
-  findAll(
-    @Query() query: OrderQueryDto,
-  ) {
+  findAll(@Query() query: OrderQueryDto) {
     return this.orderService.findAll(query);
   }
 
@@ -94,9 +75,7 @@ export class OrderController {
     UserRole.VIEWER,
   )
   @Permissions(PERMISSIONS.ORDER_VIEW)
-  findOne(
-    @Param('id') id: string,
-  ) {
+  findOne(@Param('id') id: string) {
     return this.orderService.findOne(id);
   }
 
@@ -108,26 +87,15 @@ export class OrderController {
     UserRole.WAREHOUSE_MANAGER,
   )
   @Permissions(PERMISSIONS.ORDER_UPDATE)
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateOrderDto,
-  ) {
-    return this.orderService.update(
-      id,
-      dto,
-    );
+  update(@Param('id') id: string, @Body() dto: UpdateOrderDto) {
+    return this.orderService.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({ summary: 'Delete order' })
-  @Roles(
-    UserRole.SUPER_ADMIN,
-    UserRole.COMPANY_ADMIN,
-  )
+  @Roles(UserRole.SUPER_ADMIN, UserRole.COMPANY_ADMIN)
   @Permissions(PERMISSIONS.ORDER_DELETE)
-  remove(
-    @Param('id') id: string,
-  ) {
+  remove(@Param('id') id: string) {
     return this.orderService.remove(id);
   }
 }

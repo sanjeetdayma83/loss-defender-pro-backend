@@ -1,9 +1,6 @@
-import {
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 
-import { Warehouse } from '@prisma/client';
+import { Prisma, Warehouse } from '@prisma/client';
 
 import { WarehouseRepository } from '../repositories/warehouse.repository';
 
@@ -15,12 +12,8 @@ import { IWarehouseService } from '../interfaces/warehouse.interface';
 import { WarehouseStatistics } from '../types/warehouse.types';
 
 @Injectable()
-export class WarehouseService
-  implements IWarehouseService
-{
-  constructor(
-    private readonly repository: WarehouseRepository,
-  ) {}
+export class WarehouseService implements IWarehouseService {
+  constructor(private readonly repository: WarehouseRepository) {}
 
   /**
    * -------------------------------------------------------
@@ -28,18 +21,11 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  async create(
-    dto: CreateWarehouseDto,
-  ): Promise<Warehouse> {
-    const exists =
-      await this.repository.existsByCode(
-        dto.warehouseCode,
-      );
+  async create(dto: CreateWarehouseDto): Promise<Warehouse> {
+    const exists = await this.repository.existsByCode(dto.warehouseCode);
 
     if (exists) {
-      throw new ConflictException(
-        'Warehouse code already exists.',
-      );
+      throw new ConflictException('Warehouse code already exists.');
     }
 
     return this.repository.create(dto);
@@ -51,32 +37,20 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  async findAll(
-    query: WarehouseQueryDto,
-  ) {
+  async findAll(query: WarehouseQueryDto) {
     return this.repository.findAll(query);
   }
 
-  async findById(
-    id: string,
-  ): Promise<Warehouse> {
+  async findById(id: string): Promise<Warehouse> {
     return this.repository.findById(id);
   }
 
-  async findByCompany(
-    companyId: string,
-  ) {
-    return this.repository.findByCompany(
-      companyId,
-    );
+  async findByCompany(companyId: string) {
+    return this.repository.findByCompany(companyId);
   }
 
-  async findByCode(
-    code: string,
-  ) {
-    return this.repository.findByCode(
-      code,
-    );
+  async findByCode(code: string) {
+    return this.repository.findByCode(code);
   }
 
   /**
@@ -85,14 +59,8 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  async update(
-    id: string,
-    dto: UpdateWarehouseDto,
-  ): Promise<Warehouse> {
-    return this.repository.update(
-      id,
-      dto,
-    );
+  async update(id: string, dto: UpdateWarehouseDto): Promise<Warehouse> {
+    return this.repository.update(id, dto);
   }
 
   /**
@@ -101,17 +69,11 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  async remove(
-    id: string,
-  ): Promise<Warehouse> {
-    return this.repository.softDelete(
-      id,
-    );
+  async remove(id: string): Promise<Warehouse> {
+    return this.repository.softDelete(id);
   }
 
-  async restore(
-    id: string,
-  ): Promise<Warehouse> {
+  async restore(id: string): Promise<Warehouse> {
     return this.repository.restore(id);
   }
 
@@ -121,15 +83,11 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  async activate(
-    id: string,
-  ): Promise<Warehouse> {
+  async activate(id: string): Promise<Warehouse> {
     return this.repository.activate(id);
   }
 
-  async deactivate(
-    id: string,
-  ): Promise<Warehouse> {
+  async deactivate(id: string): Promise<Warehouse> {
     return this.repository.deactivate(id);
   }
 
@@ -139,14 +97,8 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  async updateCapacity(
-    id: string,
-    capacity: any,
-  ) {
-    return this.repository.updateCapacity(
-      id,
-      capacity,
-    );
+  async updateCapacity(id: string, capacity: Record<string, unknown>) {
+    return this.repository.updateCapacity(id, capacity);
   }
 
   /**
@@ -155,48 +107,36 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  async getStatistics(
-  id: string,
-): Promise<WarehouseStatistics> {
-  await this.repository.findById(id);
+  async getStatistics(id: string): Promise<WarehouseStatistics> {
+    await this.repository.findById(id);
 
-  return {
-    totalOrders: 0,
-    activeOrders: 0,
-    completedOrders: 0,
-    totalWorkers: 0,
-    totalScanners: 0,
-  };
-}
-
-  async getDashboard(
-    id: string,
-  ) {
-    return this.repository.getDashboard(
-      id,
-    );
+    return {
+      totalOrders: 0,
+      activeOrders: 0,
+      completedOrders: 0,
+      totalWorkers: 0,
+      totalScanners: 0,
+    };
   }
-    /**
+
+  async getDashboard(id: string) {
+    return this.repository.getDashboard(id);
+  }
+  /**
    * -------------------------------------------------------
    * BULK OPERATIONS
    * -------------------------------------------------------
    */
 
-  async bulkActivate(
-    ids: string[],
-  ) {
+  async bulkActivate(ids: string[]) {
     return this.repository.bulkActivate(ids);
   }
 
-  async bulkDeactivate(
-    ids: string[],
-  ) {
+  async bulkDeactivate(ids: string[]) {
     return this.repository.bulkDeactivate(ids);
   }
 
-  async bulkDelete(
-    ids: string[],
-  ) {
+  async bulkDelete(ids: string[]) {
     return this.repository.bulkDelete(ids);
   }
 
@@ -206,12 +146,8 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  async existsByCode(
-    warehouseCode: string,
-  ) {
-    return this.repository.existsByCode(
-      warehouseCode,
-    );
+  async existsByCode(warehouseCode: string) {
+    return this.repository.existsByCode(warehouseCode);
   }
 
   /**
@@ -234,23 +170,23 @@ export class WarehouseService
    * -------------------------------------------------------
    */
 
-  count(where?: any) {
+  count(where?: Prisma.WarehouseWhereInput) {
     return this.repository.count(where);
   }
 
-  findMany(args: any) {
+  findMany(args: Prisma.WarehouseFindManyArgs) {
     return this.repository.findMany(args);
   }
 
-  findFirst(args: any) {
+  findFirst(args: Prisma.WarehouseFindFirstArgs) {
     return this.repository.findFirst(args);
   }
 
-  createMany(args: any) {
+  createMany(args: Prisma.WarehouseCreateManyArgs) {
     return this.repository.createMany(args);
   }
 
-  upsert(args: any) {
+  upsert(args: Prisma.WarehouseUpsertArgs) {
     return this.repository.upsert(args);
   }
 
@@ -259,11 +195,9 @@ export class WarehouseService
   }
 
   transaction<T>(
-    callback: any,
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
-    return this.repository.transaction(
-      callback,
-    );
+    return this.repository.transaction(callback);
   }
 
   /**

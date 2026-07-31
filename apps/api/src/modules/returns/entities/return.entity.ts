@@ -57,15 +57,9 @@ export class ReturnEntity {
 
   replacementTrackingNumber: string | null;
 
-  metadata: Record<
-    string,
-    unknown
-  > | null;
+  metadata: Record<string, unknown> | null;
 
-  resolutionData: Record<
-    string,
-    unknown
-  > | null;
+  resolutionData: Record<string, unknown> | null;
 
   resolvedBy: string | null;
 

@@ -11,25 +11,16 @@ import { OrderQueryDto } from '../dto/order-query.dto';
 
 @Injectable()
 export class OrderService {
-  constructor(
-    private readonly orderRepository: OrderRepository,
-  ) {}
+  constructor(private readonly orderRepository: OrderRepository) {}
 
-  async create(
-    companyId: string,
-    createdById: string,
-    dto: CreateOrderDto,
-  ) {
-    const exists =
-      await this.orderRepository.exists(
-        companyId,
-        dto.orderNumber,
-      );
+  async create(companyId: string, createdById: string, dto: CreateOrderDto) {
+    const exists = await this.orderRepository.exists(
+      companyId,
+      dto.orderNumber,
+    );
 
     if (exists) {
-      throw new ConflictException(
-        'Order already exists.',
-      );
+      throw new ConflictException('Order already exists.');
     }
 
     return this.orderRepository.create({
@@ -49,21 +40,16 @@ export class OrderService {
         },
       },
       marketplace: dto.marketplace,
-      marketplaceOrderId:
-        dto.marketplaceOrderId,
-      marketplaceShipmentId:
-        dto.marketplaceShipmentId,
+      marketplaceOrderId: dto.marketplaceOrderId,
+      marketplaceShipmentId: dto.marketplaceShipmentId,
       orderNumber: dto.orderNumber,
       awbNumber: dto.awbNumber,
       customerName: dto.customerName,
       customerPhone: dto.customerPhone,
       status: dto.status,
-      verificationStatus:
-        dto.verificationStatus,
-      expectedItemCount:
-        dto.expectedItemCount,
-      verifiedItemCount:
-        dto.verifiedItemCount,
+      verificationStatus: dto.verificationStatus,
+      expectedItemCount: dto.expectedItemCount,
+      verifiedItemCount: dto.verifiedItemCount,
     });
   }
 
@@ -85,71 +71,54 @@ export class OrderService {
         status: query.status,
       }),
       ...(query.verificationStatus && {
-        verificationStatus:
-          query.verificationStatus,
+        verificationStatus: query.verificationStatus,
       }),
     };
 
-    const [items, total] =
-      await Promise.all([
-        this.orderRepository.findMany({
-          where,
-          skip,
-          take: limit,
-          orderBy: {
-            [query.sortBy]:
-              query.sortOrder,
-          },
-        }),
-        this.orderRepository.count(where),
-      ]);
+    const [items, total] = await Promise.all([
+      this.orderRepository.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          [query.sortBy]: query.sortOrder,
+        },
+      }),
+      this.orderRepository.count(where),
+    ]);
 
     return {
       items,
       total,
       page,
       limit,
-      totalPages: Math.ceil(
-        total / limit,
-      ),
+      totalPages: Math.ceil(total / limit),
     };
   }
 
   async findOne(id: string) {
-    const order =
-      await this.orderRepository.findById(id);
+    const order = await this.orderRepository.findById(id);
 
     if (!order) {
-      throw new NotFoundException(
-        'Order not found.',
-      );
+      throw new NotFoundException('Order not found.');
     }
 
     return order;
   }
 
-  async update(
-    id: string,
-    dto: UpdateOrderDto,
-  ) {
+  async update(id: string, dto: UpdateOrderDto) {
     await this.findOne(id);
 
-    return this.orderRepository.update(
-      id,
-      dto,
-    );
+    return this.orderRepository.update(id, dto);
   }
 
   async remove(id: string) {
     await this.findOne(id);
 
-    await this.orderRepository.softDelete(
-      id,
-    );
+    await this.orderRepository.softDelete(id);
 
     return {
-      message:
-        'Order deleted successfully.',
+      message: 'Order deleted successfully.',
     };
   }
 }

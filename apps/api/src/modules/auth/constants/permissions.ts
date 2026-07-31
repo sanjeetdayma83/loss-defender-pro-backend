@@ -80,5 +80,4 @@ export const PERMISSIONS = {
   SETTINGS_UPDATE: 'settings:update',
 } as const;
 
-export type Permission =
-  (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];

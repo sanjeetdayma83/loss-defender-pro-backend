@@ -9,11 +9,7 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { WarehouseService } from '../services/warehouse.service';
 import { CreateWarehouseDto } from '../dto/create-warehouse.dto';
@@ -31,40 +27,28 @@ import { PERMISSIONS } from '../../auth/constants/permissions';
 @ApiTags('Warehouses')
 @ApiBearerAuth()
 @Controller('warehouses')
-@UseGuards(
-  JwtAuthGuard,
-  RolesGuard,
-  PermissionsGuard,
-)
+@UseGuards(JwtAuthGuard, RolesGuard, PermissionsGuard)
 export class WarehouseController {
-  constructor(
-    private readonly warehouseService: WarehouseService,
-  ) {}
+  constructor(private readonly warehouseService: WarehouseService) {}
 
   @Post()
   @ApiOperation({ summary: 'Create warehouse' })
   @Permissions(PERMISSIONS.WAREHOUSE_CREATE)
   create(
-    @CurrentUser() user: any,
+    @CurrentUser() user: { companyId: string },
     @Body() dto: CreateWarehouseDto,
   ) {
-    return this.warehouseService.create(
-      user.companyId,
-      dto,
-    );
+    return this.warehouseService.create(user.companyId, dto);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all warehouses' })
   @Permissions(PERMISSIONS.WAREHOUSE_VIEW)
   findAll(
-    @CurrentUser() user: any,
+    @CurrentUser() user: { companyId: string },
     @Query() query: WarehouseQueryDto,
   ) {
-    return this.warehouseService.findAll(
-      user.companyId,
-      query,
-    );
+    return this.warehouseService.findAll(user.companyId, query);
   }
 
   @Get(':id')
@@ -77,10 +61,7 @@ export class WarehouseController {
   @Patch(':id')
   @ApiOperation({ summary: 'Update warehouse' })
   @Permissions(PERMISSIONS.WAREHOUSE_UPDATE)
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateWarehouseDto,
-  ) {
+  update(@Param('id') id: string, @Body() dto: UpdateWarehouseDto) {
     return this.warehouseService.update(id, dto);
   }
 

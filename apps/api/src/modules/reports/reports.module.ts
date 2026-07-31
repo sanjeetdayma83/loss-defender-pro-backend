@@ -7,14 +7,7 @@ import { ReportsService } from './services/reports.service';
 
 @Module({
   controllers: [ReportsController],
-  providers: [
-    PrismaService,
-    ReportsRepository,
-    ReportsService,
-  ],
-  exports: [
-    ReportsRepository,
-    ReportsService,
-  ],
+  providers: [PrismaService, ReportsRepository, ReportsService],
+  exports: [ReportsRepository, ReportsService],
 })
 export class ReportsModule {}

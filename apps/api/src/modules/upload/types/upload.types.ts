@@ -1,13 +1,8 @@
 import { UploadStatus } from '@prisma/client';
 
-export type StorageProvider =
-  | 'local'
-  | 's3'
-  | 'minio';
+export type StorageProvider = 'local' | 's3' | 'minio';
 
-export type UploadVisibility =
-  | 'private'
-  | 'public';
+export type UploadVisibility = 'private' | 'public';
 
 export type UploadCategory =
   | 'recording'

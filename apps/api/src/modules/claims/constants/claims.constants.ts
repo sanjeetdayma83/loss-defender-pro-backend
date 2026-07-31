@@ -48,8 +48,7 @@ export const ESCALATION_AFTER_HOURS = 48;
  */
 export const MAX_ATTACHMENTS = 100;
 
-export const MAX_ATTACHMENT_SIZE =
-  1024 * 1024 * 100;
+export const MAX_ATTACHMENT_SIZE = 1024 * 1024 * 100;
 
 /**
  * Evidence
@@ -76,12 +75,7 @@ export const AUTO_ANALYSIS_THRESHOLD = 0.85;
 /**
  * Claim Priorities
  */
-export const CLAIM_PRIORITIES = [
-  'LOW',
-  'MEDIUM',
-  'HIGH',
-  'CRITICAL',
-] as const;
+export const CLAIM_PRIORITIES = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
 
 /**
  * Claim Statuses

@@ -15,9 +15,7 @@ import { UpdateReturnDto } from '../dto/update-return.dto';
 
 @Injectable()
 export class ReturnRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(
     data: CreateReturnDto & { returnNumber: string },
@@ -41,7 +39,7 @@ export class ReturnRepository {
         customerReason: data.customerReason,
         internalRemarks: data.internalRemarks,
         metadata: data.metadata as Prisma.InputJsonValue,
-      } as Prisma.ReturnUncheckedCreateInput,
+      },
     });
   }
 
@@ -51,9 +49,7 @@ export class ReturnRepository {
     });
   }
 
-  async findByReturnNumber(
-    returnNumber: string,
-  ): Promise<Return | null> {
+  async findByReturnNumber(returnNumber: string): Promise<Return | null> {
     return this.prisma.return.findUnique({
       where: { returnNumber },
     });
@@ -63,20 +59,20 @@ export class ReturnRepository {
     return this.prisma.return.update({
       where: { id },
       data: {
-  warehouseId: data.warehouseId,
-  orderId: data.orderId,
-  recordingId: data.recordingId,
-  evidenceId: data.evidenceId,
-  aiJobId: data.aiJobId,
-  assignedTo: data.assignedTo,
-  status: data.status,
-  priority: data.priority,
-  title: data.title,
-  description: data.description,
-  customerReason: data.customerReason,
-  internalRemarks: data.internalRemarks,
-  metadata: data.metadata as Prisma.InputJsonValue,
-} as Prisma.ReturnUncheckedUpdateInput,
+        warehouseId: data.warehouseId,
+        orderId: data.orderId,
+        recordingId: data.recordingId,
+        evidenceId: data.evidenceId,
+        aiJobId: data.aiJobId,
+        assignedTo: data.assignedTo,
+        status: data.status,
+        priority: data.priority,
+        title: data.title,
+        description: data.description,
+        customerReason: data.customerReason,
+        internalRemarks: data.internalRemarks,
+        metadata: data.metadata as Prisma.InputJsonValue,
+      },
     });
   }
 
@@ -87,10 +83,7 @@ export class ReturnRepository {
     });
   }
 
-  async updatePriority(
-    id: string,
-    priority: ReturnPriority,
-  ): Promise<Return> {
+  async updatePriority(id: string, priority: ReturnPriority): Promise<Return> {
     return this.prisma.return.update({
       where: { id },
       data: { priority },
@@ -239,35 +232,28 @@ export class ReturnRepository {
   }
 
   async statistics() {
-    const [
-      total,
-      pending,
-      approved,
-      refunded,
-      replaced,
-      rejected,
-      closed,
-    ] = await Promise.all([
-      this.prisma.return.count({ where: { isDeleted: false } }),
-      this.prisma.return.count({
-        where: { status: ReturnStatus.UNDER_REVIEW, isDeleted: false },
-      }),
-      this.prisma.return.count({
-        where: { status: ReturnStatus.APPROVED, isDeleted: false },
-      }),
-      this.prisma.return.count({
-        where: { status: ReturnStatus.REFUNDED, isDeleted: false },
-      }),
-      this.prisma.return.count({
-        where: { status: ReturnStatus.REPLACED, isDeleted: false },
-      }),
-      this.prisma.return.count({
-        where: { status: ReturnStatus.REJECTED, isDeleted: false },
-      }),
-      this.prisma.return.count({
-        where: { status: ReturnStatus.CLOSED, isDeleted: false },
-      }),
-    ]);
+    const [total, pending, approved, refunded, replaced, rejected, closed] =
+      await Promise.all([
+        this.prisma.return.count({ where: { isDeleted: false } }),
+        this.prisma.return.count({
+          where: { status: ReturnStatus.UNDER_REVIEW, isDeleted: false },
+        }),
+        this.prisma.return.count({
+          where: { status: ReturnStatus.APPROVED, isDeleted: false },
+        }),
+        this.prisma.return.count({
+          where: { status: ReturnStatus.REFUNDED, isDeleted: false },
+        }),
+        this.prisma.return.count({
+          where: { status: ReturnStatus.REPLACED, isDeleted: false },
+        }),
+        this.prisma.return.count({
+          where: { status: ReturnStatus.REJECTED, isDeleted: false },
+        }),
+        this.prisma.return.count({
+          where: { status: ReturnStatus.CLOSED, isDeleted: false },
+        }),
+      ]);
 
     return {
       total,

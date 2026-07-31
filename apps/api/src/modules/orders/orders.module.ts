@@ -8,19 +8,8 @@ import { OrderService } from './services/order.service';
 import { OrderStateMachine } from './utils/order-state-machine';
 
 @Module({
-  controllers: [
-    OrdersController,
-  ],
-  providers: [
-    PrismaService,
-    OrderRepository,
-    OrderService,
-    OrderStateMachine,
-  ],
-  exports: [
-    OrderRepository,
-    OrderService,
-    OrderStateMachine,
-  ],
+  controllers: [OrdersController],
+  providers: [PrismaService, OrderRepository, OrderService, OrderStateMachine],
+  exports: [OrderRepository, OrderService, OrderStateMachine],
 })
 export class OrdersModule {}

@@ -9,11 +9,7 @@ import {
   Query,
 } from '@nestjs/common';
 
-import {
-  ApiOperation,
-  ApiResponse,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
 import { Order } from '@prisma/client';
 
@@ -26,9 +22,7 @@ import { OrderQueryDto } from '../dto/order-query.dto';
 @ApiTags('Orders')
 @Controller('orders')
 export class OrdersController {
-  constructor(
-    private readonly orderService: OrderService,
-  ) {}
+  constructor(private readonly orderService: OrderService) {}
 
   /**
    * -------------------------------------------------------
@@ -102,10 +96,7 @@ export class OrdersController {
     @Body()
     dto: UpdateOrderDto,
   ): Promise<Order> {
-    return this.orderService.update(
-      id,
-      dto,
-    );
+    return this.orderService.update(id, dto);
   }
 
   /**
@@ -124,7 +115,7 @@ export class OrdersController {
   ): Promise<Order> {
     return this.orderService.remove(id);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * ASSIGN WAREHOUSE
    * -------------------------------------------------------
@@ -235,7 +226,7 @@ export class OrdersController {
   ): Promise<Order> {
     return this.orderService.completeRecording(id);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * START VERIFICATION
    * -------------------------------------------------------
@@ -249,9 +240,7 @@ export class OrdersController {
     @Param('id')
     id: string,
   ): Promise<Order> {
-    return this.orderService.startVerification(
-      id,
-    );
+    return this.orderService.startVerification(id);
   }
 
   /**
@@ -268,9 +257,7 @@ export class OrdersController {
     @Param('id')
     id: string,
   ): Promise<Order> {
-    return this.orderService.completeVerification(
-      id,
-    );
+    return this.orderService.completeVerification(id);
   }
 
   /**
@@ -287,9 +274,7 @@ export class OrdersController {
     @Param('id')
     id: string,
   ): Promise<Order> {
-    return this.orderService.readyToShip(
-      id,
-    );
+    return this.orderService.readyToShip(id);
   }
 
   /**
@@ -311,10 +296,7 @@ export class OrdersController {
       trackingNumber?: string;
     },
   ): Promise<Order> {
-    return this.orderService.ship(
-      id,
-      body.trackingNumber,
-    );
+    return this.orderService.ship(id, body.trackingNumber);
   }
 
   /**
@@ -331,9 +313,7 @@ export class OrdersController {
     @Param('id')
     id: string,
   ): Promise<Order> {
-    return this.orderService.deliver(
-      id,
-    );
+    return this.orderService.deliver(id);
   }
 
   /**
@@ -355,12 +335,9 @@ export class OrdersController {
       reason?: string;
     },
   ): Promise<Order> {
-    return this.orderService.cancel(
-      id,
-      body.reason,
-    );
+    return this.orderService.cancel(id, body.reason);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * REOPEN ORDER
    * -------------------------------------------------------
@@ -413,10 +390,7 @@ export class OrdersController {
       operatorId: string;
     },
   ): Promise<Order> {
-    return this.orderService.assignOperator(
-      id,
-      body.operatorId,
-    );
+    return this.orderService.assignOperator(id, body.operatorId);
   }
 
   /**
@@ -465,10 +439,7 @@ export class OrdersController {
       recordingId: string;
     },
   ): Promise<Order> {
-    return this.orderService.attachRecording(
-      id,
-      body.recordingId,
-    );
+    return this.orderService.attachRecording(id, body.recordingId);
   }
 
   /**
@@ -490,10 +461,7 @@ export class OrdersController {
       evidenceId: string;
     },
   ): Promise<Order> {
-    return this.orderService.attachEvidence(
-      id,
-      body.evidenceId,
-    );
+    return this.orderService.attachEvidence(id, body.evidenceId);
   }
 
   /**
@@ -515,10 +483,7 @@ export class OrdersController {
       claimId: string;
     },
   ): Promise<Order> {
-    return this.orderService.attachClaim(
-      id,
-      body.claimId,
-    );
+    return this.orderService.attachClaim(id, body.claimId);
   }
 
   /**
@@ -540,12 +505,9 @@ export class OrdersController {
       returnId: string;
     },
   ): Promise<Order> {
-    return this.orderService.attachReturn(
-      id,
-      body.returnId,
-    );
+    return this.orderService.attachReturn(id, body.returnId);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * ORDER STATISTICS
    * -------------------------------------------------------
@@ -726,7 +688,7 @@ export class OrdersController {
   async claimedOrders(): Promise<Order[]> {
     return this.orderService.claimedOrders();
   }
-    /**
+  /**
    * -------------------------------------------------------
    * MARKETPLACE ANALYTICS
    * -------------------------------------------------------
@@ -852,9 +814,7 @@ export class OrdersController {
     @Body()
     query: OrderQueryDto,
   ) {
-    return this.orderService.exportOrders(
-      query,
-    );
+    return this.orderService.exportOrders(query);
   }
 
   /**
@@ -885,8 +845,6 @@ export class OrdersController {
     @Query('before')
     before: string,
   ) {
-    return this.orderService.cleanupSoftDeletedOrders(
-      new Date(before),
-    );
+    return this.orderService.cleanupSoftDeletedOrders(new Date(before));
   }
 }

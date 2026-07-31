@@ -20,21 +20,15 @@ import type {
 
 @Controller('notifications')
 export class NotificationsController {
-  constructor(
-    private readonly notificationService: NotificationService,
-  ) {}
+  constructor(private readonly notificationService: NotificationService) {}
 
   @Post()
-  create(
-    @Body() dto: CreateNotificationDto,
-  ) {
+  create(@Body() dto: CreateNotificationDto) {
     return this.notificationService.create(dto);
   }
 
   @Get()
-  findAll(
-    @Query() query: NotificationQueryDto,
-  ) {
+  findAll(@Query() query: NotificationQueryDto) {
     return this.notificationService.findAll(query);
   }
 
@@ -44,34 +38,22 @@ export class NotificationsController {
   }
 
   @Get(':id')
-  findById(
-    @Param('id') id: string,
-  ) {
+  findById(@Param('id') id: string) {
     return this.notificationService.findById(id);
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateNotificationDto,
-  ) {
-    return this.notificationService.update(
-      id,
-      dto,
-    );
+  update(@Param('id') id: string, @Body() dto: UpdateNotificationDto) {
+    return this.notificationService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(
-    @Param('id') id: string,
-  ) {
+  remove(@Param('id') id: string) {
     return this.notificationService.remove(id);
   }
 
   @Post(':id/send')
-  send(
-    @Param('id') id: string,
-  ) {
+  send(@Param('id') id: string) {
     return this.notificationService.send(id);
   }
 
@@ -80,9 +62,7 @@ export class NotificationsController {
     @Body()
     request: BulkNotificationRequest,
   ) {
-    return this.notificationService.sendBulk(
-      request,
-    );
+    return this.notificationService.sendBulk(request);
   }
 
   @Post(':id/schedule')
@@ -91,42 +71,27 @@ export class NotificationsController {
     @Body('scheduledAt')
     scheduledAt: Date,
   ) {
-    return this.notificationService.schedule(
-      id,
-      new Date(scheduledAt),
-    );
+    return this.notificationService.schedule(id, new Date(scheduledAt));
   }
 
   @Post(':id/retry')
-  retry(
-    @Param('id') id: string,
-  ) {
+  retry(@Param('id') id: string) {
     return this.notificationService.retry(id);
   }
 
   @Post(':id/cancel')
-  cancel(
-    @Param('id') id: string,
-  ) {
+  cancel(@Param('id') id: string) {
     return this.notificationService.cancel(id);
   }
 
   @Post(':id/read')
-  markAsRead(
-    @Param('id') id: string,
-  ) {
-    return this.notificationService.markAsRead(
-      id,
-    );
+  markAsRead(@Param('id') id: string) {
+    return this.notificationService.markAsRead(id);
   }
 
   @Post(':id/unread')
-  markAsUnread(
-    @Param('id') id: string,
-  ) {
-    return this.notificationService.markAsUnread(
-      id,
-    );
+  markAsUnread(@Param('id') id: string) {
+    return this.notificationService.markAsUnread(id);
   }
 
   @Post('users/:userId/read-all')
@@ -134,9 +99,7 @@ export class NotificationsController {
     @Param('userId')
     userId: string,
   ) {
-    return this.notificationService.markAllAsRead(
-      userId,
-    );
+    return this.notificationService.markAllAsRead(userId);
   }
 
   @Get('users/:userId/preferences')
@@ -144,9 +107,7 @@ export class NotificationsController {
     @Param('userId')
     userId: string,
   ) {
-    return this.notificationService.getUserPreferences(
-      userId,
-    );
+    return this.notificationService.getUserPreferences(userId);
   }
 
   @Patch('users/:userId/preferences')
@@ -156,9 +117,6 @@ export class NotificationsController {
     @Body()
     preferences: UserNotificationPreferences,
   ) {
-    return this.notificationService.updateUserPreferences(
-      userId,
-      preferences,
-    );
+    return this.notificationService.updateUserPreferences(userId, preferences);
   }
 }

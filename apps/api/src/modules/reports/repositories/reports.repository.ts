@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import { Prisma } from '@prisma/client';
 
@@ -12,9 +9,7 @@ import { ReportQueryDto } from '../dto/report-query.dto';
 
 @Injectable()
 export class ReportsRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   private buildDateWhere(query: ReportQueryDto) {
     const where: Prisma.OrderWhereInput = {};
@@ -158,8 +153,7 @@ export class ReportsRepository {
         ? 0
         : Number(
             (
-              ((dashboard.scans - dashboard.claims) /
-                dashboard.scans) *
+              ((dashboard.scans - dashboard.claims) / dashboard.scans) *
               100
             ).toFixed(2),
           );
@@ -167,16 +161,12 @@ export class ReportsRepository {
     const claimRate =
       dashboard.orders === 0
         ? 0
-        : Number(
-            ((dashboard.claims / dashboard.orders) * 100).toFixed(2),
-          );
+        : Number(((dashboard.claims / dashboard.orders) * 100).toFixed(2));
 
     const returnRate =
       dashboard.orders === 0
         ? 0
-        : Number(
-            ((dashboard.returns / dashboard.orders) * 100).toFixed(2),
-          );
+        : Number(((dashboard.returns / dashboard.orders) * 100).toFixed(2));
 
     return {
       scanAccuracy,
@@ -227,12 +217,12 @@ export class ReportsRepository {
     return true;
   }
 
-  async ping() {
-    return {
+  ping(): Promise<{ module: string; status: string; timestamp: Date }> {
+    return Promise.resolve({
       module: 'ReportsRepository',
       status: 'OK',
       timestamp: new Date(),
-    };
+    });
   }
 
   count(where?: Prisma.ReportWhereInput) {
@@ -255,9 +245,7 @@ export class ReportsRepository {
     return this.prisma.report.upsert(args);
   }
 
-  transaction<T>(
-    callback: (tx: Prisma.TransactionClient) => Promise<T>,
-  ) {
+  transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>) {
     return this.prisma.$transaction(callback);
   }
 }

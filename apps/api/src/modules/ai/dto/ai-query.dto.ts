@@ -54,11 +54,7 @@ export class AiQueryDto {
 
   @IsOptional()
   @IsString()
-  sortBy:
-    | 'createdAt'
-    | 'updatedAt'
-    | 'status'
-    | 'provider' = 'createdAt';
+  sortBy: 'createdAt' | 'updatedAt' | 'status' | 'provider' = 'createdAt';
 
   @IsOptional()
   @IsEnum(['asc', 'desc'])

@@ -11,8 +11,8 @@ import { setupSwagger } from './config/swagger.setup';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
-  bufferLogs: true,
-});
+    bufferLogs: true,
+  });
 
   const config = app.get(ConfigService);
 
@@ -23,9 +23,7 @@ async function bootstrap(): Promise<void> {
     credentials: true,
   });
 
-  app.setGlobalPrefix(
-    config.get<string>('app.apiPrefix') ?? 'api',
-  );
+  app.setGlobalPrefix(config.get<string>('app.apiPrefix') ?? 'api');
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -38,20 +36,15 @@ async function bootstrap(): Promise<void> {
     }),
   );
 
-  app.useGlobalInterceptors(
-    new ResponseInterceptor(),
-  );
+  app.useGlobalInterceptors(new ResponseInterceptor());
 
-  app.useGlobalFilters(
-    new GlobalExceptionFilter(),
-  );
+  app.useGlobalFilters(new GlobalExceptionFilter());
 
   setupSwagger(app, config);
 
   app.enableShutdownHooks();
 
-  const port =
-    config.get<number>('app.port') ?? 3000;
+  const port = config.get<number>('app.port') ?? 3000;
 
   await app.listen(port);
 

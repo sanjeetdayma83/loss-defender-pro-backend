@@ -17,21 +17,14 @@ export class UserService {
     private readonly passwordService: PasswordService,
   ) {}
 
-  async create(
-    dto: CreateUserDto,
-  ): Promise<UserResponse> {
-    const existing = await this.repository.findByEmail(
-      dto.email,
-    );
+  async create(dto: CreateUserDto): Promise<UserResponse> {
+    const existing = await this.repository.findByEmail(dto.email);
 
     if (existing) {
-      throw new ConflictException(
-        'Email already exists',
-      );
+      throw new ConflictException('Email already exists');
     }
 
-    const passwordHash =
-      await this.passwordService.hash(dto.password);
+    const passwordHash = await this.passwordService.hash(dto.password);
 
     const user = await this.repository.create({
       companyId: dto.companyId,
@@ -47,57 +40,37 @@ export class UserService {
   async findAll(): Promise<UserResponse[]> {
     const users = await this.repository.findAll();
 
-    return users.map(
-      (user) => new UserResponse(user),
-    );
+    return users.map((user) => new UserResponse(user));
   }
 
-  async findOne(
-    id: string,
-  ): Promise<UserResponse> {
-    const user =
-      await this.repository.findById(id);
+  async findOne(id: string): Promise<UserResponse> {
+    const user = await this.repository.findById(id);
 
     if (!user) {
-      throw new NotFoundException(
-        'User not found',
-      );
+      throw new NotFoundException('User not found');
     }
 
     return new UserResponse(user);
   }
 
-  async update(
-    id: string,
-    dto: UpdateUserDto,
-  ): Promise<UserResponse> {
+  async update(id: string, dto: UpdateUserDto): Promise<UserResponse> {
     const updateData: Record<string, unknown> = {
       ...dto,
     };
 
     if (dto.password) {
-      updateData.passwordHash =
-        await this.passwordService.hash(
-          dto.password,
-        );
+      updateData.passwordHash = await this.passwordService.hash(dto.password);
 
       delete updateData.password;
     }
 
-    const user =
-      await this.repository.update(
-        id,
-        updateData,
-      );
+    const user = await this.repository.update(id, updateData);
 
     return new UserResponse(user);
   }
 
-  async remove(
-    id: string,
-  ): Promise<UserResponse> {
-    const user =
-      await this.repository.softDelete(id);
+  async remove(id: string): Promise<UserResponse> {
+    const user = await this.repository.softDelete(id);
 
     return new UserResponse(user);
   }

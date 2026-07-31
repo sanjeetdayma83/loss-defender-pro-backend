@@ -12,10 +12,7 @@ import {
 export interface IWarehouseService {
   create(dto: CreateWarehouseDto): Promise<Warehouse>;
 
-  update(
-    id: string,
-    dto: UpdateWarehouseDto,
-  ): Promise<Warehouse>;
+  update(id: string, dto: UpdateWarehouseDto): Promise<Warehouse>;
 
   remove(id: string): Promise<Warehouse>;
 
@@ -23,21 +20,15 @@ export interface IWarehouseService {
 
   findById(id: string): Promise<Warehouse>;
 
-  findAll(
-    query: WarehouseQueryDto,
-  ): Promise<any>;
+  findAll(query: WarehouseQueryDto): Promise<any>;
 
   activate(id: string): Promise<Warehouse>;
 
   deactivate(id: string): Promise<Warehouse>;
 
-  getStatistics(
-    id: string,
-  ): Promise<WarehouseStatistics>;
+  getStatistics(id: string): Promise<WarehouseStatistics>;
 
-  getDashboard(
-    id: string,
-  ): Promise<WarehouseDashboard>;
+  getDashboard(id: string): Promise<WarehouseDashboard>;
 
   healthCheck(): Promise<boolean>;
 }

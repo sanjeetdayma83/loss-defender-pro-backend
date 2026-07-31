@@ -31,15 +31,9 @@ export class NotificationEntity {
 
   providerMessageId: string | null;
 
-  data: Record<
-    string,
-    unknown
-  > | null;
+  data: Record<string, unknown> | null;
 
-  metadata: Record<
-    string,
-    unknown
-  > | null;
+  metadata: Record<string, unknown> | null;
 
   retryCount: number;
 

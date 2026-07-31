@@ -1,14 +1,6 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
-import {
-  Prisma,
-  User,
-  UserRole,
-  UserStatus,
-} from '@prisma/client';
+import { Prisma, User, UserRole, UserStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
 
@@ -18,9 +10,7 @@ import { UserQueryDto } from '../dto/user-query.dto';
 
 @Injectable()
 export class UserRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   private buildWhere(query: UserQueryDto): Prisma.UserWhereInput {
     const where: Prisma.UserWhereInput = {
@@ -66,38 +56,35 @@ export class UserRepository {
   }
 
   async create(dto: CreateUserDto): Promise<User> {
-  const profile = dto.profile as {
-    firstName?: string;
-    lastName?: string;
-  };
+    const profile = dto.profile as {
+      firstName?: string;
+      lastName?: string;
+    };
 
-  const data: Prisma.UserUncheckedCreateInput = {
-    companyId: dto.companyId,
-    email: dto.email,
-    username: dto.username,
-    employeeCode: dto.employeeCode,
-    passwordHash: dto.password,
-    role: dto.role as UserRole,
+    const data: Prisma.UserUncheckedCreateInput = {
+      companyId: dto.companyId,
+      email: dto.email,
+      username: dto.username,
+      employeeCode: dto.employeeCode,
+      passwordHash: dto.password,
+      role: dto.role as UserRole,
 
-    firstName: profile.firstName ?? 'User',
-    lastName: profile.lastName ?? '',
+      firstName: profile.firstName ?? 'User',
+      lastName: profile.lastName ?? '',
 
-    profile: dto.profile as unknown as Prisma.InputJsonValue,
-    assignment:
-      dto.assignment as unknown as Prisma.InputJsonValue,
-    permissions:
-      dto.permissions as unknown as Prisma.InputJsonValue,
+      profile: dto.profile as unknown as Prisma.InputJsonValue,
+      assignment: dto.assignment as unknown as Prisma.InputJsonValue,
+      permissions: dto.permissions as unknown as Prisma.InputJsonValue,
 
-    emailVerified: dto.emailVerified ?? false,
-    phoneVerified: dto.phoneVerified ?? false,
-    twoFactorEnabled:
-      dto.twoFactorEnabled ?? false,
-  };
+      emailVerified: dto.emailVerified ?? false,
+      phoneVerified: dto.phoneVerified ?? false,
+      twoFactorEnabled: dto.twoFactorEnabled ?? false,
+    };
 
-  return this.prisma.user.create({
-    data,
-  });
-}
+    return this.prisma.user.create({
+      data,
+    });
+  }
 
   async findById(id: string): Promise<User> {
     const user = await this.prisma.user.findFirst({
@@ -169,9 +156,9 @@ export class UserRepository {
     }
 
     return this.prisma.user.update({
-  where: { id },
-  data: data as Prisma.UserUncheckedUpdateInput,
-});
+      where: { id },
+      data: data,
+    });
   }
 
   async softDelete(id: string): Promise<User> {
@@ -320,12 +307,12 @@ export class UserRepository {
     return true;
   }
 
-  async ping() {
-    return {
+  ping(): Promise<{ module: string; status: string; timestamp: Date }> {
+    return Promise.resolve({
       module: 'UserRepository',
       status: 'OK',
       timestamp: new Date(),
-    };
+    });
   }
 
   count(where?: Prisma.UserWhereInput) {
@@ -352,9 +339,7 @@ export class UserRepository {
     return this.prisma.user.delete({ where: { id } });
   }
 
-  transaction<T>(
-    callback: (tx: Prisma.TransactionClient) => Promise<T>,
-  ) {
+  transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>) {
     return this.prisma.$transaction(callback);
   }
 }

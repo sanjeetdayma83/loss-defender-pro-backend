@@ -1,17 +1,9 @@
 import { UserRole } from '@prisma/client';
 
-import {
-  Permission,
-  PERMISSIONS,
-} from './permissions';
+import { Permission, PERMISSIONS } from './permissions';
 
-export const ROLE_PERMISSIONS: Record<
-  UserRole,
-  Permission[]
-> = {
-  [UserRole.SUPER_ADMIN]: Object.values(
-    PERMISSIONS,
-  ),
+export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
+  [UserRole.SUPER_ADMIN]: Object.values(PERMISSIONS),
 
   [UserRole.COMPANY_ADMIN]: [
     PERMISSIONS.DASHBOARD_VIEW,

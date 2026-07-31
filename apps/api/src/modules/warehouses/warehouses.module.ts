@@ -8,14 +8,7 @@ import { WarehouseService } from './services/warehouse.service';
 
 @Module({
   controllers: [WarehousesController],
-  providers: [
-    PrismaService,
-    WarehouseRepository,
-    WarehouseService,
-  ],
-  exports: [
-    WarehouseRepository,
-    WarehouseService,
-  ],
+  providers: [PrismaService, WarehouseRepository, WarehouseService],
+  exports: [WarehouseRepository, WarehouseService],
 })
 export class WarehousesModule {}

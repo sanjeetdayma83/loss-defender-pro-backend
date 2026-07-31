@@ -1,15 +1,9 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { UploadStatus } from '@prisma/client';
 
 @Injectable()
 export class UploadStateMachine {
-  private readonly transitions: Record<
-    UploadStatus,
-    UploadStatus[]
-  > = {
+  private readonly transitions: Record<UploadStatus, UploadStatus[]> = {
     PENDING: [
       UploadStatus.UPLOADING,
       UploadStatus.CANCELLED,
@@ -22,39 +16,21 @@ export class UploadStateMachine {
       UploadStatus.CANCELLED,
     ],
 
-    UPLOADED: [
-      UploadStatus.PROCESSING,
-      UploadStatus.DELETED,
-    ],
+    UPLOADED: [UploadStatus.PROCESSING, UploadStatus.DELETED],
 
-    PROCESSING: [
-      UploadStatus.COMPLETED,
-      UploadStatus.FAILED,
-    ],
+    PROCESSING: [UploadStatus.COMPLETED, UploadStatus.FAILED],
 
-    COMPLETED: [
-      UploadStatus.DELETED,
-    ],
+    COMPLETED: [UploadStatus.DELETED],
 
-    FAILED: [
-      UploadStatus.UPLOADING,
-      UploadStatus.DELETED,
-    ],
+    FAILED: [UploadStatus.UPLOADING, UploadStatus.DELETED],
 
-    CANCELLED: [
-      UploadStatus.UPLOADING,
-      UploadStatus.DELETED,
-    ],
+    CANCELLED: [UploadStatus.UPLOADING, UploadStatus.DELETED],
 
     DELETED: [],
   };
 
-  validateTransition(
-    current: UploadStatus,
-    next: UploadStatus,
-  ): void {
-    const allowed =
-      this.transitions[current];
+  validateTransition(current: UploadStatus, next: UploadStatus): void {
+    const allowed = this.transitions[current];
 
     if (!allowed.includes(next)) {
       throw new BadRequestException(
@@ -63,18 +39,11 @@ export class UploadStateMachine {
     }
   }
 
-  canTransition(
-    current: UploadStatus,
-    next: UploadStatus,
-  ): boolean {
-    return this.transitions[
-      current
-    ].includes(next);
+  canTransition(current: UploadStatus, next: UploadStatus): boolean {
+    return this.transitions[current].includes(next);
   }
 
-  getAllowedTransitions(
-    current: UploadStatus,
-  ): UploadStatus[] {
+  getAllowedTransitions(current: UploadStatus): UploadStatus[] {
     return this.transitions[current];
   }
 }

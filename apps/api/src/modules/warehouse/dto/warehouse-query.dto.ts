@@ -1,9 +1,5 @@
-import {
-  ApiPropertyOptional,
-} from '@nestjs/swagger';
-import {
-  Transform,
-} from 'class-transformer';
+import { ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsBoolean,
   IsIn,
@@ -46,25 +42,11 @@ export class WarehouseQueryDto {
 
   @ApiPropertyOptional({
     default: 'createdAt',
-    enum: [
-      'code',
-      'name',
-      'createdAt',
-      'updatedAt',
-    ],
+    enum: ['code', 'name', 'createdAt', 'updatedAt'],
   })
   @IsOptional()
-  @IsIn([
-    'code',
-    'name',
-    'createdAt',
-    'updatedAt',
-  ])
-  sortBy:
-    | 'code'
-    | 'name'
-    | 'createdAt'
-    | 'updatedAt' = 'createdAt';
+  @IsIn(['code', 'name', 'createdAt', 'updatedAt'])
+  sortBy: 'code' | 'name' | 'createdAt' | 'updatedAt' = 'createdAt';
 
   @ApiPropertyOptional({
     default: 'desc',
@@ -72,8 +54,7 @@ export class WarehouseQueryDto {
   })
   @IsOptional()
   @IsIn(['asc', 'desc'])
-  sortOrder: 'asc' | 'desc' =
-    'desc';
+  sortOrder: 'asc' | 'desc' = 'desc';
 
   @ApiPropertyOptional()
   @Transform(({ value }) => {

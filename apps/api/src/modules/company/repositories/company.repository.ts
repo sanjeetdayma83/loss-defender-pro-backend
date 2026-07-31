@@ -6,9 +6,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class CompanyRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(data: Prisma.CompanyCreateInput) {
     return this.prisma.company.create({
@@ -43,10 +41,7 @@ export class CompanyRepository {
     });
   }
 
-  async update(
-    id: string,
-    data: Prisma.CompanyUpdateInput,
-  ) {
+  async update(id: string, data: Prisma.CompanyUpdateInput) {
     return this.prisma.company.update({
       where: {
         id,

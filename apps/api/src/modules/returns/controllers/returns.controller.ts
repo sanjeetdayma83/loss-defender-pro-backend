@@ -23,21 +23,15 @@ import { ReturnService } from '../services/return.service';
 
 @Controller('returns')
 export class ReturnsController {
-  constructor(
-    private readonly returnService: ReturnService,
-  ) {}
+  constructor(private readonly returnService: ReturnService) {}
 
   @Post()
-  create(
-    @Body() dto: CreateReturnDto,
-  ) {
+  create(@Body() dto: CreateReturnDto) {
     return this.returnService.create(dto);
   }
 
   @Get()
-  findAll(
-    @Query() query: ReturnQueryDto,
-  ) {
+  findAll(@Query() query: ReturnQueryDto) {
     return this.returnService.findAll(query);
   }
 
@@ -47,27 +41,17 @@ export class ReturnsController {
   }
 
   @Get(':id')
-  findById(
-    @Param('id') id: string,
-  ) {
+  findById(@Param('id') id: string) {
     return this.returnService.findById(id);
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateReturnDto,
-  ) {
-    return this.returnService.update(
-      id,
-      dto,
-    );
+  update(@Param('id') id: string, @Body() dto: UpdateReturnDto) {
+    return this.returnService.update(id, dto);
   }
 
   @Delete(':id')
-  remove(
-    @Param('id') id: string,
-  ) {
+  remove(@Param('id') id: string) {
     return this.returnService.remove(id);
   }
 
@@ -77,10 +61,7 @@ export class ReturnsController {
     @Body('status')
     status: ReturnStatus,
   ) {
-    return this.returnService.changeStatus(
-      id,
-      status,
-    );
+    return this.returnService.changeStatus(id, status);
   }
 
   @Patch(':id/priority')
@@ -89,10 +70,7 @@ export class ReturnsController {
     @Body('priority')
     priority: ReturnPriority,
   ) {
-    return this.returnService.changePriority(
-      id,
-      priority,
-    );
+    return this.returnService.changePriority(id, priority);
   }
 
   @Patch(':id/assign')
@@ -101,32 +79,21 @@ export class ReturnsController {
     @Body('assignedTo')
     assignedTo: string,
   ) {
-    return this.returnService.assign(
-      id,
-      assignedTo,
-    );
+    return this.returnService.assign(id, assignedTo);
   }
 
   @Post(':id/analyze')
-  analyze(
-    @Param('id') id: string,
-  ) {
+  analyze(@Param('id') id: string) {
     return this.returnService.analyze(id);
   }
 
   @Post(':id/validate-evidence')
-  validateEvidence(
-    @Param('id') id: string,
-  ) {
-    return this.returnService.validateEvidence(
-      id,
-    );
+  validateEvidence(@Param('id') id: string) {
+    return this.returnService.validateEvidence(id);
   }
 
   @Post(':id/approve')
-  approve(
-    @Param('id') id: string,
-  ) {
+  approve(@Param('id') id: string) {
     return this.returnService.approve(id);
   }
 
@@ -136,10 +103,7 @@ export class ReturnsController {
     @Body('reason')
     reason?: string,
   ) {
-    return this.returnService.reject(
-      id,
-      reason,
-    );
+    return this.returnService.reject(id, reason);
   }
 
   @Post(':id/refund')
@@ -150,7 +114,7 @@ export class ReturnsController {
     @Body('refundedBy')
     refundedBy: string,
     @Body('refundData')
-refundData?: Prisma.JsonValue,
+    refundData?: Prisma.JsonValue,
   ) {
     return this.returnService.refund(
       id,
@@ -168,7 +132,7 @@ refundData?: Prisma.JsonValue,
     @Body('processedBy')
     processedBy: string,
     @Body('replacementData')
-replacementData?: Prisma.JsonValue,
+    replacementData?: Prisma.JsonValue,
   ) {
     return this.returnService.replace(
       id,
@@ -179,39 +143,27 @@ replacementData?: Prisma.JsonValue,
   }
 
   @Post(':id/close')
-  close(
-    @Param('id') id: string,
-  ) {
+  close(@Param('id') id: string) {
     return this.returnService.close(id);
   }
 
   @Post(':id/reopen')
-  reopen(
-    @Param('id') id: string,
-  ) {
+  reopen(@Param('id') id: string) {
     return this.returnService.reopen(id);
   }
 
   @Post(':id/cancel')
-  cancel(
-    @Param('id') id: string,
-  ) {
+  cancel(@Param('id') id: string) {
     return this.returnService.cancel(id);
   }
 
   @Post(':id/escalate')
-  escalate(
-    @Param('id') id: string,
-  ) {
+  escalate(@Param('id') id: string) {
     return this.returnService.escalate(id);
   }
 
   @Post(':id/generate-resolution')
-  generateResolution(
-    @Param('id') id: string,
-  ) {
-    return this.returnService.generateResolution(
-      id,
-    );
+  generateResolution(@Param('id') id: string) {
+    return this.returnService.generateResolution(id);
   }
 }

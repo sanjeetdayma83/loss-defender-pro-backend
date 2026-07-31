@@ -3,6 +3,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
+import { Prisma } from '@prisma/client';
+
 import { WarehouseRepository } from '../repositories/warehouse.repository';
 import { CreateWarehouseDto } from '../dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from '../dto/update-warehouse.dto';
@@ -10,20 +13,13 @@ import { WarehouseQueryDto } from '../dto/warehouse-query.dto';
 
 @Injectable()
 export class WarehouseService {
-  constructor(
-    private readonly warehouseRepository: WarehouseRepository,
-  ) {}
+  constructor(private readonly warehouseRepository: WarehouseRepository) {}
 
   async create(companyId: string, dto: CreateWarehouseDto) {
-    const exists = await this.warehouseRepository.exists(
-      companyId,
-      dto.code,
-    );
+    const exists = await this.warehouseRepository.exists(companyId, dto.code);
 
     if (exists) {
-      throw new BadRequestException(
-        'Warehouse code already exists.',
-      );
+      throw new BadRequestException('Warehouse code already exists.');
     }
 
     return this.warehouseRepository.create({
@@ -46,7 +42,7 @@ export class WarehouseService {
       isActive,
     } = query;
 
-    const where: any = {
+    const where: Prisma.WarehouseWhereInput = {
       companyId,
       isDeleted: false,
     };
@@ -96,22 +92,16 @@ export class WarehouseService {
   }
 
   async findOne(id: string) {
-    const warehouse =
-      await this.warehouseRepository.findById(id);
+    const warehouse = await this.warehouseRepository.findById(id);
 
     if (!warehouse) {
-      throw new NotFoundException(
-        'Warehouse not found.',
-      );
+      throw new NotFoundException('Warehouse not found.');
     }
 
     return warehouse;
   }
 
-  async update(
-    id: string,
-    dto: UpdateWarehouseDto,
-  ) {
+  async update(id: string, dto: UpdateWarehouseDto) {
     await this.findOne(id);
 
     return this.warehouseRepository.update(id, dto);

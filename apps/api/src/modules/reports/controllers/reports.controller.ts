@@ -16,9 +16,7 @@ import { ReportQueryDto } from '../dto/report-query.dto';
 
 @Controller('reports')
 export class ReportsController {
-  constructor(
-    private readonly service: ReportsService,
-  ) {}
+  constructor(private readonly service: ReportsService) {}
 
   @Get('dashboard')
   dashboard(@Query() query: ReportQueryDto) {
@@ -96,10 +94,7 @@ export class ReportsController {
   }
 
   @Get()
-  findAll(
-    @Query('page') page = 1,
-    @Query('limit') limit = 20,
-  ) {
+  findAll(@Query('page') page = 1, @Query('limit') limit = 20) {
     return this.service.findAll(Number(page), Number(limit));
   }
 
@@ -109,10 +104,7 @@ export class ReportsController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateReportDto,
-  ) {
+  update(@Param('id') id: string, @Body() dto: UpdateReportDto) {
     return this.service.update(id, dto);
   }
 

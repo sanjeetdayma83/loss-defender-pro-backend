@@ -16,119 +16,82 @@ export interface IClaimService {
   /**
    * Create a new claim.
    */
-  create(
-    data: unknown,
-  ): Promise<Claim>;
+  create(data: unknown): Promise<Claim>;
 
   /**
    * Update an existing claim.
    */
-  update(
-    id: string,
-    data: unknown,
-  ): Promise<Claim>;
+  update(id: string, data: unknown): Promise<Claim>;
 
   /**
    * Delete (soft delete) a claim.
    */
-  remove(
-    id: string,
-  ): Promise<void>;
+  remove(id: string): Promise<void>;
 
   /**
    * Find a claim by id.
    */
-  findById(
-    id: string,
-  ): Promise<Claim | null>;
+  findById(id: string): Promise<Claim | null>;
 
   /**
    * Search claims.
    */
-  findAll(
-    filters?: unknown,
-  ): Promise<Claim[]>;
+  findAll(filters?: unknown): Promise<Claim[]>;
 
   /**
    * Change claim status.
    */
-  changeStatus(
-    id: string,
-    status: ClaimStatus,
-  ): Promise<Claim>;
+  changeStatus(id: string, status: ClaimStatus): Promise<Claim>;
 
   /**
    * Change claim priority.
    */
-  changePriority(
-    id: string,
-    priority: ClaimPriority,
-  ): Promise<Claim>;
+  changePriority(id: string, priority: ClaimPriority): Promise<Claim>;
 
   /**
    * Run AI analysis.
    */
-  analyze(
-    id: string,
-  ): Promise<ClaimAIAnalysis>;
+  analyze(id: string): Promise<ClaimAIAnalysis>;
 
   /**
    * Validate attached evidence.
    */
-  validateEvidence(
-    id: string,
-  ): Promise<ClaimEvidenceSummary>;
+  validateEvidence(id: string): Promise<ClaimEvidenceSummary>;
 
   /**
    * Resolve claim.
    */
-  resolve(
-    id: string,
-    resolution: ClaimResolution,
-  ): Promise<Claim>;
+  resolve(id: string, resolution: ClaimResolution): Promise<Claim>;
 
   /**
    * Close claim.
    */
-  close(
-    id: string,
-  ): Promise<Claim>;
+  close(id: string): Promise<Claim>;
 
   /**
    * Re-open claim.
    */
-  reopen(
-    id: string,
-  ): Promise<Claim>;
+  reopen(id: string): Promise<Claim>;
 
   /**
    * Cancel claim.
    */
-  cancel(
-    id: string,
-  ): Promise<Claim>;
+  cancel(id: string): Promise<Claim>;
 
   /**
    * Escalate claim.
    */
-  escalate(
-    id: string,
-  ): Promise<Claim>;
+  escalate(id: string): Promise<Claim>;
 
   /**
    * Assign claim.
    */
-  assign(
-    id: string,
-    userId: string,
-  ): Promise<Claim>;
+  assign(id: string, userId: string): Promise<Claim>;
 
   /**
    * Generate final resolution.
    */
-  generateResolution(
-    id: string,
-  ): Promise<ClaimResolutionType>;
+  generateResolution(id: string): Promise<ClaimResolutionType>;
 
   /**
    * Get dashboard statistics.

@@ -11,63 +11,35 @@ import {
 } from '../types/notification.types';
 
 export interface INotificationService {
-  create(
-    dto: CreateNotificationDto,
-  ): Promise<Notification>;
+  create(dto: CreateNotificationDto): Promise<Notification>;
 
-  update(
-    id: string,
-    dto: UpdateNotificationDto,
-  ): Promise<Notification>;
+  update(id: string, dto: UpdateNotificationDto): Promise<Notification>;
 
-  remove(
-    id: string,
-  ): Promise<Notification>;
+  remove(id: string): Promise<Notification>;
 
-  findById(
-    id: string,
-  ): Promise<Notification>;
+  findById(id: string): Promise<Notification>;
 
-  findAll(
-    query: NotificationQueryDto,
-  ): Promise<unknown>;
+  findAll(query: NotificationQueryDto): Promise<unknown>;
 
-  send(
-    id: string,
-  ): Promise<NotificationDeliveryResult>;
+  send(id: string): Promise<NotificationDeliveryResult>;
 
   sendBulk(
     request: BulkNotificationRequest,
   ): Promise<NotificationDeliveryResult[]>;
 
-  schedule(
-    id: string,
-    scheduledAt: Date,
-  ): Promise<Notification>;
+  schedule(id: string, scheduledAt: Date): Promise<Notification>;
 
-  retry(
-    id: string,
-  ): Promise<NotificationDeliveryResult>;
+  retry(id: string): Promise<NotificationDeliveryResult>;
 
-  cancel(
-    id: string,
-  ): Promise<Notification>;
+  cancel(id: string): Promise<Notification>;
 
-  markAsRead(
-    id: string,
-  ): Promise<Notification>;
+  markAsRead(id: string): Promise<Notification>;
 
-  markAsUnread(
-    id: string,
-  ): Promise<Notification>;
+  markAsUnread(id: string): Promise<Notification>;
 
-  markAllAsRead(
-    userId: string,
-  ): Promise<number>;
+  markAllAsRead(userId: string): Promise<number>;
 
-  getUserPreferences(
-    userId: string,
-  ): Promise<UserNotificationPreferences>;
+  getUserPreferences(userId: string): Promise<UserNotificationPreferences>;
 
   updateUserPreferences(
     userId: string,

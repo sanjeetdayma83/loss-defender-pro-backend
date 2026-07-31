@@ -1,6 +1,4 @@
-import {
-  Type,
-} from 'class-transformer';
+import { Type } from 'class-transformer';
 
 import {
   IsEnum,
@@ -12,11 +10,7 @@ import {
   Min,
 } from 'class-validator';
 
-import {
-  UploadCategory,
-  UploadStatus,
-  UploadVisibility,
-} from '@prisma/client';
+import { UploadCategory, UploadStatus, UploadVisibility } from '@prisma/client';
 
 export class UploadQueryDto {
   @IsOptional()

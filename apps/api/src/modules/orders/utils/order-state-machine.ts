@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { OrderStatus } from '@prisma/client';
 
@@ -12,36 +9,17 @@ export class OrderStateMachine {
    * Every OrderStatus enum value must appear as a key.
    */
   private readonly transitions: Record<OrderStatus, OrderStatus[]> = {
-    CREATED: [
-      OrderStatus.PENDING,
-      OrderStatus.ASSIGNED,
-      OrderStatus.CANCELLED,
-    ],
+    CREATED: [OrderStatus.PENDING, OrderStatus.ASSIGNED, OrderStatus.CANCELLED],
 
-    PENDING: [
-      OrderStatus.ASSIGNED,
-      OrderStatus.CANCELLED,
-    ],
+    PENDING: [OrderStatus.ASSIGNED, OrderStatus.CANCELLED],
 
-    ASSIGNED: [
-      OrderStatus.PICKING,
-      OrderStatus.CANCELLED,
-    ],
+    ASSIGNED: [OrderStatus.PICKING, OrderStatus.CANCELLED],
 
-    PICKING: [
-      OrderStatus.PACKING,
-      OrderStatus.CANCELLED,
-    ],
+    PICKING: [OrderStatus.PACKING, OrderStatus.CANCELLED],
 
-    PACKING: [
-      OrderStatus.RECORDING,
-      OrderStatus.CANCELLED,
-    ],
+    PACKING: [OrderStatus.RECORDING, OrderStatus.CANCELLED],
 
-    RECORDING: [
-      OrderStatus.VERIFYING,
-      OrderStatus.CANCELLED,
-    ],
+    RECORDING: [OrderStatus.VERIFYING, OrderStatus.CANCELLED],
 
     VERIFYING: [
       OrderStatus.VERIFIED,
@@ -75,10 +53,7 @@ export class OrderStateMachine {
       OrderStatus.CLAIMED,
     ],
 
-    DELIVERED: [
-      OrderStatus.RETURNED,
-      OrderStatus.CLAIMED,
-    ],
+    DELIVERED: [OrderStatus.RETURNED, OrderStatus.CLAIMED],
 
     RETURNED: [],
 

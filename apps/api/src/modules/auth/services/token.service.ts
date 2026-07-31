@@ -17,69 +17,37 @@ export class TokenService {
     private readonly config: ConfigService,
   ) {}
 
-  async generateAccessToken(
-    payload: JwtPayload,
-  ): Promise<string> {
+  async generateAccessToken(payload: JwtPayload): Promise<string> {
     return this.jwt.signAsync(payload, {
-      secret: this.config.getOrThrow<string>(
-        'auth.jwtAccessSecret',
-      ),
-      expiresIn: this.config.getOrThrow<StringValue>(
-        'auth.jwtAccessExpires',
-      ),
+      secret: this.config.getOrThrow<string>('auth.jwtAccessSecret'),
+      expiresIn: this.config.getOrThrow<StringValue>('auth.jwtAccessExpires'),
     });
   }
 
-  async generateRefreshToken(
-    payload: JwtPayload,
-  ): Promise<string> {
+  async generateRefreshToken(payload: JwtPayload): Promise<string> {
     return this.jwt.signAsync(payload, {
-      secret: this.config.getOrThrow<string>(
-        'auth.jwtRefreshSecret',
-      ),
-      expiresIn: this.config.getOrThrow<StringValue>(
-        'auth.jwtRefreshExpires',
-      ),
+      secret: this.config.getOrThrow<string>('auth.jwtRefreshSecret'),
+      expiresIn: this.config.getOrThrow<StringValue>('auth.jwtRefreshExpires'),
     });
   }
 
-  async verifyAccessToken(
-    token: string,
-  ): Promise<JwtPayload> {
+  async verifyAccessToken(token: string): Promise<JwtPayload> {
     try {
-      return await this.jwt.verifyAsync<JwtPayload>(
-        token,
-        {
-          secret:
-            this.config.getOrThrow<string>(
-              'auth.jwtAccessSecret',
-            ),
-        },
-      );
+      return await this.jwt.verifyAsync<JwtPayload>(token, {
+        secret: this.config.getOrThrow<string>('auth.jwtAccessSecret'),
+      });
     } catch {
-      throw new UnauthorizedException(
-        'Invalid access token',
-      );
+      throw new UnauthorizedException('Invalid access token');
     }
   }
 
-  async verifyRefreshToken(
-    token: string,
-  ): Promise<JwtPayload> {
+  async verifyRefreshToken(token: string): Promise<JwtPayload> {
     try {
-      return await this.jwt.verifyAsync<JwtPayload>(
-        token,
-        {
-          secret:
-            this.config.getOrThrow<string>(
-              'auth.jwtRefreshSecret',
-            ),
-        },
-      );
+      return await this.jwt.verifyAsync<JwtPayload>(token, {
+        secret: this.config.getOrThrow<string>('auth.jwtRefreshSecret'),
+      });
     } catch {
-      throw new UnauthorizedException(
-        'Invalid refresh token',
-      );
+      throw new UnauthorizedException('Invalid refresh token');
     }
   }
 }

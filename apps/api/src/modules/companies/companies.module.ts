@@ -9,19 +9,10 @@ import { CompanyService } from './services/company.service';
 import { CompanyRepository } from './repositories/company.repository';
 
 @Module({
-  controllers: [
-    CompaniesController,
-  ],
+  controllers: [CompaniesController],
 
-  providers: [
-    PrismaService,
-    CompanyRepository,
-    CompanyService,
-  ],
+  providers: [PrismaService, CompanyRepository, CompanyService],
 
-  exports: [
-    CompanyRepository,
-    CompanyService,
-  ],
+  exports: [CompanyRepository, CompanyService],
 })
 export class CompaniesModule {}

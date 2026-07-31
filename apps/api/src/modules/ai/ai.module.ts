@@ -12,18 +12,13 @@ import { AiStateMachine } from './utils/ai-state-machine';
 
 import { ProviderFactory } from './providers/provider.factory';
 
-import { AiProvider } from './providers/ai.provider';
 import { GeminiProvider } from './providers/gemini.provider';
 import { OpenAIProvider } from './providers/openai.provider';
 import { LocalProvider } from './providers/local.provider';
 
 @Module({
-  imports: [
-    ConfigModule,
-  ],
-  controllers: [
-    AiController,
-  ],
+  imports: [ConfigModule],
+  controllers: [AiController],
   providers: [
     PrismaService,
 
@@ -38,10 +33,6 @@ import { LocalProvider } from './providers/local.provider';
     OpenAIProvider,
     LocalProvider,
   ],
-  exports: [
-    AiService,
-    AiRepository,
-    ProviderFactory,
-  ],
+  exports: [AiService, AiRepository, ProviderFactory],
 })
 export class AiModule {}

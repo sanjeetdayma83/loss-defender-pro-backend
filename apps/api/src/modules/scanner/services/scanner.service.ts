@@ -1,7 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 
 import { Scanner } from '@prisma/client';
 
@@ -14,12 +11,8 @@ import { ScannerQueryDto } from '../dto/scanner-query.dto';
 import { IScannerService } from '../interfaces/scanner.interface';
 
 @Injectable()
-export class ScannerService
-  implements IScannerService
-{
-  constructor(
-    private readonly repository: ScannerRepository,
-  ) {}
+export class ScannerService implements IScannerService {
+  constructor(private readonly repository: ScannerRepository) {}
 
   /**
    * -------------------------------------------------------
@@ -27,19 +20,14 @@ export class ScannerService
    * -------------------------------------------------------
    */
 
-  async create(
-    dto: CreateScannerDto,
-  ): Promise<Scanner> {
-    const duplicate =
-      await this.repository.isDuplicateScan(
-        dto.barcode,
-        dto.orderId,
-      );
+  async create(dto: CreateScannerDto): Promise<Scanner> {
+    const duplicate = await this.repository.isDuplicateScan(
+      dto.barcode,
+      dto.orderId,
+    );
 
     if (duplicate) {
-      throw new ConflictException(
-        'Duplicate barcode scan detected.',
-      );
+      throw new ConflictException('Duplicate barcode scan detected.');
     }
 
     return this.repository.create(dto);
@@ -51,48 +39,28 @@ export class ScannerService
    * -------------------------------------------------------
    */
 
-  async findAll(
-    query: ScannerQueryDto,
-  ) {
+  async findAll(query: ScannerQueryDto) {
     return this.repository.findAll(query);
   }
 
-  async findById(
-    id: string,
-  ): Promise<Scanner> {
+  async findById(id: string): Promise<Scanner> {
     return this.repository.findById(id);
   }
 
-  async findByBarcode(
-    barcode: string,
-  ) {
-    return this.repository.findByBarcode(
-      barcode,
-    );
+  async findByBarcode(barcode: string) {
+    return this.repository.findByBarcode(barcode);
   }
 
-  async findByOrder(
-    orderId: string,
-  ) {
-    return this.repository.findByOrder(
-      orderId,
-    );
+  async findByOrder(orderId: string) {
+    return this.repository.findByOrder(orderId);
   }
 
-  async findByWarehouse(
-    warehouseId: string,
-  ) {
-    return this.repository.findByWarehouse(
-      warehouseId,
-    );
+  async findByWarehouse(warehouseId: string) {
+    return this.repository.findByWarehouse(warehouseId);
   }
 
-  async findBySession(
-    sessionId: string,
-  ) {
-    return this.repository.findBySession(
-      sessionId,
-    );
+  async findBySession(sessionId: string) {
+    return this.repository.findBySession(sessionId);
   }
 
   /**
@@ -101,14 +69,8 @@ export class ScannerService
    * -------------------------------------------------------
    */
 
-  async update(
-    id: string,
-    dto: UpdateScannerDto,
-  ): Promise<Scanner> {
-    return this.repository.update(
-      id,
-      dto,
-    );
+  async update(id: string, dto: UpdateScannerDto): Promise<Scanner> {
+    return this.repository.update(id, dto);
   }
 
   /**
@@ -117,15 +79,11 @@ export class ScannerService
    * -------------------------------------------------------
    */
 
-  async remove(
-    id: string,
-  ): Promise<Scanner> {
+  async remove(id: string): Promise<Scanner> {
     return this.repository.softDelete(id);
   }
 
-  async restore(
-    id: string,
-  ): Promise<Scanner> {
+  async restore(id: string): Promise<Scanner> {
     return this.repository.restore(id);
   }
 
@@ -135,24 +93,12 @@ export class ScannerService
    * -------------------------------------------------------
    */
 
-  async verifyScan(
-    id: string,
-    verifiedBy: string,
-  ) {
-    return this.repository.verifyScan(
-      id,
-      verifiedBy,
-    );
+  async verifyScan(id: string, verifiedBy: string) {
+    return this.repository.verifyScan(id, verifiedBy);
   }
 
-  async markFailed(
-    id: string,
-    remarks?: string,
-  ) {
-    return this.repository.markFailed(
-      id,
-      remarks,
-    );
+  async markFailed(id: string, remarks?: string) {
+    return this.repository.markFailed(id, remarks);
   }
 
   /**
@@ -161,22 +107,12 @@ export class ScannerService
    * -------------------------------------------------------
    */
 
-  async isDuplicateScan(
-    barcode: string,
-    orderId: string,
-  ) {
-    return this.repository.isDuplicateScan(
-      barcode,
-      orderId,
-    );
+  async isDuplicateScan(barcode: string, orderId: string) {
+    return this.repository.isDuplicateScan(barcode, orderId);
   }
 
-  async barcodeExists(
-    barcode: string,
-  ) {
-    return this.repository.barcodeExists(
-      barcode,
-    );
+  async barcodeExists(barcode: string) {
+    return this.repository.barcodeExists(barcode);
   }
 
   /**
@@ -189,35 +125,21 @@ export class ScannerService
     return this.repository.getStatistics();
   }
 
-  async getSessionStatistics(
-    sessionId: string,
-  ) {
-    return this.repository.getSessionStatistics(
-      sessionId,
-    );
+  async getSessionStatistics(sessionId: string) {
+    return this.repository.getSessionStatistics(sessionId);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * BULK OPERATIONS
    * -------------------------------------------------------
    */
 
-  async bulkVerify(
-    ids: string[],
-    verifiedBy: string,
-  ) {
-    return this.repository.bulkVerify(
-      ids,
-      verifiedBy,
-    );
+  async bulkVerify(ids: string[], verifiedBy: string) {
+    return this.repository.bulkVerify(ids, verifiedBy);
   }
 
-  async bulkDelete(
-    ids: string[],
-  ) {
-    return this.repository.bulkDelete(
-      ids,
-    );
+  async bulkDelete(ids: string[]) {
+    return this.repository.bulkDelete(ids);
   }
 
   /**
@@ -230,7 +152,7 @@ export class ScannerService
     return this.repository.healthCheck();
   }
 
-  async ping() {
+  ping() {
     return this.repository.ping();
   }
 
@@ -244,8 +166,8 @@ export class ScannerService
     return this.repository.count();
   }
 
-  async getRepository() {
-    return this.repository;
+  getRepository(): Promise<ScannerRepository> {
+    return Promise.resolve(this.repository);
   }
 
   async metadata() {

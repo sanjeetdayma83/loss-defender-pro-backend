@@ -1,13 +1,6 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
-import {
-  Prisma,
-  Scanner,
-  ScanStatus,
-} from '@prisma/client';
+import { Prisma, Scanner, ScanStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
 
@@ -17,9 +10,7 @@ import { ScannerQueryDto } from '../dto/scanner-query.dto';
 
 @Injectable()
 export class ScannerRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * -------------------------------------------------------
@@ -27,9 +18,7 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  private buildWhere(
-    query: ScannerQueryDto,
-  ): Prisma.ScannerWhereInput {
+  private buildWhere(query: ScannerQueryDto): Prisma.ScannerWhereInput {
     const where: Prisma.ScannerWhereInput = {
       isDeleted: false,
     };
@@ -47,8 +36,8 @@ export class ScannerRepository {
     }
 
     if (query.status) {
-  where.status = query.status as ScanStatus;
-}
+      where.status = query.status as ScanStatus;
+    }
 
     if (query.search) {
       where.OR = [
@@ -82,12 +71,10 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async create(
-    dto: CreateScannerDto,
-  ): Promise<Scanner> {
+  async create(dto: CreateScannerDto): Promise<Scanner> {
     return this.prisma.scanner.create({
-  data: dto as unknown as Prisma.ScannerCreateInput,
-});
+      data: dto as unknown as Prisma.ScannerCreateInput,
+    });
   }
 
   /**
@@ -96,21 +83,16 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async findById(
-    id: string,
-  ): Promise<Scanner> {
-    const scanner =
-      await this.prisma.scanner.findFirst({
-        where: {
-          id,
-          isDeleted: false,
-        },
-      });
+  async findById(id: string): Promise<Scanner> {
+    const scanner = await this.prisma.scanner.findFirst({
+      where: {
+        id,
+        isDeleted: false,
+      },
+    });
 
     if (!scanner) {
-      throw new NotFoundException(
-        `Scanner record ${id} not found.`,
-      );
+      throw new NotFoundException(`Scanner record ${id} not found.`);
     }
 
     return scanner;
@@ -122,41 +104,32 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async findAll(
-    query: ScannerQueryDto,
-  ) {
-    const where =
-      this.buildWhere(query);
+  async findAll(query: ScannerQueryDto) {
+    const where = this.buildWhere(query);
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
 
-    const [data, total] =
-      await this.prisma.$transaction([
-        this.prisma.scanner.findMany({
-          where,
-          skip: (page - 1) * limit,
-          take: limit,
-          orderBy: {
-            [query.sortBy ??
-              'createdAt']:
-              query.sortOrder ??
-              'desc',
-          },
-        }),
-        this.prisma.scanner.count({
-          where,
-        }),
-      ]);
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.scanner.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: {
+          [query.sortBy ?? 'createdAt']: query.sortOrder ?? 'desc',
+        },
+      }),
+      this.prisma.scanner.count({
+        where,
+      }),
+    ]);
 
     return {
       data,
       total,
       page,
       limit,
-      totalPages: Math.ceil(
-        total / limit,
-      ),
+      totalPages: Math.ceil(total / limit),
     };
   }
 
@@ -166,16 +139,12 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async update(
-    id: string,
-    dto: UpdateScannerDto,
-  ): Promise<Scanner> {
+  async update(id: string, dto: UpdateScannerDto): Promise<Scanner> {
     await this.findById(id);
 
     return this.prisma.scanner.update({
       where: { id },
-      data:
-        dto as Prisma.ScannerUpdateInput,
+      data: dto as Prisma.ScannerUpdateInput,
     });
   }
 
@@ -185,9 +154,7 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async softDelete(
-    id: string,
-  ): Promise<Scanner> {
+  async softDelete(id: string): Promise<Scanner> {
     await this.findById(id);
 
     return this.prisma.scanner.update({
@@ -205,9 +172,7 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async restore(
-    id: string,
-  ): Promise<Scanner> {
+  async restore(id: string): Promise<Scanner> {
     return this.prisma.scanner.update({
       where: { id },
       data: {
@@ -223,9 +188,7 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async findByBarcode(
-    barcode: string,
-  ): Promise<Scanner | null> {
+  async findByBarcode(barcode: string): Promise<Scanner | null> {
     return this.prisma.scanner.findFirst({
       where: {
         barcode,
@@ -234,17 +197,15 @@ export class ScannerRepository {
     });
   }
 
-  async barcodeExists(
-    barcode: string,
-  ): Promise<boolean> {
+  async barcodeExists(barcode: string): Promise<boolean> {
     return (
-      await this.prisma.scanner.count({
+      (await this.prisma.scanner.count({
         where: {
           barcode,
           isDeleted: false,
         },
-      })
-    ) > 0;
+      })) > 0
+    );
   }
 
   /**
@@ -253,19 +214,16 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async isDuplicateScan(
-    barcode: string,
-    orderId: string,
-  ): Promise<boolean> {
+  async isDuplicateScan(barcode: string, orderId: string): Promise<boolean> {
     return (
-      await this.prisma.scanner.count({
+      (await this.prisma.scanner.count({
         where: {
           barcode,
           orderId,
           isDeleted: false,
         },
-      })
-    ) > 0;
+      })) > 0
+    );
   }
 
   /**
@@ -274,9 +232,7 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async findBySession(
-    sessionId: string,
-  ): Promise<Scanner[]> {
+  async findBySession(sessionId: string): Promise<Scanner[]> {
     return this.prisma.scanner.findMany({
       where: {
         sessionId,
@@ -288,9 +244,7 @@ export class ScannerRepository {
     });
   }
 
-  async findByOrder(
-    orderId: string,
-  ): Promise<Scanner[]> {
+  async findByOrder(orderId: string): Promise<Scanner[]> {
     return this.prisma.scanner.findMany({
       where: {
         orderId,
@@ -302,9 +256,7 @@ export class ScannerRepository {
     });
   }
 
-  async findByWarehouse(
-    warehouseId: string,
-  ): Promise<Scanner[]> {
+  async findByWarehouse(warehouseId: string): Promise<Scanner[]> {
     return this.prisma.scanner.findMany({
       where: {
         warehouseId,
@@ -315,16 +267,13 @@ export class ScannerRepository {
       },
     });
   }
-    /**
+  /**
    * -------------------------------------------------------
    * VERIFICATION
    * -------------------------------------------------------
    */
 
-  async verifyScan(
-    id: string,
-    verifiedBy: string,
-  ): Promise<Scanner> {
+  async verifyScan(id: string, verifiedBy: string): Promise<Scanner> {
     await this.findById(id);
 
     return this.prisma.scanner.update({
@@ -337,10 +286,7 @@ export class ScannerRepository {
     });
   }
 
-  async markFailed(
-    id: string,
-    remarks?: string,
-  ): Promise<Scanner> {
+  async markFailed(id: string, remarks?: string): Promise<Scanner> {
     await this.findById(id);
 
     return this.prisma.scanner.update({
@@ -359,36 +305,32 @@ export class ScannerRepository {
    */
 
   async getStatistics() {
-    const [
-      totalScans,
-      verifiedScans,
-      failedScans,
-      duplicateScans,
-    ] = await this.prisma.$transaction([
-      this.prisma.scanner.count({
-        where: {
-          isDeleted: false,
-        },
-      }),
-      this.prisma.scanner.count({
-        where: {
-          status: 'VERIFIED',
-          isDeleted: false,
-        },
-      }),
-      this.prisma.scanner.count({
-        where: {
-          status: 'FAILED',
-          isDeleted: false,
-        },
-      }),
-      this.prisma.scanner.count({
-        where: {
-          status: 'DUPLICATE',
-          isDeleted: false,
-        },
-      }),
-    ]);
+    const [totalScans, verifiedScans, failedScans, duplicateScans] =
+      await this.prisma.$transaction([
+        this.prisma.scanner.count({
+          where: {
+            isDeleted: false,
+          },
+        }),
+        this.prisma.scanner.count({
+          where: {
+            status: 'VERIFIED',
+            isDeleted: false,
+          },
+        }),
+        this.prisma.scanner.count({
+          where: {
+            status: 'FAILED',
+            isDeleted: false,
+          },
+        }),
+        this.prisma.scanner.count({
+          where: {
+            status: 'DUPLICATE',
+            isDeleted: false,
+          },
+        }),
+      ]);
 
     return {
       totalScans,
@@ -398,24 +340,15 @@ export class ScannerRepository {
     };
   }
 
-  async getSessionStatistics(
-    sessionId: string,
-  ) {
-    const scans =
-      await this.findBySession(sessionId);
+  async getSessionStatistics(sessionId: string) {
+    const scans = await this.findBySession(sessionId);
 
     return {
       sessionId,
       totalScans: scans.length,
-      verifiedScans: scans.filter(
-        (s) => s.status === 'VERIFIED',
-      ).length,
-      failedScans: scans.filter(
-        (s) => s.status === 'FAILED',
-      ).length,
-      duplicateScans: scans.filter(
-        (s) => s.status === 'DUPLICATE',
-      ).length,
+      verifiedScans: scans.filter((s) => s.status === 'VERIFIED').length,
+      failedScans: scans.filter((s) => s.status === 'FAILED').length,
+      duplicateScans: scans.filter((s) => s.status === 'DUPLICATE').length,
     };
   }
 
@@ -425,9 +358,7 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  async bulkDelete(
-    ids: string[],
-  ) {
+  async bulkDelete(ids: string[]) {
     return this.prisma.scanner.updateMany({
       where: {
         id: {
@@ -441,10 +372,7 @@ export class ScannerRepository {
     });
   }
 
-  async bulkVerify(
-    ids: string[],
-    verifiedBy: string,
-  ) {
+  async bulkVerify(ids: string[], verifiedBy: string) {
     return this.prisma.scanner.updateMany({
       where: {
         id: {
@@ -470,12 +398,12 @@ export class ScannerRepository {
     return true;
   }
 
-  async ping() {
-    return {
+  ping(): Promise<{ module: string; status: string; timestamp: Date }> {
+    return Promise.resolve({
       module: 'ScannerRepository',
       status: 'OK',
       timestamp: new Date(),
-    };
+    });
   }
 
   /**
@@ -484,44 +412,26 @@ export class ScannerRepository {
    * -------------------------------------------------------
    */
 
-  count(
-    where?: Prisma.ScannerWhereInput,
-  ) {
+  count(where?: Prisma.ScannerWhereInput) {
     return this.prisma.scanner.count({
       where,
     });
   }
 
-  findMany(
-    args: Prisma.ScannerFindManyArgs,
-  ) {
-    return this.prisma.scanner.findMany(
-      args,
-    );
+  findMany(args: Prisma.ScannerFindManyArgs) {
+    return this.prisma.scanner.findMany(args);
   }
 
-  findFirst(
-    args: Prisma.ScannerFindFirstArgs,
-  ) {
-    return this.prisma.scanner.findFirst(
-      args,
-    );
+  findFirst(args: Prisma.ScannerFindFirstArgs) {
+    return this.prisma.scanner.findFirst(args);
   }
 
-  createMany(
-    args: Prisma.ScannerCreateManyArgs,
-  ) {
-    return this.prisma.scanner.createMany(
-      args,
-    );
+  createMany(args: Prisma.ScannerCreateManyArgs) {
+    return this.prisma.scanner.createMany(args);
   }
 
-  upsert(
-    args: Prisma.ScannerUpsertArgs,
-  ) {
-    return this.prisma.scanner.upsert(
-      args,
-    );
+  upsert(args: Prisma.ScannerUpsertArgs) {
+    return this.prisma.scanner.upsert(args);
   }
 
   delete(id: string) {
@@ -532,13 +442,7 @@ export class ScannerRepository {
     });
   }
 
-  transaction<T>(
-    callback: (
-      tx: Prisma.TransactionClient,
-    ) => Promise<T>,
-  ) {
-    return this.prisma.$transaction(
-      callback,
-    );
+  transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>) {
+    return this.prisma.$transaction(callback);
   }
 }

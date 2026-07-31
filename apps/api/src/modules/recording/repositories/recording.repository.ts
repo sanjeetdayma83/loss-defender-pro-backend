@@ -1,17 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import {
-  Prisma,
-  RecordingSession,
-  RecordingStatus,
-} from '@prisma/client';
+import { Prisma, RecordingSession, RecordingStatus } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
 export class RecordingRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(
     data: Prisma.RecordingSessionCreateInput,
@@ -21,9 +15,7 @@ export class RecordingRepository {
     });
   }
 
-  async findById(
-    id: string,
-  ): Promise<RecordingSession | null> {
+  async findById(id: string): Promise<RecordingSession | null> {
     return this.prisma.recordingSession.findUnique({
       where: {
         id,
@@ -34,9 +26,7 @@ export class RecordingRepository {
   async findAll(
     args?: Prisma.RecordingSessionFindManyArgs,
   ): Promise<RecordingSession[]> {
-    return this.prisma.recordingSession.findMany(
-      args,
-    );
+    return this.prisma.recordingSession.findMany(args);
   }
 
   async update(
@@ -67,9 +57,7 @@ export class RecordingRepository {
     });
   }
 
-  async softDelete(
-    id: string,
-  ): Promise<RecordingSession> {
+  async softDelete(id: string): Promise<RecordingSession> {
     return this.prisma.recordingSession.update({
       where: {
         id,
@@ -81,9 +69,7 @@ export class RecordingRepository {
     });
   }
 
-  async count(
-    where?: Prisma.RecordingSessionWhereInput,
-  ): Promise<number> {
+  async count(where?: Prisma.RecordingSessionWhereInput): Promise<number> {
     return this.prisma.recordingSession.count({
       where,
     });

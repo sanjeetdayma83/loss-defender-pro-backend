@@ -15,13 +15,9 @@ import { ClaimQueryDto } from '../dto/claim-query.dto';
 
 @Injectable()
 export class ClaimRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    data: CreateClaimDto & { claimNumber: string },
-  ): Promise<Claim> {
+  async create(data: CreateClaimDto & { claimNumber: string }): Promise<Claim> {
     return this.prisma.claim.create({
       data: {
         claimNumber: data.claimNumber,
@@ -39,7 +35,7 @@ export class ClaimRepository {
         customerRemarks: data.customerRemarks,
         internalRemarks: data.internalRemarks,
         metadata: data.metadata as Prisma.InputJsonValue,
-      } as Prisma.ClaimUncheckedCreateInput,
+      },
     });
   }
 
@@ -72,7 +68,7 @@ export class ClaimRepository {
         customerRemarks: data.customerRemarks,
         internalRemarks: data.internalRemarks,
         metadata: data.metadata as Prisma.InputJsonValue,
-      } as Prisma.ClaimUncheckedUpdateInput,
+      },
     });
   }
 
@@ -83,10 +79,7 @@ export class ClaimRepository {
     });
   }
 
-  async updatePriority(
-    id: string,
-    priority: ClaimPriority,
-  ): Promise<Claim> {
+  async updatePriority(id: string, priority: ClaimPriority): Promise<Claim> {
     return this.prisma.claim.update({
       where: { id },
       data: { priority },

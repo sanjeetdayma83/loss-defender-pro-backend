@@ -3,9 +3,7 @@ import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class LoggerService {
-  constructor(
-    private readonly logger: PinoLogger,
-  ) {}
+  constructor(private readonly logger: PinoLogger) {}
 
   info(message: string, data?: unknown): void {
     this.logger.info(data, message);

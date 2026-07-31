@@ -8,14 +8,7 @@ import { ScannerService } from './services/scanner.service';
 
 @Module({
   controllers: [ScannerController],
-  providers: [
-    PrismaService,
-    ScannerRepository,
-    ScannerService,
-  ],
-  exports: [
-    ScannerRepository,
-    ScannerService,
-  ],
+  providers: [PrismaService, ScannerRepository, ScannerService],
+  exports: [ScannerRepository, ScannerService],
 })
 export class ScannerModule {}

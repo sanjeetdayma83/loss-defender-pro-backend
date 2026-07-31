@@ -1,7 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-} from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 
 import { CompanyRepository } from '../../repositories/company.repository';
 
@@ -10,19 +7,13 @@ import { UpdateCompanyDto } from '../../dto/update-company.dto';
 
 @Injectable()
 export class CompanyService {
-  constructor(
-    private readonly companyRepository: CompanyRepository,
-  ) {}
+  constructor(private readonly companyRepository: CompanyRepository) {}
 
   async create(dto: CreateCompanyDto) {
-    const existing = await this.companyRepository.findByCode(
-      dto.code,
-    );
+    const existing = await this.companyRepository.findByCode(dto.code);
 
     if (existing) {
-      throw new ConflictException(
-        `Company code '${dto.code}' already exists.`,
-      );
+      throw new ConflictException(`Company code '${dto.code}' already exists.`);
     }
 
     return this.companyRepository.create({
@@ -42,10 +33,7 @@ export class CompanyService {
     return this.companyRepository.findById(id);
   }
 
-  async update(
-    id: string,
-    dto: UpdateCompanyDto,
-  ) {
+  async update(id: string, dto: UpdateCompanyDto) {
     return this.companyRepository.update(id, dto);
   }
 

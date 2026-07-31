@@ -14,14 +14,10 @@ import { UserService } from '../../services/user/user.service';
 
 @Controller('users')
 export class UserController {
-  constructor(
-    private readonly service: UserService,
-  ) {}
+  constructor(private readonly service: UserService) {}
 
   @Post()
-  create(
-    @Body() dto: CreateUserDto,
-  ) {
+  create(@Body() dto: CreateUserDto) {
     return this.service.create(dto);
   }
 
@@ -31,24 +27,17 @@ export class UserController {
   }
 
   @Get(':id')
-  findOne(
-    @Param('id') id: string,
-  ) {
+  findOne(@Param('id') id: string) {
     return this.service.findOne(id);
   }
 
   @Patch(':id')
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateUserDto,
-  ) {
+  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
     return this.service.update(id, dto);
   }
 
   @Delete(':id')
-  remove(
-    @Param('id') id: string,
-  ) {
+  remove(@Param('id') id: string) {
     return this.service.remove(id);
   }
 }

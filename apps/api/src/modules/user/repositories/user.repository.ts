@@ -2,16 +2,11 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../../database/prisma.service';
 
-import {
-  Prisma,
-  User,
-} from '@prisma/client';
+import { Prisma, User } from '@prisma/client';
 
 @Injectable()
 export class UserRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(data: {
     companyId: string;
@@ -25,17 +20,13 @@ export class UserRepository {
     });
   }
 
-  async findById(
-    id: string,
-  ): Promise<User | null> {
+  async findById(id: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: { id },
     });
   }
 
-  async findByEmail(
-    email: string,
-  ): Promise<User | null> {
+  async findByEmail(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({
       where: {
         email,
@@ -43,9 +34,7 @@ export class UserRepository {
     });
   }
 
-  async findByEmailActive(
-    email: string,
-  ): Promise<User | null> {
+  async findByEmailActive(email: string): Promise<User | null> {
     return this.prisma.user.findFirst({
       where: {
         email,
@@ -66,9 +55,9 @@ export class UserRepository {
   }
 
   async update(
-  id: string,
-  data: Prisma.UserUncheckedUpdateInput,
-): Promise<User> {
+    id: string,
+    data: Prisma.UserUncheckedUpdateInput,
+  ): Promise<User> {
     return this.prisma.user.update({
       where: { id },
       data,
@@ -89,9 +78,7 @@ export class UserRepository {
     });
   }
 
-  async updateLastLogin(
-    id: string,
-  ): Promise<User> {
+  async updateLastLogin(id: string): Promise<User> {
     return this.prisma.user.update({
       where: {
         id,
@@ -102,9 +89,7 @@ export class UserRepository {
     });
   }
 
-  async softDelete(
-    id: string,
-  ): Promise<User> {
+  async softDelete(id: string): Promise<User> {
     return this.prisma.user.update({
       where: {
         id,

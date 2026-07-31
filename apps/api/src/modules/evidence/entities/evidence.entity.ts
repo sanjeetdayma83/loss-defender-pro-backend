@@ -43,9 +43,7 @@ export class EvidenceEntity {
 
   isDeleted!: boolean;
 
-  constructor(
-    partial?: Partial<EvidenceEntity>,
-  ) {
+  constructor(partial?: Partial<EvidenceEntity>) {
     Object.assign(this, partial);
   }
 }

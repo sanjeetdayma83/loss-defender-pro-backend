@@ -17,9 +17,7 @@ import { ScannerQueryDto } from '../dto/scanner-query.dto';
 
 @Controller('scanner')
 export class ScannerController {
-  constructor(
-    private readonly service: ScannerService,
-  ) {}
+  constructor(private readonly service: ScannerService) {}
 
   /**
    * -------------------------------------------------------
@@ -74,9 +72,7 @@ export class ScannerController {
     @Param('barcode')
     barcode: string,
   ) {
-    return this.service.findByBarcode(
-      barcode,
-    );
+    return this.service.findByBarcode(barcode);
   }
 
   /**
@@ -90,9 +86,7 @@ export class ScannerController {
     @Param('orderId')
     orderId: string,
   ) {
-    return this.service.findByOrder(
-      orderId,
-    );
+    return this.service.findByOrder(orderId);
   }
 
   /**
@@ -106,9 +100,7 @@ export class ScannerController {
     @Param('warehouseId')
     warehouseId: string,
   ) {
-    return this.service.findByWarehouse(
-      warehouseId,
-    );
+    return this.service.findByWarehouse(warehouseId);
   }
 
   /**
@@ -122,9 +114,7 @@ export class ScannerController {
     @Param('sessionId')
     sessionId: string,
   ) {
-    return this.service.findBySession(
-      sessionId,
-    );
+    return this.service.findBySession(sessionId);
   }
 
   /**
@@ -141,10 +131,7 @@ export class ScannerController {
     @Body()
     dto: UpdateScannerDto,
   ) {
-    return this.service.update(
-      id,
-      dto,
-    );
+    return this.service.update(id, dto);
   }
 
   /**
@@ -174,7 +161,7 @@ export class ScannerController {
   ) {
     return this.service.restore(id);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * VERIFY SCAN
    * -------------------------------------------------------
@@ -188,10 +175,7 @@ export class ScannerController {
     @Body('verifiedBy')
     verifiedBy: string,
   ) {
-    return this.service.verifyScan(
-      id,
-      verifiedBy,
-    );
+    return this.service.verifyScan(id, verifiedBy);
   }
 
   /**
@@ -208,10 +192,7 @@ export class ScannerController {
     @Body('remarks')
     remarks?: string,
   ) {
-    return this.service.markFailed(
-      id,
-      remarks,
-    );
+    return this.service.markFailed(id, remarks);
   }
 
   /**
@@ -228,10 +209,7 @@ export class ScannerController {
     @Param('barcode')
     barcode: string,
   ) {
-    return this.service.isDuplicateScan(
-      barcode,
-      orderId,
-    );
+    return this.service.isDuplicateScan(barcode, orderId);
   }
 
   /**
@@ -250,9 +228,7 @@ export class ScannerController {
     @Param('sessionId')
     sessionId: string,
   ) {
-    return this.service.getSessionStatistics(
-      sessionId,
-    );
+    return this.service.getSessionStatistics(sessionId);
   }
 
   /**
@@ -269,10 +245,7 @@ export class ScannerController {
     @Body('verifiedBy')
     verifiedBy: string,
   ) {
-    return this.service.bulkVerify(
-      ids,
-      verifiedBy,
-    );
+    return this.service.bulkVerify(ids, verifiedBy);
   }
 
   @Post('bulk/delete')

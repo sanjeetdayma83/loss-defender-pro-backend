@@ -7,14 +7,8 @@ import { CompanyService } from './services/company/company.service';
 @Module({
   controllers: [CompanyController],
 
-  providers: [
-    CompanyService,
-    CompanyRepository,
-  ],
+  providers: [CompanyService, CompanyRepository],
 
-  exports: [
-    CompanyService,
-    CompanyRepository,
-  ],
+  exports: [CompanyService, CompanyRepository],
 })
 export class CompanyModule {}

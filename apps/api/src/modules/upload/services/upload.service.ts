@@ -1,13 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import {
-  Prisma,
-  Upload,
-  UploadStatus,
-  UploadVisibility,
-} from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Prisma, Upload, UploadStatus, UploadVisibility } from '@prisma/client';
 
 import { CreateUploadDto } from '../dto/create-upload.dto';
 import { UpdateUploadDto } from '../dto/update-upload.dto';
@@ -27,9 +19,7 @@ export class UploadService {
     private readonly stateMachine: UploadStateMachine,
   ) {}
 
-  async create(
-    dto: CreateUploadDto,
-  ): Promise<Upload> {
+  async create(dto: CreateUploadDto): Promise<Upload> {
     return this.uploadRepository.create({
       company: {
         connect: {
@@ -79,9 +69,7 @@ export class UploadService {
 
       category: dto.category,
 
-      visibility:
-        dto.visibility ??
-        UploadVisibility.PRIVATE,
+      visibility: dto.visibility ?? UploadVisibility.PRIVATE,
 
       metadata: dto.metadata as Prisma.InputJsonValue,
 
@@ -89,26 +77,17 @@ export class UploadService {
     });
   }
 
-  async findById(
-    id: string,
-  ): Promise<Upload> {
-    const upload =
-      await this.uploadRepository.findById(
-        id,
-      );
+  async findById(id: string): Promise<Upload> {
+    const upload = await this.uploadRepository.findById(id);
 
     if (!upload) {
-      throw new NotFoundException(
-        'Upload not found',
-      );
+      throw new NotFoundException('Upload not found');
     }
 
     return upload;
   }
 
-  async findAll(
-    query: UploadQueryDto,
-  ): Promise<Upload[]> {
+  async findAll(query: UploadQueryDto): Promise<Upload[]> {
     return this.uploadRepository.findAll({
       where: {
         companyId: query.companyId,
@@ -123,63 +102,39 @@ export class UploadService {
         isDeleted: false,
       },
 
-      skip:
-        (query.page - 1) *
-        query.limit,
+      skip: (query.page - 1) * query.limit,
 
       take: query.limit,
 
       orderBy: {
-        [query.sortBy]:
-          query.sortOrder,
+        [query.sortBy]: query.sortOrder,
       },
     });
   }
 
-  async update(
-    id: string,
-    dto: UpdateUploadDto,
-  ): Promise<Upload> {
+  async update(id: string, dto: UpdateUploadDto): Promise<Upload> {
     await this.findById(id);
 
-    return this.uploadRepository.update(
-  id,
-  {
-    ...dto,
-    metadata:
-      dto.metadata as Prisma.InputJsonValue,
-  },
-);
+    return this.uploadRepository.update(id, {
+      ...dto,
+      metadata: dto.metadata as Prisma.InputJsonValue,
+    });
   }
 
-  async delete(
-    id: string,
-  ): Promise<Upload> {
+  async delete(id: string): Promise<Upload> {
     await this.findById(id);
 
-    return this.uploadRepository.softDelete(
-      id,
-    );
+    return this.uploadRepository.softDelete(id);
   }
 
-  async changeStatus(
-    id: string,
-    status: UploadStatus,
-  ): Promise<Upload> {
-    const upload =
-      await this.findById(id);
+  async changeStatus(id: string, status: UploadStatus): Promise<Upload> {
+    const upload = await this.findById(id);
 
-    this.stateMachine.validateTransition(
-      upload.status,
+    this.stateMachine.validateTransition(upload.status, status);
+
+    return this.uploadRepository.update(id, {
       status,
-    );
-
-    return this.uploadRepository.update(
-      id,
-      {
-        status,
-      },
-    );
+    });
   }
 
   async uploadCompleted(
@@ -189,113 +144,54 @@ export class UploadService {
   ): Promise<Upload> {
     await this.findById(id);
 
-    return this.uploadRepository.markUploaded(
-      id,
-      etag,
-      size,
-    );
+    return this.uploadRepository.markUploaded(id, etag, size);
   }
 
-  async generateUploadUrl(
-    key: string,
-  ) {
-    return this.storageService.generateUploadUrl(
-      key,
-    );
+  async generateUploadUrl(key: string) {
+    return this.storageService.generateUploadUrl(key);
   }
 
-  async generateDownloadUrl(
-    key: string,
-  ) {
-    return this.storageService.generateDownloadUrl(
-      key,
-    );
+  async generateDownloadUrl(key: string) {
+    return this.storageService.generateDownloadUrl(key);
   }
 
-  async deletePhysicalFile(
-    key: string,
-  ): Promise<void> {
-    return this.storageService.delete(
-      key,
-    );
+  async deletePhysicalFile(key: string): Promise<void> {
+    return this.storageService.delete(key);
   }
 
-  async fileExists(
-    key: string,
-  ): Promise<boolean> {
-    return this.storageService.exists(
-      key,
-    );
+  async fileExists(key: string): Promise<boolean> {
+    return this.storageService.exists(key);
   }
 
-  async getFileUrl(
-    key: string,
-  ): Promise<string> {
-    return this.storageService.getUrl(
-      key,
-    );
+  async getFileUrl(key: string): Promise<string> {
+    return this.storageService.getUrl(key);
   }
 
-  async markUploading(
-    id: string,
-  ): Promise<Upload> {
-    return this.changeStatus(
-      id,
-      UploadStatus.UPLOADING,
-    );
+  async markUploading(id: string): Promise<Upload> {
+    return this.changeStatus(id, UploadStatus.UPLOADING);
   }
 
-  async markUploaded(
-    id: string,
-  ): Promise<Upload> {
-    return this.changeStatus(
-      id,
-      UploadStatus.UPLOADED,
-    );
+  async markUploaded(id: string): Promise<Upload> {
+    return this.changeStatus(id, UploadStatus.UPLOADED);
   }
 
-  async markProcessing(
-    id: string,
-  ): Promise<Upload> {
-    return this.changeStatus(
-      id,
-      UploadStatus.PROCESSING,
-    );
+  async markProcessing(id: string): Promise<Upload> {
+    return this.changeStatus(id, UploadStatus.PROCESSING);
   }
 
-  async markCompleted(
-    id: string,
-  ): Promise<Upload> {
-    return this.changeStatus(
-      id,
-      UploadStatus.COMPLETED,
-    );
+  async markCompleted(id: string): Promise<Upload> {
+    return this.changeStatus(id, UploadStatus.COMPLETED);
   }
 
-  async markFailed(
-    id: string,
-  ): Promise<Upload> {
-    return this.changeStatus(
-      id,
-      UploadStatus.FAILED,
-    );
+  async markFailed(id: string): Promise<Upload> {
+    return this.changeStatus(id, UploadStatus.FAILED);
   }
 
-  async cancel(
-    id: string,
-  ): Promise<Upload> {
-    return this.changeStatus(
-      id,
-      UploadStatus.CANCELLED,
-    );
+  async cancel(id: string): Promise<Upload> {
+    return this.changeStatus(id, UploadStatus.CANCELLED);
   }
 
-  async restore(
-    id: string,
-  ): Promise<Upload> {
-    return this.changeStatus(
-      id,
-      UploadStatus.UPLOADING,
-    );
+  async restore(id: string): Promise<Upload> {
+    return this.changeStatus(id, UploadStatus.UPLOADING);
   }
 }

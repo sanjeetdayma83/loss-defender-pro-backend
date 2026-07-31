@@ -29,9 +29,7 @@ import { AuthService } from '../services/auth.service';
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -42,42 +40,35 @@ export class AuthController {
     description: 'Login successful',
     type: LoginResponseDto,
   })
-  async login(
-    @Body() dto: LoginDto,
-  ): Promise<LoginResponseDto> {
+  async login(@Body() dto: LoginDto): Promise<LoginResponseDto> {
     return this.authService.login(dto);
   }
 
   @Get('profile')
-@UseGuards(
-  JwtAuthGuard,
-  RolesGuard,
-)
-@Roles(
-  UserRole.SUPER_ADMIN,
-  UserRole.COMPANY_ADMIN,
-  UserRole.WAREHOUSE_MANAGER,
-  UserRole.SUPERVISOR,
-  UserRole.OPERATOR,
-  UserRole.VIEWER,
-)
-@ApiBearerAuth()
-@ApiOperation({
-  summary: 'Get authenticated user profile',
-})
-@ApiOkResponse({
-  type: ProfileResponseDto,
-})
-async getProfile(
-  @CurrentUser()
-  user: {
-    id: string;
-  },
-): Promise<ProfileResponseDto> {
-  return this.authService.getProfile(
-    user.id,
-  );
-}
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(
+    UserRole.SUPER_ADMIN,
+    UserRole.COMPANY_ADMIN,
+    UserRole.WAREHOUSE_MANAGER,
+    UserRole.SUPERVISOR,
+    UserRole.OPERATOR,
+    UserRole.VIEWER,
+  )
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Get authenticated user profile',
+  })
+  @ApiOkResponse({
+    type: ProfileResponseDto,
+  })
+  async getProfile(
+    @CurrentUser()
+    user: {
+      id: string;
+    },
+  ): Promise<ProfileResponseDto> {
+    return this.authService.getProfile(user.id);
+  }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
@@ -85,8 +76,7 @@ async getProfile(
     summary: 'Refresh access token',
   })
   @ApiOkResponse({
-    description:
-      'New access and refresh tokens issued',
+    description: 'New access and refresh tokens issued',
     type: LoginResponseDto,
   })
   @ApiResponse({
@@ -118,9 +108,7 @@ async getProfile(
   ): Promise<{
     message: string;
   }> {
-    await this.authService.logout(
-      user.id,
-    );
+    await this.authService.logout(user.id);
 
     return {
       message: 'Logout successful',

@@ -4,9 +4,7 @@ import {
   NotificationStatus,
 } from '@prisma/client';
 
-import {
-  Type,
-} from 'class-transformer';
+import { Type } from 'class-transformer';
 
 import {
   IsEnum,

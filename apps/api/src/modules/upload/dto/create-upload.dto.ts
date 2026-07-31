@@ -8,10 +8,7 @@ import {
   MaxLength,
 } from 'class-validator';
 
-import {
-  UploadCategory,
-  UploadVisibility,
-} from '@prisma/client';
+import { UploadCategory, UploadVisibility } from '@prisma/client';
 
 export class CreateUploadDto {
   @IsUUID()
@@ -79,8 +76,5 @@ export class CreateUploadDto {
 
   @IsOptional()
   @IsObject()
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }

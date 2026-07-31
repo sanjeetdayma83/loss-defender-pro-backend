@@ -110,10 +110,6 @@ export class ClaimQueryDto {
     | 'aiConfidence' = 'createdAt';
 
   @IsOptional()
-  @IsIn([
-    'asc',
-    'desc',
-  ])
-  sortOrder: 'asc' | 'desc' =
-    'desc';
+  @IsIn(['asc', 'desc'])
+  sortOrder: 'asc' | 'desc' = 'desc';
 }

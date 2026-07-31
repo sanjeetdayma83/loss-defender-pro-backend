@@ -10,15 +10,7 @@ import { RecordingStateMachine } from './utils/recording-state-machine';
 @Module({
   imports: [PrismaModule],
   controllers: [RecordingController],
-  providers: [
-    RecordingRepository,
-    RecordingService,
-    RecordingStateMachine,
-  ],
-  exports: [
-    RecordingRepository,
-    RecordingService,
-    RecordingStateMachine,
-  ],
+  providers: [RecordingRepository, RecordingService, RecordingStateMachine],
+  exports: [RecordingRepository, RecordingService, RecordingStateMachine],
 })
 export class RecordingModule {}

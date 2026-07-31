@@ -1,12 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
 export class OrderRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(data: Prisma.OrderCreateInput) {
     return this.prisma.order.create({
@@ -23,10 +21,7 @@ export class OrderRepository {
     });
   }
 
-  async findByOrderNumber(
-    companyId: string,
-    orderNumber: string,
-  ) {
+  async findByOrderNumber(companyId: string, orderNumber: string) {
     return this.prisma.order.findFirst({
       where: {
         companyId,
@@ -49,29 +44,22 @@ export class OrderRepository {
     });
   }
 
-  async exists(
-    companyId: string,
-    orderNumber: string,
-  ): Promise<boolean> {
-    const order =
-      await this.prisma.order.findFirst({
-        where: {
-          companyId,
-          orderNumber,
-          isDeleted: false,
-        },
-        select: {
-          id: true,
-        },
-      });
+  async exists(companyId: string, orderNumber: string): Promise<boolean> {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        companyId,
+        orderNumber,
+        isDeleted: false,
+      },
+      select: {
+        id: true,
+      },
+    });
 
     return order !== null;
   }
 
-  async update(
-    id: string,
-    data: Prisma.OrderUpdateInput,
-  ) {
+  async update(id: string, data: Prisma.OrderUpdateInput) {
     return this.prisma.order.update({
       where: {
         id,
@@ -92,24 +80,18 @@ export class OrderRepository {
     });
   }
 
-  async findMany(
-    args?: Prisma.OrderFindManyArgs,
-  ) {
+  async findMany(args?: Prisma.OrderFindManyArgs) {
     return this.prisma.order.findMany(args);
   }
 
-  async count(
-    where?: Prisma.OrderWhereInput,
-  ) {
+  async count(where?: Prisma.OrderWhereInput) {
     return this.prisma.order.count({
       where,
     });
   }
 
   async transaction<T>(
-    callback: (
-      tx: Prisma.TransactionClient,
-    ) => Promise<T>,
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
     return this.prisma.$transaction(callback);
   }

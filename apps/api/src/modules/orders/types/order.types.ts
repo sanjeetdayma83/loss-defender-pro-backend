@@ -136,10 +136,7 @@ export interface MarketplaceMetadata {
 
   courier?: string;
 
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }
 
 export interface OrderStatistics {

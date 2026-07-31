@@ -1,14 +1,6 @@
-import {
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 
-import {
-  AIJob,
-  AIJobStatus,
-  AIProvider,
-} from '@prisma/client';
+import { AIJob, AIJobStatus, AIProvider } from '@prisma/client';
 
 import { AiRepository } from '../repositories/ai.repository';
 import { ProviderFactory } from '../providers/provider.factory';
@@ -63,19 +55,16 @@ export class AiService {
   async execute(id: string): Promise<AIJob> {
     const job = await this.findOne(id);
 
-    this.stateMachine.validateTransition(
-      job.status,
-      AIJobStatus.PROCESSING,
-    );
+    this.stateMachine.validateTransition(job.status, AIJobStatus.PROCESSING);
 
     await this.repository.markStarted(id);
 
     const startedAt = Date.now();
 
     try {
-      const providerKey = (
-        job.provider ?? 'LOCAL'
-      ).toString().toUpperCase() as AIProvider;
+      const providerKey = (job.provider ?? 'LOCAL')
+        .toString()
+        .toUpperCase() as AIProvider;
 
       const provider = this.providerFactory.getProvider(providerKey);
 
@@ -94,7 +83,7 @@ export class AiService {
 
       return this.repository.markCompleted(
         id,
-        (result.data ?? result) as any,
+        result.data ?? result,
         confidence,
         processingTime,
         tokensUsed,

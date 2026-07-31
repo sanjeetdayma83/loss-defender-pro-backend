@@ -15,10 +15,6 @@ import { ReturnStateMachine } from './utils/return-state-machine';
     ReturnService,
     ReturnStateMachine,
   ],
-  exports: [
-    ReturnRepository,
-    ReturnService,
-    ReturnStateMachine,
-  ],
+  exports: [ReturnRepository, ReturnService, ReturnStateMachine],
 })
 export class ReturnsModule {}

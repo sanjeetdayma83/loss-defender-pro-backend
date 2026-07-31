@@ -8,11 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 
 import { CreateEvidenceDto } from '../dto/create-evidence.dto';
 import { EvidenceQueryDto } from '../dto/evidence-query.dto';
@@ -23,17 +19,13 @@ import { EvidenceService } from '../services/evidence.service';
 @ApiBearerAuth()
 @Controller('evidence')
 export class EvidenceController {
-  constructor(
-    private readonly evidenceService: EvidenceService,
-  ) {}
+  constructor(private readonly evidenceService: EvidenceService) {}
 
   @Post()
   @ApiOperation({
     summary: 'Create Evidence',
   })
-  create(
-    @Body() dto: CreateEvidenceDto,
-  ) {
+  create(@Body() dto: CreateEvidenceDto) {
     return this.evidenceService.create(dto);
   }
 
@@ -41,9 +33,7 @@ export class EvidenceController {
   @ApiOperation({
     summary: 'Get All Evidence',
   })
-  findAll(
-    @Query() query: EvidenceQueryDto,
-  ) {
+  findAll(@Query() query: EvidenceQueryDto) {
     return this.evidenceService.findAll(query);
   }
 
@@ -51,9 +41,7 @@ export class EvidenceController {
   @ApiOperation({
     summary: 'Get Evidence By ID',
   })
-  findById(
-    @Param('id') id: string,
-  ) {
+  findById(@Param('id') id: string) {
     return this.evidenceService.findById(id);
   }
 
@@ -61,23 +49,15 @@ export class EvidenceController {
   @ApiOperation({
     summary: 'Update Evidence',
   })
-  update(
-    @Param('id') id: string,
-    @Body() dto: UpdateEvidenceDto,
-  ) {
-    return this.evidenceService.update(
-      id,
-      dto,
-    );
+  update(@Param('id') id: string, @Body() dto: UpdateEvidenceDto) {
+    return this.evidenceService.update(id, dto);
   }
 
   @Delete(':id')
   @ApiOperation({
     summary: 'Delete Evidence',
   })
-  delete(
-    @Param('id') id: string,
-  ) {
+  delete(@Param('id') id: string) {
     return this.evidenceService.delete(id);
   }
 
@@ -85,33 +65,23 @@ export class EvidenceController {
   @ApiOperation({
     summary: 'Start Evidence Generation',
   })
-  startGeneration(
-    @Param('id') id: string,
-  ) {
-    return this.evidenceService.startGeneration(
-      id,
-    );
+  startGeneration(@Param('id') id: string) {
+    return this.evidenceService.startGeneration(id);
   }
 
   @Post(':id/generated')
   @ApiOperation({
     summary: 'Mark Evidence Generated',
   })
-  markGenerated(
-    @Param('id') id: string,
-  ) {
-    return this.evidenceService.markGenerated(
-      id,
-    );
+  markGenerated(@Param('id') id: string) {
+    return this.evidenceService.markGenerated(id);
   }
 
   @Post(':id/verify')
   @ApiOperation({
     summary: 'Verify Evidence',
   })
-  verify(
-    @Param('id') id: string,
-  ) {
+  verify(@Param('id') id: string) {
     return this.evidenceService.verify(id);
   }
 
@@ -119,9 +89,7 @@ export class EvidenceController {
   @ApiOperation({
     summary: 'Archive Evidence',
   })
-  archive(
-    @Param('id') id: string,
-  ) {
+  archive(@Param('id') id: string) {
     return this.evidenceService.archive(id);
   }
 
@@ -129,9 +97,7 @@ export class EvidenceController {
   @ApiOperation({
     summary: 'Mark Evidence Failed',
   })
-  fail(
-    @Param('id') id: string,
-  ) {
+  fail(@Param('id') id: string) {
     return this.evidenceService.fail(id);
   }
 }

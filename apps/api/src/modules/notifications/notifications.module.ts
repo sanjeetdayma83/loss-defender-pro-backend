@@ -8,9 +8,7 @@ import { NotificationService } from './services/notification.service';
 import { NotificationDispatcher } from './utils/notification-dispatcher';
 
 @Module({
-  controllers: [
-    NotificationsController,
-  ],
+  controllers: [NotificationsController],
   providers: [
     PrismaService,
     NotificationRepository,

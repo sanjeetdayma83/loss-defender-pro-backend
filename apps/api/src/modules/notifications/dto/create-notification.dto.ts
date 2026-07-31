@@ -40,13 +40,11 @@ export class CreateNotificationDto {
 
   @IsOptional()
   @IsEnum(NotificationPriority)
-  priority: NotificationPriority =
-    NotificationPriority.MEDIUM;
+  priority: NotificationPriority = NotificationPriority.MEDIUM;
 
   @IsOptional()
   @IsEnum(NotificationStatus)
-  status: NotificationStatus =
-    NotificationStatus.PENDING;
+  status: NotificationStatus = NotificationStatus.PENDING;
 
   @IsOptional()
   @IsString()
@@ -68,17 +66,11 @@ export class CreateNotificationDto {
 
   @IsOptional()
   @IsObject()
-  data?: Record<
-    string,
-    unknown
-  >;
+  data?: Record<string, unknown>;
 
   @IsOptional()
   @IsObject()
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 
   @IsOptional()
   @IsDateString()

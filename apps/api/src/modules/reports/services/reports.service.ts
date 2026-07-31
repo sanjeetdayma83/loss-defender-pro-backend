@@ -8,9 +8,7 @@ import { IReportsService } from '../interfaces/reports.interface';
 
 @Injectable()
 export class ReportsService implements IReportsService {
-  constructor(
-    private readonly repository: ReportsRepository,
-  ) {}
+  constructor(private readonly repository: ReportsRepository) {}
 
   async dashboard(query: ReportQueryDto) {
     return this.repository.dashboard(query);
@@ -88,8 +86,8 @@ export class ReportsService implements IReportsService {
     return this.repository.count();
   }
 
-  async getRepository() {
-    return this.repository;
+  getRepository(): Promise<ReportsRepository> {
+    return Promise.resolve(this.repository);
   }
 
   async metadata() {

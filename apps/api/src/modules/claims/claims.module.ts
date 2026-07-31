@@ -11,18 +11,8 @@ import { ClaimService } from './services/claim.service';
 import { ClaimStateMachine } from './utils/claim-state-machine';
 
 @Module({
-  controllers: [
-    ClaimsController,
-  ],
-  providers: [
-    PrismaService,
-    ClaimRepository,
-    ClaimService,
-    ClaimStateMachine,
-  ],
-  exports: [
-    ClaimService,
-    ClaimRepository,
-  ],
+  controllers: [ClaimsController],
+  providers: [PrismaService, ClaimRepository, ClaimService, ClaimStateMachine],
+  exports: [ClaimService, ClaimRepository],
 })
 export class ClaimsModule {}

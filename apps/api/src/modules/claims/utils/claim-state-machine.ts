@@ -1,7 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 
 import { ClaimStatus } from '@prisma/client';
 
@@ -52,10 +49,7 @@ export class ClaimStateMachine {
   }
 
   isTerminalState(status: ClaimStatus): boolean {
-    const terminal: ClaimStatus[] = [
-      ClaimStatus.CLOSED,
-      ClaimStatus.CANCELLED,
-    ];
+    const terminal: ClaimStatus[] = [ClaimStatus.CLOSED, ClaimStatus.CANCELLED];
     return terminal.includes(status);
   }
 
@@ -92,10 +86,7 @@ export class ClaimStateMachine {
   }
 
   canClose(status: ClaimStatus): boolean {
-    return (
-      status === ClaimStatus.RESOLVED ||
-      status === ClaimStatus.REJECTED
-    );
+    return status === ClaimStatus.RESOLVED || status === ClaimStatus.REJECTED;
   }
 
   canCancel(status: ClaimStatus): boolean {

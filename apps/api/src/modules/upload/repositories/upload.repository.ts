@@ -1,30 +1,19 @@
-import {
-  Injectable,
-} from '@nestjs/common';
-import {
-  Prisma,
-  Upload,
-} from '@prisma/client';
+import { Injectable } from '@nestjs/common';
+import { Prisma, Upload } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
 
 @Injectable()
 export class UploadRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    data: Prisma.UploadCreateInput,
-  ): Promise<Upload> {
+  async create(data: Prisma.UploadCreateInput): Promise<Upload> {
     return this.prisma.upload.create({
       data,
     });
   }
 
-  async findById(
-    id: string,
-  ): Promise<Upload | null> {
+  async findById(id: string): Promise<Upload | null> {
     return this.prisma.upload.findUnique({
       where: {
         id,
@@ -32,18 +21,11 @@ export class UploadRepository {
     });
   }
 
-  async findAll(
-    args?: Prisma.UploadFindManyArgs,
-  ): Promise<Upload[]> {
-    return this.prisma.upload.findMany(
-      args,
-    );
+  async findAll(args?: Prisma.UploadFindManyArgs): Promise<Upload[]> {
+    return this.prisma.upload.findMany(args);
   }
 
-  async update(
-    id: string,
-    data: Prisma.UploadUpdateInput,
-  ): Promise<Upload> {
+  async update(id: string, data: Prisma.UploadUpdateInput): Promise<Upload> {
     return this.prisma.upload.update({
       where: {
         id,
@@ -52,9 +34,7 @@ export class UploadRepository {
     });
   }
 
-  async softDelete(
-    id: string,
-  ): Promise<Upload> {
+  async softDelete(id: string): Promise<Upload> {
     return this.prisma.upload.update({
       where: {
         id,
@@ -66,9 +46,7 @@ export class UploadRepository {
     });
   }
 
-  async hardDelete(
-    id: string,
-  ): Promise<Upload> {
+  async hardDelete(id: string): Promise<Upload> {
     return this.prisma.upload.delete({
       where: {
         id,
@@ -76,31 +54,24 @@ export class UploadRepository {
     });
   }
 
-  async count(
-    where?: Prisma.UploadWhereInput,
-  ): Promise<number> {
+  async count(where?: Prisma.UploadWhereInput): Promise<number> {
     return this.prisma.upload.count({
       where,
     });
   }
 
-  async exists(
-    id: string,
-  ): Promise<boolean> {
-    const count =
-      await this.prisma.upload.count({
-        where: {
-          id,
-          isDeleted: false,
-        },
-      });
+  async exists(id: string): Promise<boolean> {
+    const count = await this.prisma.upload.count({
+      where: {
+        id,
+        isDeleted: false,
+      },
+    });
 
     return count > 0;
   }
 
-  async findByStorageKey(
-    storageKey: string,
-  ): Promise<Upload | null> {
+  async findByStorageKey(storageKey: string): Promise<Upload | null> {
     return this.prisma.upload.findFirst({
       where: {
         storageKey,
@@ -109,9 +80,7 @@ export class UploadRepository {
     });
   }
 
-  async findByChecksum(
-    checksum: string,
-  ): Promise<Upload | null> {
+  async findByChecksum(checksum: string): Promise<Upload | null> {
     return this.prisma.upload.findFirst({
       where: {
         checksum,
@@ -120,11 +89,7 @@ export class UploadRepository {
     });
   }
 
-  async markUploaded(
-    id: string,
-    etag: string,
-    size: bigint,
-  ): Promise<Upload> {
+  async markUploaded(id: string, etag: string, size: bigint): Promise<Upload> {
     return this.prisma.upload.update({
       where: {
         id,

@@ -1,9 +1,4 @@
-import {
-  AIJob,
-  AIJobStatus,
-  AIProvider,
-  Prisma,
-} from '@prisma/client';
+import { AIJob, AIJobStatus, AIProvider, Prisma } from '@prisma/client';
 
 /**
  * Entity matching the generated Prisma AIJob model.
@@ -37,7 +32,7 @@ export class AIJobEntity implements AIJob {
   processingTime: number | null;
   tokensUsed: number | null;
 
-   startedAt: Date | null;
+  startedAt: Date | null;
   completedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;

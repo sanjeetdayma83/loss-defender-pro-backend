@@ -1,21 +1,12 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
-import {
-  AiService,
-} from '../services/ai.service';
+import { AiService } from '../services/ai.service';
 
 @Injectable()
 export class AiWorker {
-  private readonly logger = new Logger(
-    AiWorker.name,
-  );
+  private readonly logger = new Logger(AiWorker.name);
 
-  constructor(
-    private readonly aiService: AiService,
-  ) {}
+  constructor(private readonly aiService: AiService) {}
 
   /**
    * Process an AI job.
@@ -29,27 +20,17 @@ export class AiWorker {
    * - Google Pub/Sub
    * - Azure Service Bus
    */
-  async process(
-    jobId: string,
-  ): Promise<void> {
-    this.logger.log(
-      `Processing AI job: ${jobId}`,
-    );
+  async process(jobId: string): Promise<void> {
+    this.logger.log(`Processing AI job: ${jobId}`);
 
     try {
-      await this.aiService.execute(
-        jobId,
-      );
+      await this.aiService.execute(jobId);
 
-      this.logger.log(
-        `AI job completed: ${jobId}`,
-      );
+      this.logger.log(`AI job completed: ${jobId}`);
     } catch (error) {
       this.logger.error(
         `AI job failed: ${jobId}`,
-        error instanceof Error
-          ? error.stack
-          : undefined,
+        error instanceof Error ? error.stack : undefined,
       );
 
       throw error;
@@ -59,28 +40,22 @@ export class AiWorker {
   /**
    * Retry a failed AI job.
    */
-  async retry(
-    jobId: string,
-  ): Promise<void> {
-    this.logger.warn(
-      `Retrying AI job: ${jobId}`,
-    );
+  async retry(jobId: string): Promise<void> {
+    this.logger.warn(`Retrying AI job: ${jobId}`);
 
-    await this.aiService.retry(
-      jobId,
-    );
+    await this.aiService.retry(jobId);
   }
 
   /**
    * Health probe for worker.
    */
-  async healthCheck(): Promise<{
+  healthCheck(): Promise<{
     status: string;
     timestamp: Date;
   }> {
-    return {
+    return Promise.resolve({
       status: 'healthy',
       timestamp: new Date(),
-    };
+    });
   }
 }

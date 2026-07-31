@@ -1,25 +1,14 @@
-import {
-  Injectable,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
-import {
-  AIProviderRequest,
-  AIProviderResponse,
-} from '../types/ai.types';
+import { AIProviderRequest, AIProviderResponse } from '../types/ai.types';
 
-import {
-  IAIProvider,
-} from '../interfaces/ai.interface';
+import { IAIProvider } from '../interfaces/ai.interface';
 
 @Injectable()
-export abstract class AiProvider
-  implements IAIProvider
-{
+export abstract class AiProvider implements IAIProvider {
   abstract readonly name: string;
 
-  abstract analyze(
-    request: AIProviderRequest,
-  ): Promise<AIProviderResponse>;
+  abstract analyze(request: AIProviderRequest): Promise<AIProviderResponse>;
 
   abstract analyzeVideo(
     request: AIProviderRequest,
@@ -33,9 +22,7 @@ export abstract class AiProvider
     request: AIProviderRequest,
   ): Promise<AIProviderResponse>;
 
-  abstract performOCR(
-    request: AIProviderRequest,
-  ): Promise<AIProviderResponse>;
+  abstract performOCR(request: AIProviderRequest): Promise<AIProviderResponse>;
 
   abstract validateEvidence(
     request: AIProviderRequest,

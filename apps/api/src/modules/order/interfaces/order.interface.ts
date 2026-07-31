@@ -1,8 +1,4 @@
-import {
-  Marketplace,
-  OrderStatus,
-  VerificationStatus,
-} from '@prisma/client';
+import { Marketplace, OrderStatus, VerificationStatus } from '@prisma/client';
 
 export interface OrderEntity {
   id: string;

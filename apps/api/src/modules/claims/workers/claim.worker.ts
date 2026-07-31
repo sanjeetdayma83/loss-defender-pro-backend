@@ -1,19 +1,12 @@
-import {
-  Injectable,
-  Logger,
-} from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 
 import { ClaimService } from '../services/claim.service';
 
 @Injectable()
 export class ClaimWorker {
-  private readonly logger = new Logger(
-    ClaimWorker.name,
-  );
+  private readonly logger = new Logger(ClaimWorker.name);
 
-  constructor(
-    private readonly claimService: ClaimService,
-  ) {}
+  constructor(private readonly claimService: ClaimService) {}
 
   /**
    * Process AI analysis for a claim.
@@ -23,27 +16,17 @@ export class ClaimWorker {
    * - Generate recommendations
    * - Update claim status
    */
-  async processAIAnalysis(
-    claimId: string,
-  ): Promise<void> {
-    this.logger.log(
-      `Starting AI analysis for claim ${claimId}`,
-    );
+  async processAIAnalysis(claimId: string): Promise<void> {
+    this.logger.log(`Starting AI analysis for claim ${claimId}`);
 
     try {
-      await this.claimService.analyze(
-        claimId,
-      );
+      await this.claimService.analyze(claimId);
 
-      this.logger.log(
-        `AI analysis queued for ${claimId}`,
-      );
+      this.logger.log(`AI analysis queued for ${claimId}`);
     } catch (error) {
       this.logger.error(
         `AI analysis failed for ${claimId}`,
-        error instanceof Error
-          ? error.stack
-          : undefined,
+        error instanceof Error ? error.stack : undefined,
       );
 
       throw error;
@@ -53,27 +36,17 @@ export class ClaimWorker {
   /**
    * Validate evidence asynchronously.
    */
-  async processEvidenceValidation(
-    claimId: string,
-  ): Promise<void> {
-    this.logger.log(
-      `Validating evidence for ${claimId}`,
-    );
+  async processEvidenceValidation(claimId: string): Promise<void> {
+    this.logger.log(`Validating evidence for ${claimId}`);
 
     try {
-      await this.claimService.validateEvidence(
-        claimId,
-      );
+      await this.claimService.validateEvidence(claimId);
 
-      this.logger.log(
-        `Evidence validation completed for ${claimId}`,
-      );
+      this.logger.log(`Evidence validation completed for ${claimId}`);
     } catch (error) {
       this.logger.error(
         `Evidence validation failed for ${claimId}`,
-        error instanceof Error
-          ? error.stack
-          : undefined,
+        error instanceof Error ? error.stack : undefined,
       );
 
       throw error;
@@ -86,41 +59,31 @@ export class ClaimWorker {
    * - Escalate overdue claims
    * - Notify managers
    */
-  async monitorSLA(): Promise<void> {
-    this.logger.log(
-      'Running claim SLA monitoring...',
-    );
+  monitorSLA(): Promise<void> {
+    this.logger.log('Running claim SLA monitoring...');
 
     // TODO:
     // Fetch overdue claims
     // Escalate automatically
     // Send notifications
+
+    return Promise.resolve();
   }
 
   /**
    * Generate AI-assisted resolutions.
    */
-  async processResolutionGeneration(
-    claimId: string,
-  ): Promise<void> {
-    this.logger.log(
-      `Generating AI resolution for ${claimId}`,
-    );
+  async processResolutionGeneration(claimId: string): Promise<void> {
+    this.logger.log(`Generating AI resolution for ${claimId}`);
 
     try {
-      await this.claimService.generateResolution(
-        claimId,
-      );
+      await this.claimService.generateResolution(claimId);
 
-      this.logger.log(
-        `Resolution generation completed for ${claimId}`,
-      );
+      this.logger.log(`Resolution generation completed for ${claimId}`);
     } catch (error) {
       this.logger.error(
         `Resolution generation failed for ${claimId}`,
-        error instanceof Error
-          ? error.stack
-          : undefined,
+        error instanceof Error ? error.stack : undefined,
       );
 
       throw error;
@@ -130,14 +93,14 @@ export class ClaimWorker {
   /**
    * Future scheduled cleanup.
    */
-  async cleanup(): Promise<void> {
-    this.logger.log(
-      'Running claim maintenance tasks...',
-    );
+  cleanup(): Promise<void> {
+    this.logger.log('Running claim maintenance tasks...');
 
     // TODO:
     // Archive old claims
     // Remove temporary AI artifacts
     // Optimize indexes
+
+    return Promise.resolve();
   }
 }

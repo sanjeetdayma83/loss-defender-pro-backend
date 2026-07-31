@@ -1,10 +1,6 @@
 import { Injectable } from '@nestjs/common';
 
-import {
-  Notification,
-  NotificationStatus,
-  Prisma,
-} from '@prisma/client';
+import { Notification, NotificationStatus, Prisma } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
 
@@ -14,21 +10,15 @@ import { UpdateNotificationDto } from '../dto/update-notification.dto';
 
 @Injectable()
 export class NotificationRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async create(
-    data: CreateNotificationDto,
-  ): Promise<Notification> {
+  async create(data: CreateNotificationDto): Promise<Notification> {
     return this.prisma.notification.create({
       data: data as Prisma.NotificationCreateInput,
     });
   }
 
-  async findById(
-    id: string,
-  ): Promise<Notification | null> {
+  async findById(id: string): Promise<Notification | null> {
     return this.prisma.notification.findUnique({
       where: {
         id,
@@ -36,10 +26,7 @@ export class NotificationRepository {
     });
   }
 
-  async update(
-    id: string,
-    data: UpdateNotificationDto,
-  ): Promise<Notification> {
+  async update(id: string, data: UpdateNotificationDto): Promise<Notification> {
     return this.prisma.notification.update({
       where: {
         id,
@@ -48,9 +35,7 @@ export class NotificationRepository {
     });
   }
 
-  async softDelete(
-    id: string,
-  ): Promise<Notification> {
+  async softDelete(id: string): Promise<Notification> {
     return this.prisma.notification.update({
       where: {
         id,
@@ -76,10 +61,7 @@ export class NotificationRepository {
     });
   }
 
-  async schedule(
-    id: string,
-    scheduledAt: Date,
-  ): Promise<Notification> {
+  async schedule(id: string, scheduledAt: Date): Promise<Notification> {
     return this.prisma.notification.update({
       where: {
         id,
@@ -90,9 +72,7 @@ export class NotificationRepository {
     });
   }
 
-  async markAsRead(
-    id: string,
-  ): Promise<Notification> {
+  async markAsRead(id: string): Promise<Notification> {
     return this.prisma.notification.update({
       where: {
         id,
@@ -104,9 +84,7 @@ export class NotificationRepository {
     });
   }
 
-  async markAsUnread(
-    id: string,
-  ): Promise<Notification> {
+  async markAsUnread(id: string): Promise<Notification> {
     return this.prisma.notification.update({
       where: {
         id,
@@ -118,28 +96,23 @@ export class NotificationRepository {
     });
   }
 
-  async markAllAsRead(
-    userId: string,
-  ): Promise<number> {
-    const result =
-      await this.prisma.notification.updateMany({
-        where: {
-          userId,
-          readAt: null,
-          isDeleted: false,
-        },
-        data: {
-          readAt: new Date(),
-          status: NotificationStatus.READ,
-        },
-      });
+  async markAllAsRead(userId: string): Promise<number> {
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        userId,
+        readAt: null,
+        isDeleted: false,
+      },
+      data: {
+        readAt: new Date(),
+        status: NotificationStatus.READ,
+      },
+    });
 
     return result.count;
   }
 
-  async incrementRetry(
-    id: string,
-  ): Promise<Notification> {
+  async incrementRetry(id: string): Promise<Notification> {
     return this.prisma.notification.update({
       where: {
         id,
@@ -152,23 +125,18 @@ export class NotificationRepository {
     });
   }
 
-  async cancel(
-    id: string,
-  ): Promise<Notification> {
+  async cancel(id: string): Promise<Notification> {
     return this.prisma.notification.update({
       where: {
         id,
       },
       data: {
-        status:
-          NotificationStatus.CANCELLED,
+        status: NotificationStatus.CANCELLED,
       },
     });
   }
 
-  async findAll(
-    query: NotificationQueryDto,
-  ): Promise<Notification[]> {
+  async findAll(query: NotificationQueryDto): Promise<Notification[]> {
     const {
       page,
       limit,
@@ -180,11 +148,10 @@ export class NotificationRepository {
       ...filters
     } = query;
 
-    const where: Prisma.NotificationWhereInput =
-      {
-        isDeleted: false,
-        ...filters,
-      };
+    const where: Prisma.NotificationWhereInput = {
+      isDeleted: false,
+      ...filters,
+    };
 
     if (search) {
       where.OR = [
@@ -213,13 +180,11 @@ export class NotificationRepository {
       where.createdAt = {};
 
       if (fromDate) {
-        where.createdAt.gte =
-          new Date(fromDate);
+        where.createdAt.gte = new Date(fromDate);
       }
 
       if (toDate) {
-        where.createdAt.lte =
-          new Date(toDate);
+        where.createdAt.lte = new Date(toDate);
       }
     }
 
@@ -233,9 +198,7 @@ export class NotificationRepository {
     });
   }
 
-  async count(
-    where: Prisma.NotificationWhereInput = {},
-  ): Promise<number> {
+  async count(where: Prisma.NotificationWhereInput = {}): Promise<number> {
     return this.prisma.notification.count({
       where,
     });
@@ -259,50 +222,43 @@ export class NotificationRepository {
       }),
       this.prisma.notification.count({
         where: {
-          status:
-            NotificationStatus.PENDING,
+          status: NotificationStatus.PENDING,
           isDeleted: false,
         },
       }),
       this.prisma.notification.count({
         where: {
-          status:
-            NotificationStatus.PROCESSING,
+          status: NotificationStatus.PROCESSING,
           isDeleted: false,
         },
       }),
       this.prisma.notification.count({
         where: {
-          status:
-            NotificationStatus.SENT,
+          status: NotificationStatus.SENT,
           isDeleted: false,
         },
       }),
       this.prisma.notification.count({
         where: {
-          status:
-            NotificationStatus.DELIVERED,
+          status: NotificationStatus.DELIVERED,
           isDeleted: false,
         },
       }),
       this.prisma.notification.count({
         where: {
-          status:
-            NotificationStatus.FAILED,
+          status: NotificationStatus.FAILED,
           isDeleted: false,
         },
       }),
       this.prisma.notification.count({
         where: {
-          status:
-            NotificationStatus.CANCELLED,
+          status: NotificationStatus.CANCELLED,
           isDeleted: false,
         },
       }),
       this.prisma.notification.count({
         where: {
-          status:
-            NotificationStatus.READ,
+          status: NotificationStatus.READ,
           isDeleted: false,
         },
       }),
@@ -317,18 +273,13 @@ export class NotificationRepository {
       failed,
       cancelled,
       read,
-      unread:
-        delivered + sent + processing,
+      unread: delivered + sent + processing,
     };
   }
 
   async transaction<T>(
-    callback: (
-      tx: Prisma.TransactionClient,
-    ) => Promise<T>,
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
-    return this.prisma.$transaction(
-      callback,
-    );
+    return this.prisma.$transaction(callback);
   }
 }

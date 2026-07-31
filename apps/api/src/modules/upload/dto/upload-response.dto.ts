@@ -1,8 +1,4 @@
-import {
-  UploadCategory,
-  UploadStatus,
-  UploadVisibility,
-} from '@prisma/client';
+import { UploadCategory, UploadStatus, UploadVisibility } from '@prisma/client';
 
 export class UploadResponseDto {
   id: string;
@@ -45,10 +41,7 @@ export class UploadResponseDto {
 
   etag: string | null;
 
-  metadata: Record<
-    string,
-    unknown
-  > | null;
+  metadata: Record<string, unknown> | null;
 
   uploadedAt: Date | null;
 

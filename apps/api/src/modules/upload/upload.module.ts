@@ -15,14 +15,9 @@ import { ConfigModule } from '@nestjs/config';
 import { UploadStateMachine } from './utils/upload-state-machine';
 
 @Module({
+  imports: [ConfigModule],
 
-  imports: [
-  ConfigModule,
-],
-
-  controllers: [
-    UploadController,
-  ],
+  controllers: [UploadController],
   providers: [
     PrismaService,
 
@@ -38,10 +33,6 @@ import { UploadStateMachine } from './utils/upload-state-machine';
     S3Storage,
     MinioStorage,
   ],
-  exports: [
-    UploadService,
-    StorageService,
-    UploadRepository,
-  ],
+  exports: [UploadService, StorageService, UploadRepository],
 })
 export class UploadModule {}

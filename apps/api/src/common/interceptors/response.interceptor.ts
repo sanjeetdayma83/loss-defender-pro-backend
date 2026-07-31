@@ -4,33 +4,22 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-
+import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 
 @Injectable()
-export class ResponseInterceptor
-  implements NestInterceptor
-{
-  intercept(
-    context: ExecutionContext,
-    next: CallHandler,
-  ): Observable<unknown> {
-    const request = context.switchToHttp().getRequest();
+export class ResponseInterceptor implements NestInterceptor {
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const request = context.switchToHttp().getRequest<Request>();
 
     return next.handle().pipe(
-      map((data) => ({
+      map((data: unknown) => ({
         success: true,
-
-        requestId:
-          request.headers['x-request-id'],
-
+        requestId: request.headers['x-request-id'],
         timestamp: new Date().toISOString(),
-
         path: request.originalUrl,
-
         method: request.method,
-
         data,
       })),
     );

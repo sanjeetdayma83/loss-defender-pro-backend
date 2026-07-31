@@ -10,10 +10,7 @@ import {
   Min,
 } from 'class-validator';
 
-import {
-  ReturnPriority,
-  ReturnStatus,
-} from '@prisma/client';
+import { ReturnPriority, ReturnStatus } from '@prisma/client';
 
 export class CreateReturnDto {
   @IsUUID()
@@ -100,8 +97,5 @@ export class CreateReturnDto {
 
   @IsOptional()
   @IsObject()
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  metadata?: Record<string, unknown>;
 }

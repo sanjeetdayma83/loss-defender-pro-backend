@@ -25,11 +25,8 @@ export class ClaimService {
     private readonly stateMachine: ClaimStateMachine,
   ) {}
 
-  async create(
-    dto: CreateClaimDto,
-  ): Promise<Claim> {
-    const claimNumber =
-      await this.generateClaimNumber();
+  async create(dto: CreateClaimDto): Promise<Claim> {
+    const claimNumber = await this.generateClaimNumber();
 
     return this.repository.create({
       ...dto,
@@ -37,16 +34,10 @@ export class ClaimService {
     });
   }
 
-  async findAll(
-    query: ClaimQueryDto,
-  ) {
-    const data =
-      await this.repository.findAll(
-        query,
-      );
+  async findAll(query: ClaimQueryDto) {
+    const data = await this.repository.findAll(query);
 
-    const total =
-      await this.repository.count();
+    const total = await this.repository.count();
 
     return {
       data,
@@ -56,121 +47,65 @@ export class ClaimService {
     };
   }
 
-  async findById(
-    id: string,
-  ): Promise<Claim> {
-    const claim =
-      await this.repository.findById(id);
+  async findById(id: string): Promise<Claim> {
+    const claim = await this.repository.findById(id);
 
     if (!claim) {
-      throw new NotFoundException(
-        'Claim not found.',
-      );
+      throw new NotFoundException('Claim not found.');
     }
 
     return claim;
   }
 
-  async update(
-    id: string,
-    dto: UpdateClaimDto,
-  ): Promise<Claim> {
+  async update(id: string, dto: UpdateClaimDto): Promise<Claim> {
     await this.findById(id);
 
-    return this.repository.update(
-      id,
-      dto,
-    );
+    return this.repository.update(id, dto);
   }
 
-  async remove(
-    id: string,
-  ): Promise<Claim> {
+  async remove(id: string): Promise<Claim> {
     await this.findById(id);
 
-    return this.repository.softDelete(
-      id,
-    );
+    return this.repository.softDelete(id);
   }
 
-  async changeStatus(
-    id: string,
-    status: ClaimStatus,
-  ): Promise<Claim> {
-    const claim =
-      await this.findById(id);
+  async changeStatus(id: string, status: ClaimStatus): Promise<Claim> {
+    const claim = await this.findById(id);
 
-    this.stateMachine.validateTransition(
-      claim.status,
-      status,
-    );
+    this.stateMachine.validateTransition(claim.status, status);
 
-    return this.repository.updateStatus(
-      id,
-      status,
-    );
+    return this.repository.updateStatus(id, status);
   }
 
-  async changePriority(
-    id: string,
-    priority: ClaimPriority,
-  ): Promise<Claim> {
+  async changePriority(id: string, priority: ClaimPriority): Promise<Claim> {
     await this.findById(id);
 
-    return this.repository.updatePriority(
-      id,
-      priority,
-    );
+    return this.repository.updatePriority(id, priority);
   }
 
-  async assign(
-    id: string,
-    assignedTo: string,
-  ): Promise<Claim> {
-    const claim =
-      await this.findById(id);
+  async assign(id: string, assignedTo: string): Promise<Claim> {
+    const claim = await this.findById(id);
 
-    if (
-      !this.stateMachine.canAssign(
-        claim.status,
-      )
-    ) {
+    if (!this.stateMachine.canAssign(claim.status)) {
       throw new BadRequestException(
         'Claim cannot be assigned in its current state.',
       );
     }
 
-    return this.repository.assign(
-      id,
-      assignedTo,
-    );
+    return this.repository.assign(id, assignedTo);
   }
 
-  async analyze(
-    id: string,
-  ): Promise<Claim> {
-    const claim =
-      await this.findById(id);
+  async analyze(id: string): Promise<Claim> {
+    const claim = await this.findById(id);
 
-    if (
-      !this.stateMachine.canAnalyze(
-        claim.status,
-      )
-    ) {
-      throw new BadRequestException(
-        'Claim is not eligible for AI analysis.',
-      );
+    if (!this.stateMachine.canAnalyze(claim.status)) {
+      throw new BadRequestException('Claim is not eligible for AI analysis.');
     }
 
-    return this.repository.updateStatus(
-      id,
-      ClaimStatus.AI_ANALYZING,
-    );
+    return this.repository.updateStatus(id, ClaimStatus.AI_ANALYZING);
   }
 
-  async validateEvidence(
-    id: string,
-  ): Promise<boolean> {
+  async validateEvidence(id: string): Promise<boolean> {
     await this.findById(id);
 
     // Future implementation:
@@ -186,17 +121,10 @@ export class ClaimService {
     resolvedBy: string,
     resolutionData?: Prisma.JsonValue,
   ): Promise<Claim> {
-    const claim =
-      await this.findById(id);
+    const claim = await this.findById(id);
 
-    if (
-      !this.stateMachine.canResolve(
-        claim.status,
-      )
-    ) {
-      throw new BadRequestException(
-        'Claim cannot be resolved.',
-      );
+    if (!this.stateMachine.canResolve(claim.status)) {
+      throw new BadRequestException('Claim cannot be resolved.');
     }
 
     return this.repository.resolve(
@@ -207,90 +135,48 @@ export class ClaimService {
     );
   }
 
-  async close(
-    id: string,
-  ): Promise<Claim> {
-    const claim =
-      await this.findById(id);
+  async close(id: string): Promise<Claim> {
+    const claim = await this.findById(id);
 
-    if (
-      !this.stateMachine.canClose(
-        claim.status,
-      )
-    ) {
-      throw new BadRequestException(
-        'Claim cannot be closed.',
-      );
+    if (!this.stateMachine.canClose(claim.status)) {
+      throw new BadRequestException('Claim cannot be closed.');
     }
 
     return this.repository.close(id);
   }
 
-  async reopen(
-    id: string,
-  ): Promise<Claim> {
-    const claim =
-      await this.findById(id);
+  async reopen(id: string): Promise<Claim> {
+    const claim = await this.findById(id);
 
-    if (
-      !this.stateMachine.canReopen(
-        claim.status,
-      )
-    ) {
-      throw new BadRequestException(
-        'Claim cannot be reopened.',
-      );
+    if (!this.stateMachine.canReopen(claim.status)) {
+      throw new BadRequestException('Claim cannot be reopened.');
     }
 
-    return this.repository.updateStatus(
-      id,
-      ClaimStatus.OPEN,
-    );
+    return this.repository.updateStatus(id, ClaimStatus.OPEN);
   }
 
-  async cancel(
-    id: string,
-  ): Promise<Claim> {
-    const claim =
-      await this.findById(id);
+  async cancel(id: string): Promise<Claim> {
+    const claim = await this.findById(id);
 
-    if (
-      !this.stateMachine.canCancel(
-        claim.status,
-      )
-    ) {
-      throw new BadRequestException(
-        'Claim cannot be cancelled.',
-      );
+    if (!this.stateMachine.canCancel(claim.status)) {
+      throw new BadRequestException('Claim cannot be cancelled.');
     }
 
-    return this.repository.updateStatus(
-      id,
-      ClaimStatus.CANCELLED,
-    );
+    return this.repository.updateStatus(id, ClaimStatus.CANCELLED);
   }
 
-  async escalate(
-    id: string,
-  ): Promise<Claim> {
-    const claim =
-      await this.findById(id);
+  async escalate(id: string): Promise<Claim> {
+    await this.findById(id);
 
-    return this.repository.updatePriority(
-      id,
-      ClaimPriority.HIGH,
-    );
+    return this.repository.updatePriority(id, ClaimPriority.HIGH);
   }
 
-  async generateResolution(
-    id: string,
-  ) {
+  async generateResolution(id: string) {
     await this.findById(id);
 
     return {
       success: true,
-      message:
-        'AI-generated resolution will be available in a future release.',
+      message: 'AI-generated resolution will be available in a future release.',
     };
   }
 
@@ -300,14 +186,9 @@ export class ClaimService {
 
   private async generateClaimNumber(): Promise<string> {
     while (true) {
-      const number = `CLM-${Date.now()}-${Math.floor(
-        Math.random() * 1000,
-      )}`;
+      const number = `CLM-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-      const exists =
-        await this.repository.findByClaimNumber(
-          number,
-        );
+      const exists = await this.repository.findByClaimNumber(number);
 
       if (!exists) {
         return number;

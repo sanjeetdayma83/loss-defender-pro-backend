@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 
 import {
   Order,
@@ -21,6 +18,7 @@ import { OrderQueryDto } from '../dto/order-query.dto';
 import { IOrderService } from '../interfaces/order.interface';
 
 import {
+  OrderFilter,
   OrderSearchResult,
   OrderStatistics,
 } from '../types/order.types';
@@ -42,9 +40,7 @@ export class OrderService implements IOrderService {
     return this.repository.findById(id);
   }
 
-  async findAll(
-    query: OrderQueryDto,
-  ): Promise<OrderSearchResult<Order>> {
+  async findAll(query: OrderQueryDto): Promise<OrderSearchResult<Order>> {
     return this.repository.findAll(query);
   }
 
@@ -209,9 +205,7 @@ export class OrderService implements IOrderService {
     const order = await this.getOrder(id);
 
     if (order.status === OrderStatus.DELIVERED) {
-      throw new BadRequestException(
-        'Delivered orders cannot be cancelled.',
-      );
+      throw new BadRequestException('Delivered orders cannot be cancelled.');
     }
 
     this.validateTransition(order.status, OrderStatus.CANCELLED);
@@ -226,9 +220,7 @@ export class OrderService implements IOrderService {
     const order = await this.getOrder(id);
 
     if (order.status !== OrderStatus.CANCELLED) {
-      throw new BadRequestException(
-        'Only cancelled orders can be reopened.',
-      );
+      throw new BadRequestException('Only cancelled orders can be reopened.');
     }
 
     return this.repository.update(id, {
@@ -339,7 +331,7 @@ export class OrderService implements IOrderService {
       limit: 1000,
       sortBy: 'createdAt',
       sortOrder: 'desc',
-    } as OrderQueryDto);
+    });
 
     return result.items;
   }
@@ -382,9 +374,7 @@ export class OrderService implements IOrderService {
     return this.repository.findByPriority(priority as OrderPriority);
   }
 
-  async findByPackingStatus(
-    packingStatus: PackingStatus,
-  ): Promise<Order[]> {
+  async findByPackingStatus(packingStatus: PackingStatus): Promise<Order[]> {
     return this.repository.findByPackingStatus(packingStatus);
   }
 
@@ -396,12 +386,12 @@ export class OrderService implements IOrderService {
 
   async findByMarketplace(marketplace: string): Promise<Order[]> {
     const result = await this.repository.findAll({
-      marketplace: marketplace as any,
+      marketplace: marketplace,
       page: 1,
       limit: 1000,
       sortBy: 'createdAt',
       sortOrder: 'desc',
-    } as OrderQueryDto);
+    });
 
     return result.items;
   }
@@ -545,16 +535,10 @@ export class OrderService implements IOrderService {
   }
 
   async batchUpdatePriority(ids: string[], priority: string) {
-    return this.repository.batchUpdatePriority(
-      ids,
-      priority as OrderPriority,
-    );
+    return this.repository.batchUpdatePriority(ids, priority as OrderPriority);
   }
 
-  async batchUpdatePackingStatus(
-    ids: string[],
-    packingStatus: PackingStatus,
-  ) {
+  async batchUpdatePackingStatus(ids: string[], packingStatus: PackingStatus) {
     return this.repository.batchUpdatePackingStatus(ids, packingStatus);
   }
 
@@ -579,10 +563,12 @@ export class OrderService implements IOrderService {
   // ─── TRANSACTIONS ───────────────────────────────────────
 
   async transaction<T>(
-  callback: (tx: Parameters<Parameters<OrderRepository['transaction']>[0]>[0]) => Promise<T>,
-): Promise<T> {
-  return this.repository.transaction(callback);
-}
+    callback: (
+      tx: Parameters<Parameters<OrderRepository['transaction']>[0]>[0],
+    ) => Promise<T>,
+  ): Promise<T> {
+    return this.repository.transaction(callback);
+  }
 
   async executeTransaction(
     operations: Parameters<OrderRepository['executeTransaction']>[0],
@@ -633,7 +619,7 @@ export class OrderService implements IOrderService {
   }
 
   async exportOrders(query: OrderQueryDto): Promise<Order[]> {
-    return this.repository.exportOrders(query as any);
+    return this.repository.exportOrders(query as unknown as OrderFilter);
   }
 
   async archivedOrders(): Promise<Order[]> {

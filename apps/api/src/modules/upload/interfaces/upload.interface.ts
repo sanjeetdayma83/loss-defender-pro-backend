@@ -18,17 +18,11 @@ export interface IStorageProvider {
     metadata?: UploadMetadata,
   ): Promise<UploadResult>;
 
-  delete(
-    key: string,
-  ): Promise<void>;
+  delete(key: string): Promise<void>;
 
-  exists(
-    key: string,
-  ): Promise<boolean>;
+  exists(key: string): Promise<boolean>;
 
-  getUrl(
-    key: string,
-  ): Promise<string>;
+  getUrl(key: string): Promise<string>;
 
   generatePresignedUploadUrl(
     key: string,
@@ -59,8 +53,5 @@ export interface IStorageProvider {
     parts: ChunkUploadResult[],
   ): Promise<CompletedMultipartUpload>;
 
-  abortMultipartUpload(
-    uploadId: string,
-    key: string,
-  ): Promise<void>;
+  abortMultipartUpload(uploadId: string, key: string): Promise<void>;
 }

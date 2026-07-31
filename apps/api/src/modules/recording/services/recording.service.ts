@@ -1,11 +1,5 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
-import {
-  RecordingSession,
-  RecordingStatus,
-} from '@prisma/client';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { RecordingSession, RecordingStatus } from '@prisma/client';
 
 import { RecordingRepository } from '../repositories/recording.repository';
 import { CreateRecordingDto } from '../dto/create-recording.dto';
@@ -20,9 +14,7 @@ export class RecordingService {
     private readonly stateMachine: RecordingStateMachine,
   ) {}
 
-  async create(
-    dto: CreateRecordingDto,
-  ): Promise<RecordingSession> {
+  async create(dto: CreateRecordingDto): Promise<RecordingSession> {
     return this.recordingRepository.create({
       company: {
         connect: { id: dto.companyId },
@@ -42,24 +34,17 @@ export class RecordingService {
     });
   }
 
-  async findById(
-    id: string,
-  ): Promise<RecordingSession> {
-    const recording =
-      await this.recordingRepository.findById(id);
+  async findById(id: string): Promise<RecordingSession> {
+    const recording = await this.recordingRepository.findById(id);
 
     if (!recording) {
-      throw new NotFoundException(
-        'Recording not found',
-      );
+      throw new NotFoundException('Recording not found');
     }
 
     return recording;
   }
 
-  async findAll(
-    query: RecordingQueryDto,
-  ): Promise<RecordingSession[]> {
+  async findAll(query: RecordingQueryDto): Promise<RecordingSession[]> {
     return this.recordingRepository.findAll({
       where: {
         companyId: query.companyId,
@@ -77,18 +62,13 @@ export class RecordingService {
     });
   }
 
-  async update(
-    id: string,
-    dto: UpdateRecordingDto,
-  ): Promise<RecordingSession> {
+  async update(id: string, dto: UpdateRecordingDto): Promise<RecordingSession> {
     await this.findById(id);
 
     return this.recordingRepository.update(id, dto);
   }
 
-  async delete(
-    id: string,
-  ): Promise<RecordingSession> {
+  async delete(id: string): Promise<RecordingSession> {
     await this.findById(id);
 
     return this.recordingRepository.softDelete(id);
@@ -100,95 +80,44 @@ export class RecordingService {
   ): Promise<RecordingSession> {
     const recording = await this.findById(id);
 
-    this.stateMachine.validateTransition(
-      recording.status,
-      status,
-    );
+    this.stateMachine.validateTransition(recording.status, status);
 
-    return this.recordingRepository.updateStatus(
-      id,
-      status,
-    );
+    return this.recordingRepository.updateStatus(id, status);
   }
 
-  async startRecording(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.STARTED,
-    );
+  async startRecording(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.STARTED);
   }
 
-  async pauseRecording(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.PAUSED,
-    );
+  async pauseRecording(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.PAUSED);
   }
 
-  async resumeRecording(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.RESUMED,
-    );
+  async resumeRecording(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.RESUMED);
   }
 
-  async stopRecording(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.STOPPED,
-    );
+  async stopRecording(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.STOPPED);
   }
 
-  async uploadRecording(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.UPLOADING,
-    );
+  async uploadRecording(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.UPLOADING);
   }
 
-  async markUploaded(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.UPLOADED,
-    );
+  async markUploaded(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.UPLOADED);
   }
 
-  async startProcessing(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.PROCESSING,
-    );
+  async startProcessing(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.PROCESSING);
   }
 
-  async completeRecording(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.COMPLETED,
-    );
+  async completeRecording(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.COMPLETED);
   }
 
-  async failRecording(
-    id: string,
-  ): Promise<RecordingSession> {
-    return this.changeStatus(
-      id,
-      RecordingStatus.FAILED,
-    );
+  async failRecording(id: string): Promise<RecordingSession> {
+    return this.changeStatus(id, RecordingStatus.FAILED);
   }
 }

@@ -17,9 +17,7 @@ import { UserQueryDto } from '../dto/user-query.dto';
 
 @Controller('users')
 export class UsersController {
-  constructor(
-    private readonly service: UserService,
-  ) {}
+  constructor(private readonly service: UserService) {}
 
   /**
    * -------------------------------------------------------
@@ -74,9 +72,7 @@ export class UsersController {
     @Param('companyId')
     companyId: string,
   ) {
-    return this.service.findByCompany(
-      companyId,
-    );
+    return this.service.findByCompany(companyId);
   }
 
   /**
@@ -90,9 +86,7 @@ export class UsersController {
     @Param('warehouseId')
     warehouseId: string,
   ) {
-    return this.service.findByWarehouse(
-      warehouseId,
-    );
+    return this.service.findByWarehouse(warehouseId);
   }
 
   /**
@@ -109,10 +103,7 @@ export class UsersController {
     @Body()
     dto: UpdateUserDto,
   ) {
-    return this.service.update(
-      id,
-      dto,
-    );
+    return this.service.update(id, dto);
   }
 
   /**
@@ -170,7 +161,7 @@ export class UsersController {
   ) {
     return this.service.deactivate(id);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * STATISTICS
    * -------------------------------------------------------
@@ -198,10 +189,7 @@ export class UsersController {
     @Body('password')
     password: string,
   ) {
-    return this.service.updatePassword(
-      id,
-      password,
-    );
+    return this.service.updatePassword(id, password);
   }
 
   /**

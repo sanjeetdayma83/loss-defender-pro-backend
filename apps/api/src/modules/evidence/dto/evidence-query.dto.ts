@@ -1,6 +1,4 @@
-import {
-  ApiPropertyOptional,
-} from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { EvidenceStatus } from '@prisma/client';
 import {
   IsEnum,
@@ -71,6 +69,5 @@ export class EvidenceQueryDto {
   })
   @IsOptional()
   @IsEnum(['asc', 'desc'])
-  sortOrder: 'asc' | 'desc' =
-    'desc';
+  sortOrder: 'asc' | 'desc' = 'desc';
 }

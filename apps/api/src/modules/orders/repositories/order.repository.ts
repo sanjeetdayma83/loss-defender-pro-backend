@@ -1,7 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 
 import {
   Prisma,
@@ -27,9 +24,7 @@ import {
 
 @Injectable()
 export class OrderRepository {
-  constructor(
-    private readonly prisma: PrismaService,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   /**
    * -------------------------------------------------------
@@ -37,9 +32,7 @@ export class OrderRepository {
    * -------------------------------------------------------
    */
 
-  private buildWhereClause(
-    query: OrderQueryDto,
-  ): Prisma.OrderWhereInput {
+  private buildWhereClause(query: OrderQueryDto): Prisma.OrderWhereInput {
     const where: Prisma.OrderWhereInput = {
       isDeleted: false,
     };
@@ -61,48 +54,38 @@ export class OrderRepository {
     }
 
     if (query.marketplace) {
-  where.marketplace = query.marketplace as Marketplace;
-}
+      where.marketplace = query.marketplace as Marketplace;
+    }
 
-if (query.status) {
-  where.status = query.status as OrderStatus;
-}
+    if (query.status) {
+      where.status = query.status;
+    }
 
-if (query.priority) {
-  where.priority = query.priority as OrderPriority;
-}
+    if (query.priority) {
+      where.priority = query.priority;
+    }
 
     if (query.packingStatus) {
-      where.packingStatus =
-        query.packingStatus;
+      where.packingStatus = query.packingStatus;
     }
 
     if (query.verificationStatus) {
-      where.verificationStatus =
-        query.verificationStatus;
+      where.verificationStatus = query.verificationStatus;
     }
 
-    if (
-      query.fromDate ||
-      query.toDate
-    ) {
+    if (query.fromDate || query.toDate) {
       where.createdAt = {};
 
       if (query.fromDate) {
-        where.createdAt.gte =
-          new Date(query.fromDate);
+        where.createdAt.gte = new Date(query.fromDate);
       }
 
       if (query.toDate) {
-        where.createdAt.lte =
-          new Date(query.toDate);
+        where.createdAt.lte = new Date(query.toDate);
       }
     }
 
-    if (
-      query.search &&
-      query.search.trim().length > 0
-    ) {
+    if (query.search && query.search.trim().length > 0) {
       where.OR = [
         {
           orderNumber: {
@@ -138,15 +121,11 @@ if (query.priority) {
     query: OrderQueryDto,
   ): Prisma.OrderOrderByWithRelationInput {
     return {
-      [query.sortBy ?? 'createdAt']:
-        query.sortOrder ?? 'desc',
+      [query.sortBy ?? 'createdAt']: query.sortOrder ?? 'desc',
     };
   }
 
-  private pagination(
-    page = 1,
-    limit = 20,
-  ) {
+  private pagination(page = 1, limit = 20) {
     return {
       skip: (page - 1) * limit,
       take: limit,
@@ -164,29 +143,18 @@ if (query.priority) {
 
     const date =
       now.getFullYear().toString() +
-      String(
-        now.getMonth() + 1,
-      ).padStart(2, '0') +
-      String(
-        now.getDate(),
-      ).padStart(2, '0');
+      String(now.getMonth() + 1).padStart(2, '0') +
+      String(now.getDate()).padStart(2, '0');
 
-    const todayCount =
-      await this.prisma.order.count({
-        where: {
-          createdAt: {
-            gte: new Date(
-              now.getFullYear(),
-              now.getMonth(),
-              now.getDate(),
-            ),
-          },
+    const todayCount = await this.prisma.order.count({
+      where: {
+        createdAt: {
+          gte: new Date(now.getFullYear(), now.getMonth(), now.getDate()),
         },
-      });
+      },
+    });
 
-    return `ORD-${date}-${String(
-      todayCount + 1,
-    ).padStart(6, '0')}`;
+    return `ORD-${date}-${String(todayCount + 1).padStart(6, '0')}`;
   }
 
   /**
@@ -195,7 +163,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-    async create(dto: CreateOrderDto): Promise<Order> {
+  async create(dto: CreateOrderDto): Promise<Order> {
     const orderNumber = await this.generateOrderNumber();
 
     return this.prisma.order.create({
@@ -233,46 +201,36 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findById(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.prisma.order.findFirst({
-        where: {
-          id,
-          isDeleted: false,
-        },
-      });
+  async findById(id: string): Promise<Order> {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        id,
+        isDeleted: false,
+      },
+    });
 
     if (!order) {
-      throw new NotFoundException(
-        `Order ${id} not found.`,
-      );
+      throw new NotFoundException(`Order ${id} not found.`);
     }
 
     return order;
   }
-    /**
+  /**
    * -------------------------------------------------------
    * FIND BY ORDER NUMBER
    * -------------------------------------------------------
    */
 
-  async findByOrderNumber(
-    orderNumber: string,
-  ): Promise<Order> {
-    const order =
-      await this.prisma.order.findFirst({
-        where: {
-          orderNumber,
-          isDeleted: false,
-        },
-      });
+  async findByOrderNumber(orderNumber: string): Promise<Order> {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        orderNumber,
+        isDeleted: false,
+      },
+    });
 
     if (!order) {
-      throw new NotFoundException(
-        `Order ${orderNumber} not found.`,
-      );
+      throw new NotFoundException(`Order ${orderNumber} not found.`);
     }
 
     return order;
@@ -284,21 +242,16 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findByMarketplaceOrderId(
-    marketplaceOrderId: string,
-  ): Promise<Order> {
-    const order =
-      await this.prisma.order.findFirst({
-        where: {
-          marketplaceOrderId,
-          isDeleted: false,
-        },
-      });
+  async findByMarketplaceOrderId(marketplaceOrderId: string): Promise<Order> {
+    const order = await this.prisma.order.findFirst({
+      where: {
+        marketplaceOrderId,
+        isDeleted: false,
+      },
+    });
 
     if (!order) {
-      throw new NotFoundException(
-        `Marketplace order not found.`,
-      );
+      throw new NotFoundException(`Marketplace order not found.`);
     }
 
     return order;
@@ -310,16 +263,13 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async exists(
-    id: string,
-  ): Promise<boolean> {
-    const count =
-      await this.prisma.order.count({
-        where: {
-          id,
-          isDeleted: false,
-        },
-      });
+  async exists(id: string): Promise<boolean> {
+    const count = await this.prisma.order.count({
+      where: {
+        id,
+        isDeleted: false,
+      },
+    });
 
     return count > 0;
   }
@@ -330,46 +280,30 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findAll(
-    query: OrderQueryDto,
-  ): Promise<
-    OrderSearchResult<Order>
-  > {
-    const where =
-      this.buildWhereClause(query);
+  async findAll(query: OrderQueryDto): Promise<OrderSearchResult<Order>> {
+    const where = this.buildWhereClause(query);
 
-    const page =
-      query.page ?? 1;
+    const page = query.page ?? 1;
 
-    const limit =
-      query.limit ?? 20;
+    const limit = query.limit ?? 20;
 
-    const pagination =
-      this.pagination(
-        page,
-        limit,
-      );
+    const pagination = this.pagination(page, limit);
 
-    const orderBy =
-      this.buildOrderBy(query);
+    const orderBy = this.buildOrderBy(query);
 
-    const [
-      items,
-      total,
-    ] =
-      await this.prisma.$transaction([
-        this.prisma.order.findMany({
-          where,
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.order.findMany({
+        where,
 
-          ...pagination,
+        ...pagination,
 
-          orderBy,
-        }),
+        orderBy,
+      }),
 
-        this.prisma.order.count({
-          where,
-        }),
-      ]);
+      this.prisma.order.count({
+        where,
+      }),
+    ]);
 
     return {
       items,
@@ -380,11 +314,9 @@ if (query.priority) {
 
       limit,
 
-      hasNext:
-        page * limit < total,
+      hasNext: page * limit < total,
 
-      hasPrevious:
-        page > 1,
+      hasPrevious: page > 1,
     };
   }
 
@@ -394,9 +326,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findManyByIds(
-    ids: string[],
-  ): Promise<Order[]> {
+  async findManyByIds(ids: string[]): Promise<Order[]> {
     if (ids.length === 0) {
       return [];
     }
@@ -418,9 +348,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findByCompany(
-    companyId: string,
-  ): Promise<Order[]> {
+  async findByCompany(companyId: string): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         companyId,
@@ -439,9 +367,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findByWarehouse(
-    warehouseId: string,
-  ): Promise<Order[]> {
+  async findByWarehouse(warehouseId: string): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         warehouseId,
@@ -460,9 +386,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findByCustomer(
-    customerId: string,
-  ): Promise<Order[]> {
+  async findByCustomer(customerId: string): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         customerId,
@@ -481,9 +405,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findByAssignedUser(
-    userId: string,
-  ): Promise<Order[]> {
+  async findByAssignedUser(userId: string): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         assignedTo: userId,
@@ -503,9 +425,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findByStatus(
-    status: OrderStatus,
-  ): Promise<Order[]> {
+  async findByStatus(status: OrderStatus): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         status,
@@ -525,9 +445,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findByPriority(
-    priority: OrderPriority,
-  ): Promise<Order[]> {
+  async findByPriority(priority: OrderPriority): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         priority,
@@ -547,9 +465,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async findByPackingStatus(
-    packingStatus: PackingStatus,
-  ): Promise<Order[]> {
+  async findByPackingStatus(packingStatus: PackingStatus): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         packingStatus,
@@ -584,13 +500,13 @@ if (query.priority) {
       },
     });
   }
-    /**
+  /**
    * -------------------------------------------------------
    * UPDATE
    * -------------------------------------------------------
    */
 
-    async update(id: string, dto: UpdateOrderDto): Promise<Order> {
+  async update(id: string, dto: UpdateOrderDto): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -617,7 +533,7 @@ if (query.priority) {
         returnId: dto.returnId,
         remarks: dto.remarks,
         metadata: dto.metadata as Prisma.InputJsonValue,
-      } as Prisma.OrderUncheckedUpdateInput,
+      },
     });
   }
 
@@ -627,10 +543,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async updateStatus(
-    id: string,
-    status: OrderStatus,
-  ): Promise<Order> {
+  async updateStatus(id: string, status: OrderStatus): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -650,10 +563,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async assignWarehouse(
-    id: string,
-    warehouseId: string,
-  ): Promise<Order> {
+  async assignWarehouse(id: string, warehouseId: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -673,10 +583,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async assignOperator(
-    id: string,
-    userId: string,
-  ): Promise<Order> {
+  async assignOperator(id: string, userId: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -721,10 +628,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async attachRecording(
-    id: string,
-    recordingId: string,
-  ): Promise<Order> {
+  async attachRecording(id: string, recordingId: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -744,10 +648,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async attachEvidence(
-    id: string,
-    evidenceId: string,
-  ): Promise<Order> {
+  async attachEvidence(id: string, evidenceId: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -767,10 +668,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async attachClaim(
-    id: string,
-    claimId: string,
-  ): Promise<Order> {
+  async attachClaim(id: string, claimId: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -790,10 +688,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async attachReturn(
-    id: string,
-    returnId: string,
-  ): Promise<Order> {
+  async attachReturn(id: string, returnId: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -882,10 +777,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async updateItems(
-    id: string,
-    items: Prisma.JsonArray,
-  ): Promise<Order> {
+  async updateItems(id: string, items: Prisma.JsonArray): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -898,15 +790,13 @@ if (query.priority) {
       },
     });
   }
-    /**
+  /**
    * -------------------------------------------------------
    * SOFT DELETE
    * -------------------------------------------------------
    */
 
-  async softDelete(
-    id: string,
-  ): Promise<Order> {
+  async softDelete(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -927,20 +817,15 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async restore(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.prisma.order.findUnique({
-        where: {
-          id,
-        },
-      });
+  async restore(id: string): Promise<Order> {
+    const order = await this.prisma.order.findUnique({
+      where: {
+        id,
+      },
+    });
 
     if (!order) {
-      throw new NotFoundException(
-        `Order ${id} not found.`,
-      );
+      throw new NotFoundException(`Order ${id} not found.`);
     }
 
     return this.prisma.order.update({
@@ -961,9 +846,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async delete(
-    id: string,
-  ): Promise<Order> {
+  async delete(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.delete({
@@ -1054,9 +937,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async batchSoftDelete(
-    ids: string[],
-  ): Promise<Prisma.BatchPayload> {
+  async batchSoftDelete(ids: string[]): Promise<Prisma.BatchPayload> {
     return this.prisma.order.updateMany({
       where: {
         id: {
@@ -1079,9 +960,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async batchRestore(
-    ids: string[],
-  ): Promise<Prisma.BatchPayload> {
+  async batchRestore(ids: string[]): Promise<Prisma.BatchPayload> {
     return this.prisma.order.updateMany({
       where: {
         id: {
@@ -1180,13 +1059,9 @@ if (query.priority) {
    */
 
   async transaction<T>(
-    callback: (
-      tx: Prisma.TransactionClient,
-    ) => Promise<T>,
+    callback: (tx: Prisma.TransactionClient) => Promise<T>,
   ): Promise<T> {
-    return this.prisma.$transaction(
-      callback,
-    );
+    return this.prisma.$transaction(callback);
   }
 
   /**
@@ -1195,87 +1070,57 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async executeTransaction(
-    operations: Prisma.PrismaPromise<unknown>[],
-  ) {
-    return this.prisma.$transaction(
-      operations,
-    );
+  async executeTransaction(operations: Prisma.PrismaPromise<unknown>[]) {
+    return this.prisma.$transaction(operations);
   }
-    /**
+  /**
    * -------------------------------------------------------
    * DASHBOARD STATISTICS
    * -------------------------------------------------------
    */
 
   async statistics(): Promise<OrderStatistics> {
-    const total =
-      await this.prisma.order.count({
-        where: {
-          isDeleted: false,
-        },
-      });
+    const total = await this.prisma.order.count({
+      where: {
+        isDeleted: false,
+      },
+    });
 
-    const grouped =
-      await this.prisma.order.groupBy({
-        by: ['status'],
-        where: {
-          isDeleted: false,
-        },
-        _count: {
-          status: true,
-        },
-      });
+    const grouped = await this.prisma.order.groupBy({
+      by: ['status'],
+      where: {
+        isDeleted: false,
+      },
+      _count: {
+        status: true,
+      },
+    });
 
-    const getCount = (
-      status: OrderStatus,
-    ) =>
-      grouped.find(
-        (g) => g.status === status,
-      )?._count.status ?? 0;
+    const getCount = (status: OrderStatus) =>
+      grouped.find((g) => g.status === status)?._count.status ?? 0;
 
     return {
       total,
 
-      created: getCount(
-        OrderStatus.CREATED,
-      ),
+      created: getCount(OrderStatus.CREATED),
 
-      assigned: getCount(
-        OrderStatus.ASSIGNED,
-      ),
+      assigned: getCount(OrderStatus.ASSIGNED),
 
-      packing: getCount(
-        OrderStatus.PACKING,
-      ),
+      packing: getCount(OrderStatus.PACKING),
 
-      recording: getCount(
-        OrderStatus.RECORDING,
-      ),
+      recording: getCount(OrderStatus.RECORDING),
 
-      verifying: getCount(
-        OrderStatus.VERIFYING,
-      ),
+      verifying: getCount(OrderStatus.VERIFYING),
 
-      shipped: getCount(
-        OrderStatus.SHIPPED,
-      ),
+      shipped: getCount(OrderStatus.SHIPPED),
 
-      delivered: getCount(
-        OrderStatus.DELIVERED,
-      ),
+      delivered: getCount(OrderStatus.DELIVERED),
 
-      cancelled: getCount(
-        OrderStatus.CANCELLED,
-      ),
+      cancelled: getCount(OrderStatus.CANCELLED),
 
-      returned: getCount(
-        OrderStatus.RETURNED,
-      ),
+      returned: getCount(OrderStatus.RETURNED),
 
-      claimed: getCount(
-        OrderStatus.CLAIMED,
-      ),
+      claimed: getCount(OrderStatus.CLAIMED),
     };
   }
 
@@ -1285,9 +1130,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async countByStatus(
-    status: OrderStatus,
-  ): Promise<number> {
+  async countByStatus(status: OrderStatus): Promise<number> {
     return this.prisma.order.count({
       where: {
         status,
@@ -1302,9 +1145,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async countByPriority(
-    priority: OrderPriority,
-  ): Promise<number> {
+  async countByPriority(priority: OrderPriority): Promise<number> {
     return this.prisma.order.count({
       where: {
         priority,
@@ -1319,9 +1160,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async countByWarehouse(
-    warehouseId: string,
-  ): Promise<number> {
+  async countByWarehouse(warehouseId: string): Promise<number> {
     return this.prisma.order.count({
       where: {
         warehouseId,
@@ -1336,9 +1175,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async countByOperator(
-    operatorId: string,
-  ): Promise<number> {
+  async countByOperator(operatorId: string): Promise<number> {
     return this.prisma.order.count({
       where: {
         assignedTo: operatorId,
@@ -1353,9 +1190,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async countByMarketplace(
-    marketplace: string,
-  ): Promise<number> {
+  async countByMarketplace(marketplace: string): Promise<number> {
     return this.prisma.order.count({
       where: {
         marketplace: marketplace as Marketplace,
@@ -1378,11 +1213,7 @@ if (query.priority) {
         isDeleted: false,
 
         createdAt: {
-          gte: new Date(
-            today.getFullYear(),
-            today.getMonth(),
-            today.getDate(),
-          ),
+          gte: new Date(today.getFullYear(), today.getMonth(), today.getDate()),
         },
       },
     });
@@ -1397,9 +1228,7 @@ if (query.priority) {
   async weeklyOrders(): Promise<number> {
     const date = new Date();
 
-    date.setDate(
-      date.getDate() - 7,
-    );
+    date.setDate(date.getDate() - 7);
 
     return this.prisma.order.count({
       where: {
@@ -1421,9 +1250,7 @@ if (query.priority) {
   async monthlyOrders(): Promise<number> {
     const date = new Date();
 
-    date.setMonth(
-      date.getMonth() - 1,
-    );
+    date.setMonth(date.getMonth() - 1);
 
     return this.prisma.order.count({
       where: {
@@ -1445,8 +1272,7 @@ if (query.priority) {
   async packingQueue(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
-        status:
-          OrderStatus.PACKING,
+        status: OrderStatus.PACKING,
 
         isDeleted: false,
       },
@@ -1466,8 +1292,7 @@ if (query.priority) {
   async recordingQueue(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
-        status:
-          OrderStatus.RECORDING,
+        status: OrderStatus.RECORDING,
 
         isDeleted: false,
       },
@@ -1487,8 +1312,7 @@ if (query.priority) {
   async verificationQueue(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
-        status:
-          OrderStatus.VERIFYING,
+        status: OrderStatus.VERIFYING,
 
         isDeleted: false,
       },
@@ -1508,8 +1332,7 @@ if (query.priority) {
   async readyToShipQueue(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
-        status:
-          OrderStatus.READY_TO_SHIP,
+        status: OrderStatus.READY_TO_SHIP,
 
         isDeleted: false,
       },
@@ -1529,8 +1352,7 @@ if (query.priority) {
   async cancelledOrders(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
-        status:
-          OrderStatus.CANCELLED,
+        status: OrderStatus.CANCELLED,
 
         isDeleted: false,
       },
@@ -1550,8 +1372,7 @@ if (query.priority) {
   async returnedOrders(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
-        status:
-          OrderStatus.RETURNED,
+        status: OrderStatus.RETURNED,
 
         isDeleted: false,
       },
@@ -1571,8 +1392,7 @@ if (query.priority) {
   async claimedOrders(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
-        status:
-          OrderStatus.CLAIMED,
+        status: OrderStatus.CLAIMED,
 
         isDeleted: false,
       },
@@ -1582,15 +1402,13 @@ if (query.priority) {
       },
     });
   }
-    /**
+  /**
    * -------------------------------------------------------
    * RECENT ORDERS
    * -------------------------------------------------------
    */
 
-  async recentOrders(
-    limit = 20,
-  ): Promise<Order[]> {
+  async recentOrders(limit = 20): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         isDeleted: false,
@@ -1610,7 +1428,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-    async highPriorityOrders(): Promise<Order[]> {
+  async highPriorityOrders(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         isDeleted: false,
@@ -1618,10 +1436,7 @@ if (query.priority) {
           in: [OrderPriority.HIGH, OrderPriority.CRITICAL],
         },
       },
-      orderBy: [
-        { priority: 'desc' },
-        { createdAt: 'asc' },
-      ],
+      orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
     });
   }
 
@@ -1691,9 +1506,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async overdueOrders(
-    before: Date,
-  ): Promise<Order[]> {
+  async overdueOrders(before: Date): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         createdAt: {
@@ -1844,9 +1657,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async dailyTrend(
-    from: Date,
-  ): Promise<Order[]> {
+  async dailyTrend(from: Date): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         createdAt: {
@@ -1868,9 +1679,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async recentShipments(
-    limit = 25,
-  ): Promise<Order[]> {
+  async recentShipments(limit = 25): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         status: OrderStatus.SHIPPED,
@@ -1892,9 +1701,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async recentDeliveries(
-    limit = 25,
-  ): Promise<Order[]> {
+  async recentDeliveries(limit = 25): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         status: OrderStatus.DELIVERED,
@@ -1909,15 +1716,13 @@ if (query.priority) {
       take: limit,
     });
   }
-    /**
+  /**
    * -------------------------------------------------------
    * SLA MONITORING
    * -------------------------------------------------------
    */
 
-  async slaBreachedOrders(
-    before: Date,
-  ): Promise<Order[]> {
+  async slaBreachedOrders(before: Date): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         isDeleted: false,
@@ -1952,16 +1757,15 @@ if (query.priority) {
     marketplace: string,
     marketplaceOrderId: string,
   ): Promise<boolean> {
-    const count =
-      await this.prisma.order.count({
-        where: {
-          marketplace: marketplace as Marketplace,
+    const count = await this.prisma.order.count({
+      where: {
+        marketplace: marketplace as Marketplace,
 
-          marketplaceOrderId,
+        marketplaceOrderId,
 
-          isDeleted: false,
-        },
-      });
+        isDeleted: false,
+      },
+    });
 
     return count > 0;
   }
@@ -1972,17 +1776,14 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async trackingExists(
-    trackingNumber: string,
-  ): Promise<boolean> {
-    const count =
-      await this.prisma.order.count({
-        where: {
-          trackingNumber,
+  async trackingExists(trackingNumber: string): Promise<boolean> {
+    const count = await this.prisma.order.count({
+      where: {
+        trackingNumber,
 
-          isDeleted: false,
-        },
-      });
+        isDeleted: false,
+      },
+    });
 
     return count > 0;
   }
@@ -2001,10 +1802,7 @@ if (query.priority) {
         trackingNumber: null,
 
         status: {
-          in: [
-            OrderStatus.CREATED,
-            OrderStatus.ASSIGNED,
-          ],
+          in: [OrderStatus.CREATED, OrderStatus.ASSIGNED],
         },
       },
 
@@ -2038,7 +1836,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-    async exportOrders(filter: OrderFilter): Promise<Order[]> {
+  async exportOrders(filter: OrderFilter): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         companyId: filter.companyId,
@@ -2098,10 +1896,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async createdBetween(
-    from: Date,
-    to: Date,
-  ): Promise<Order[]> {
+  async createdBetween(from: Date, to: Date): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         isDeleted: false,
@@ -2175,15 +1970,13 @@ if (query.priority) {
 
     return true;
   }
-    /**
+  /**
    * -------------------------------------------------------
    * CLEANUP SOFT DELETED ORDERS
    * -------------------------------------------------------
    */
 
-  async cleanupSoftDeletedOrders(
-    before: Date,
-  ): Promise<Prisma.BatchPayload> {
+  async cleanupSoftDeletedOrders(before: Date): Promise<Prisma.BatchPayload> {
     return this.prisma.order.deleteMany({
       where: {
         isDeleted: true,
@@ -2200,7 +1993,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-    async resetAssignment(id: string): Promise<Order> {
+  async resetAssignment(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -2218,9 +2011,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async clearTracking(
-    id: string,
-  ): Promise<Order> {
+  async clearTracking(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -2240,9 +2031,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async detachRecording(
-    id: string,
-  ): Promise<Order> {
+  async detachRecording(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -2261,9 +2050,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async detachEvidence(
-    id: string,
-  ): Promise<Order> {
+  async detachEvidence(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -2282,9 +2069,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async detachClaim(
-    id: string,
-  ): Promise<Order> {
+  async detachClaim(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -2303,9 +2088,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async detachReturn(
-    id: string,
-  ): Promise<Order> {
+  async detachReturn(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -2325,9 +2108,7 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async touch(
-    id: string,
-  ): Promise<Order> {
+  async touch(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
@@ -2346,15 +2127,12 @@ if (query.priority) {
    * -------------------------------------------------------
    */
 
-  async orderNumberExists(
-    orderNumber: string,
-  ): Promise<boolean> {
-    const count =
-      await this.prisma.order.count({
-        where: {
-          orderNumber,
-        },
-      });
+  async orderNumberExists(orderNumber: string): Promise<boolean> {
+    const count = await this.prisma.order.count({
+      where: {
+        orderNumber,
+      },
+    });
 
     return count > 0;
   }
@@ -2404,11 +2182,7 @@ if (query.priority) {
    */
 
   async databaseStatistics() {
-    const [
-      total,
-      active,
-      deleted,
-    ] = await Promise.all([
+    const [total, active, deleted] = await Promise.all([
       this.totalOrders(),
       this.activeOrders(),
       this.deletedOrders(),

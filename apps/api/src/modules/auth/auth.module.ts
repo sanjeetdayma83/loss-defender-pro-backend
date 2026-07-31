@@ -27,13 +27,9 @@ import { TokenService } from './services/token.service';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: (config: ConfigService) => ({
-        secret: config.getOrThrow<string>(
-          'auth.jwtAccessSecret',
-        ),
+        secret: config.getOrThrow<string>('auth.jwtAccessSecret'),
         signOptions: {
-          expiresIn: config.getOrThrow<StringValue>(
-            'auth.jwtAccessExpires',
-          ),
+          expiresIn: config.getOrThrow<StringValue>('auth.jwtAccessExpires'),
         },
       }),
     }),

@@ -50,8 +50,7 @@ export class CreateOrderDto {
 
   @IsOptional()
   @IsEnum(VerificationStatus)
-  verificationStatus: VerificationStatus =
-    VerificationStatus.PENDING;
+  verificationStatus: VerificationStatus = VerificationStatus.PENDING;
 
   @IsArray()
   items: Record<string, unknown>[];

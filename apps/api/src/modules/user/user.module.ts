@@ -9,20 +9,12 @@ import { UserRepository } from './repositories/user.repository';
 import { UserService } from './services/user/user.service';
 
 @Module({
-  imports: [
-    PrismaModule,
-    forwardRef(() => AuthModule),
-  ],
+  imports: [PrismaModule, forwardRef(() => AuthModule)],
 
   controllers: [UserController],
 
-  providers: [
-    UserService,
-    UserRepository,
-  ],
+  providers: [UserService, UserRepository],
 
-  exports: [
-    UserRepository,
-  ],
+  exports: [UserRepository],
 })
 export class UserModule {}
