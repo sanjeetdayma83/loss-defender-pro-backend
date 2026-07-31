@@ -3,9 +3,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
-import {
-  AIProvider,
-} from '@prisma/client';
+import { AIProvider } from '@prisma/client';
 
 import { AiProvider } from './ai.provider';
 import { GeminiProvider } from './gemini.provider';
@@ -20,9 +18,7 @@ export class ProviderFactory {
     private readonly localProvider: LocalProvider,
   ) {}
 
-  getProvider(
-    provider: AIProvider,
-  ): AiProvider {
+  getProvider(provider: AIProvider): AiProvider {
     switch (provider) {
       case AIProvider.GEMINI:
         return this.geminiProvider;
@@ -52,9 +48,7 @@ export class ProviderFactory {
     ];
   }
 
-  async healthCheck(): Promise<
-    Record<AIProvider, boolean>
-  > {
+  async healthCheck(): Promise<Record<AIProvider, boolean>> {
     return {
       [AIProvider.GEMINI]:
         await this.geminiProvider.healthCheck(),

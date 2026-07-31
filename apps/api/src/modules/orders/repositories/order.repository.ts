@@ -10,6 +10,7 @@ import {
   OrderStatus,
   PackingStatus,
   VerificationStatus,
+  Marketplace,
 } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
@@ -60,16 +61,16 @@ export class OrderRepository {
     }
 
     if (query.marketplace) {
-      where.marketplace = query.marketplace;
-    }
+  where.marketplace = query.marketplace as Marketplace;
+}
 
-    if (query.status) {
-      where.status = query.status;
-    }
+if (query.status) {
+  where.status = query.status as OrderStatus;
+}
 
-    if (query.priority) {
-      where.priority = query.priority;
-    }
+if (query.priority) {
+  where.priority = query.priority as OrderPriority;
+}
 
     if (query.packingStatus) {
       where.packingStatus =
@@ -194,82 +195,35 @@ export class OrderRepository {
    * -------------------------------------------------------
    */
 
-  async create(
-    dto: CreateOrderDto,
-  ): Promise<Order> {
-    const orderNumber =
-      await this.generateOrderNumber();
+    async create(dto: CreateOrderDto): Promise<Order> {
+    const orderNumber = await this.generateOrderNumber();
 
     return this.prisma.order.create({
       data: {
         orderNumber,
-
         companyId: dto.companyId,
-
-        warehouseId:
-          dto.warehouseId,
-
-        customerId:
-          dto.customerId,
-
-        marketplace:
-          dto.marketplace,
-
-        marketplaceOrderId:
-          dto.marketplaceOrderId,
-
-        priority:
-          dto.priority ??
-          OrderPriority.MEDIUM,
-
-        status:
-          dto.status ??
-          OrderStatus.CREATED,
-
-        packingStatus:
-          dto.packingStatus ??
-          PackingStatus.PENDING,
-
+        warehouseId: dto.warehouseId!,
+        customerId: dto.customerId,
+        marketplace: dto.marketplace as Marketplace,
+        marketplaceOrderId: dto.marketplaceOrderId,
+        priority: dto.priority ?? OrderPriority.MEDIUM,
+        status: dto.status ?? OrderStatus.CREATED,
+        packingStatus: dto.packingStatus ?? PackingStatus.PENDING,
         verificationStatus:
-          dto.verificationStatus ??
-          VerificationStatus.PENDING,
-
-        assignedTo:
-          dto.assignedTo,
-
-        trackingNumber:
-          dto.trackingNumber,
-
-        courier:
-          dto.courier,
-
-        items:
-          dto.items as Prisma.JsonArray,
-
-        customer:
-          dto.customer as Prisma.JsonObject,
-
-        shippingAddress:
-          dto.shippingAddress as Prisma.JsonObject,
-
-        recordingId:
-          dto.recordingId,
-
-        evidenceId:
-          dto.evidenceId,
-
-        claimId:
-          dto.claimId,
-
-        returnId:
-          dto.returnId,
-
-        remarks:
-          dto.remarks,
-
-        metadata:
-          dto.metadata as Prisma.JsonObject,
-      },
+          dto.verificationStatus ?? VerificationStatus.PENDING,
+        assignedTo: dto.assignedTo,
+        trackingNumber: dto.trackingNumber,
+        courier: dto.courier,
+        items: dto.items as Prisma.InputJsonValue,
+        customer: dto.customer as Prisma.InputJsonValue,
+        shippingAddress: dto.shippingAddress as Prisma.InputJsonValue,
+        recordingId: dto.recordingId,
+        evidenceId: dto.evidenceId,
+        claimId: dto.claimId,
+        returnId: dto.returnId,
+        remarks: dto.remarks,
+        metadata: dto.metadata as Prisma.InputJsonValue,
+      } as Prisma.OrderUncheckedCreateInput,
     });
   }
 
@@ -636,75 +590,34 @@ export class OrderRepository {
    * -------------------------------------------------------
    */
 
-  async update(
-    id: string,
-    dto: UpdateOrderDto,
-  ): Promise<Order> {
+    async update(id: string, dto: UpdateOrderDto): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
-      where: {
-        id,
-      },
-
+      where: { id },
       data: {
         companyId: dto.companyId,
-
         warehouseId: dto.warehouseId,
-
         customerId: dto.customerId,
-
-        marketplace: dto.marketplace,
-
-        marketplaceOrderId:
-          dto.marketplaceOrderId,
-
+        marketplace: dto.marketplace as Marketplace | undefined,
+        marketplaceOrderId: dto.marketplaceOrderId,
         priority: dto.priority,
-
         status: dto.status,
-
-        packingStatus:
-          dto.packingStatus,
-
-        verificationStatus:
-          dto.verificationStatus,
-
-        assignedTo:
-          dto.assignedTo,
-
-        trackingNumber:
-          dto.trackingNumber,
-
-        courier:
-          dto.courier,
-
-        items:
-          dto.items as Prisma.JsonArray,
-
-        customer:
-          dto.customer as Prisma.JsonObject,
-
-        shippingAddress:
-          dto.shippingAddress as Prisma.JsonObject,
-
-        recordingId:
-          dto.recordingId,
-
-        evidenceId:
-          dto.evidenceId,
-
-        claimId:
-          dto.claimId,
-
-        returnId:
-          dto.returnId,
-
-        remarks:
-          dto.remarks,
-
-        metadata:
-          dto.metadata as Prisma.JsonObject,
-      },
+        packingStatus: dto.packingStatus,
+        verificationStatus: dto.verificationStatus,
+        assignedTo: dto.assignedTo,
+        trackingNumber: dto.trackingNumber,
+        courier: dto.courier,
+        items: dto.items as Prisma.InputJsonValue,
+        customer: dto.customer as Prisma.InputJsonValue,
+        shippingAddress: dto.shippingAddress as Prisma.InputJsonValue,
+        recordingId: dto.recordingId,
+        evidenceId: dto.evidenceId,
+        claimId: dto.claimId,
+        returnId: dto.returnId,
+        remarks: dto.remarks,
+        metadata: dto.metadata as Prisma.InputJsonValue,
+      } as Prisma.OrderUncheckedUpdateInput,
     });
   }
 
@@ -1445,7 +1358,7 @@ export class OrderRepository {
   ): Promise<number> {
     return this.prisma.order.count({
       where: {
-        marketplace,
+        marketplace: marketplace as Marketplace,
         isDeleted: false,
       },
     });
@@ -1697,26 +1610,17 @@ export class OrderRepository {
    * -------------------------------------------------------
    */
 
-  async highPriorityOrders(): Promise<Order[]> {
+    async highPriorityOrders(): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
         isDeleted: false,
-
         priority: {
-          in: [
-            OrderPriority.HIGH,
-            OrderPriority.CRITICAL,
-          ],
+          in: [OrderPriority.HIGH, OrderPriority.CRITICAL],
         },
       },
-
       orderBy: [
-        {
-          priority: 'desc',
-        },
-        {
-          createdAt: 'asc',
-        },
+        { priority: 'desc' },
+        { createdAt: 'asc' },
       ],
     });
   }
@@ -2051,7 +1955,7 @@ export class OrderRepository {
     const count =
       await this.prisma.order.count({
         where: {
-          marketplace,
+          marketplace: marketplace as Marketplace,
 
           marketplaceOrderId,
 
@@ -2134,44 +2038,21 @@ export class OrderRepository {
    * -------------------------------------------------------
    */
 
-  async exportOrders(
-    filter: OrderFilter,
-  ): Promise<Order[]> {
+    async exportOrders(filter: OrderFilter): Promise<Order[]> {
     return this.prisma.order.findMany({
       where: {
-        companyId:
-          filter.companyId,
-
-        warehouseId:
-          filter.warehouseId,
-
-        customerId:
-          filter.customerId,
-
-        assignedTo:
-          filter.assignedTo,
-
-        marketplace:
-          filter.marketplace,
-
-        status:
-          filter.status,
-
-        priority:
-          filter.priority,
-
-        packingStatus:
-          filter.packingStatus,
-
-        verificationStatus:
-          filter.verificationStatus,
-
+        companyId: filter.companyId,
+        warehouseId: filter.warehouseId,
+        customerId: filter.customerId,
+        assignedTo: filter.assignedTo,
+        marketplace: filter.marketplace as Marketplace | undefined,
+        status: filter.status,
+        priority: filter.priority,
+        packingStatus: filter.packingStatus,
+        verificationStatus: filter.verificationStatus,
         isDeleted: false,
       },
-
-      orderBy: {
-        createdAt: 'desc',
-      },
+      orderBy: { createdAt: 'desc' },
     });
   }
 
@@ -2319,18 +2200,13 @@ export class OrderRepository {
    * -------------------------------------------------------
    */
 
-  async resetAssignment(
-    id: string,
-  ): Promise<Order> {
+    async resetAssignment(id: string): Promise<Order> {
     await this.findById(id);
 
     return this.prisma.order.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         assignedTo: null,
-        warehouseId: null,
         status: OrderStatus.CREATED,
       },
     });

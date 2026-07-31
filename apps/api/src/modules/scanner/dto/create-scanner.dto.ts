@@ -9,7 +9,7 @@ import {
 
 import { Type } from 'class-transformer';
 
-import {
+import type {
   ScanDevice,
   ScanLocation,
   ScanResult,

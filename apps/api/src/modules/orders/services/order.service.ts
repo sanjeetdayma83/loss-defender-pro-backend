@@ -3,10 +3,15 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 
-import { Order } from '@prisma/client';
+import {
+  Order,
+  OrderPriority,
+  OrderStatus,
+  PackingStatus,
+  VerificationStatus,
+} from '@prisma/client';
 
 import { OrderRepository } from '../repositories/order.repository';
-
 import { OrderStateMachine } from '../utils/order-state-machine';
 
 import { CreateOrderDto } from '../dto/create-order.dto';
@@ -21,263 +26,109 @@ import {
 } from '../types/order.types';
 
 @Injectable()
-export class OrderService
-  implements IOrderService
-{
+export class OrderService implements IOrderService {
   constructor(
     private readonly repository: OrderRepository,
-
     private readonly stateMachine: OrderStateMachine,
   ) {}
 
-  /**
-   * -------------------------------------------------------
-   * CREATE
-   * -------------------------------------------------------
-   */
+  // ─── CRUD ───────────────────────────────────────────────
 
-  async create(
-    dto: CreateOrderDto,
-  ): Promise<Order> {
+  async create(dto: CreateOrderDto): Promise<Order> {
     return this.repository.create(dto);
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY ID
-   * -------------------------------------------------------
-   */
-
-  async findById(
-    id: string,
-  ): Promise<Order> {
+  async findById(id: string): Promise<Order> {
     return this.repository.findById(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND ALL
-   * -------------------------------------------------------
-   */
-
   async findAll(
     query: OrderQueryDto,
-  ): Promise<
-    OrderSearchResult<Order>
-  > {
+  ): Promise<OrderSearchResult<Order>> {
     return this.repository.findAll(query);
   }
 
-  /**
-   * -------------------------------------------------------
-   * UPDATE
-   * -------------------------------------------------------
-   */
-
-  async update(
-    id: string,
-    dto: UpdateOrderDto,
-  ): Promise<Order> {
-    return this.repository.update(
-      id,
-      dto,
-    );
+  async update(id: string, dto: UpdateOrderDto): Promise<Order> {
+    return this.repository.update(id, dto);
   }
 
-  /**
-   * -------------------------------------------------------
-   * DELETE
-   * -------------------------------------------------------
-   */
-
-  async remove(
-    id: string,
-  ): Promise<Order> {
-    return this.repository.softDelete(
-      id,
-    );
+  async remove(id: string): Promise<Order> {
+    return this.repository.softDelete(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * PRIVATE HELPERS
-   * -------------------------------------------------------
-   */
+  // ─── PRIVATE ────────────────────────────────────────────
 
-  private async getOrder(
-    id: string,
-  ): Promise<Order> {
+  private async getOrder(id: string): Promise<Order> {
     return this.repository.findById(id);
   }
 
   private validateTransition(
-    currentStatus: any,
-    nextStatus: any,
+    currentStatus: OrderStatus,
+    nextStatus: OrderStatus,
   ): void {
-    const allowed =
-      this.stateMachine.canTransition(
-        currentStatus,
-        nextStatus,
-      );
-
-    if (!allowed) {
+    if (!this.stateMachine.canTransition(currentStatus, nextStatus)) {
       throw new BadRequestException(
         `Invalid order transition: ${currentStatus} → ${nextStatus}`,
       );
     }
   }
 
-  /**
-   * -------------------------------------------------------
-   * GENERATE ORDER NUMBER
-   * -------------------------------------------------------
-   */
+  // ─── HELPERS ────────────────────────────────────────────
 
   async generateOrderNumber(): Promise<string> {
     return this.repository.generateOrderNumber();
   }
-    /**
-   * -------------------------------------------------------
-   * ASSIGN WAREHOUSE
-   * -------------------------------------------------------
-   */
+
+  // ─── WORKFLOW ───────────────────────────────────────────
 
   async assignWarehouse(
     id: string,
     warehouseId: string,
     assignedTo: string,
   ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
+    const order = await this.getOrder(id);
+    this.validateTransition(order.status, OrderStatus.ASSIGNED);
 
-    this.validateTransition(
-      order.status,
-      OrderStatus.ASSIGNED,
-    );
-
-    return this.repository.assignWarehouse(
-      id,
-      warehouseId,
-      assignedTo,
-    );
+    await this.repository.assignWarehouse(id, warehouseId);
+    return this.repository.assignOperator(id, assignedTo);
   }
 
-  /**
-   * -------------------------------------------------------
-   * START PICKING
-   * -------------------------------------------------------
-   */
-
-  async startPicking(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
-
-    this.validateTransition(
-      order.status,
-      OrderStatus.PICKING,
-    );
-
-    return this.repository.updateStatus(
-      id,
-      OrderStatus.PICKING,
-    );
+  async startPicking(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
+    this.validateTransition(order.status, OrderStatus.PICKING);
+    return this.repository.updateStatus(id, OrderStatus.PICKING);
   }
 
-  /**
-   * -------------------------------------------------------
-   * START PACKING
-   * -------------------------------------------------------
-   */
+  async startPacking(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
+    this.validateTransition(order.status, OrderStatus.PACKING);
 
-  async startPacking(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
-
-    this.validateTransition(
-      order.status,
-      OrderStatus.PACKING,
-    );
-
-    return this.repository.update(
-      id,
-      {
-        status:
-          OrderStatus.PACKING,
-
-        packingStatus:
-          PackingStatus.STARTED,
-      },
-    );
+    return this.repository.update(id, {
+      status: OrderStatus.PACKING,
+      packingStatus: PackingStatus.STARTED,
+    });
   }
 
-  /**
-   * -------------------------------------------------------
-   * COMPLETE PACKING
-   * -------------------------------------------------------
-   */
+  async completePacking(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
 
-  async completePacking(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
-
-    if (
-      order.packingStatus !==
-      PackingStatus.STARTED
-    ) {
-      throw new BadRequestException(
-        'Packing has not been started.',
-      );
+    if (order.packingStatus !== PackingStatus.STARTED) {
+      throw new BadRequestException('Packing has not been started.');
     }
 
-    return this.repository.update(
-      id,
-      {
-        packingStatus:
-          PackingStatus.COMPLETED,
-      },
-    );
+    return this.repository.update(id, {
+      packingStatus: PackingStatus.COMPLETED,
+    });
   }
 
-  /**
-   * -------------------------------------------------------
-   * START RECORDING
-   * -------------------------------------------------------
-   */
-
-  async startRecording(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
-
-    this.validateTransition(
-      order.status,
-      OrderStatus.RECORDING,
-    );
-
-    return this.repository.updateStatus(
-      id,
-      OrderStatus.RECORDING,
-    );
+  async startRecording(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
+    this.validateTransition(order.status, OrderStatus.RECORDING);
+    return this.repository.updateStatus(id, OrderStatus.RECORDING);
   }
 
-  /**
-   * -------------------------------------------------------
-   * COMPLETE RECORDING
-   * -------------------------------------------------------
-   */
-
-  async completeRecording(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
+  async completeRecording(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
 
     if (!order.recordingId) {
       throw new BadRequestException(
@@ -285,63 +136,29 @@ export class OrderService
       );
     }
 
-    return this.repository.update(
-      id,
-      {
-        status:
-          OrderStatus.VERIFYING,
-      },
-    );
+    return this.repository.update(id, {
+      status: OrderStatus.VERIFYING,
+    });
   }
-    /**
-   * -------------------------------------------------------
-   * START VERIFICATION
-   * -------------------------------------------------------
-   */
 
-  async startVerification(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
+  async startVerification(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
+    this.validateTransition(order.status, OrderStatus.VERIFYING);
 
-    this.validateTransition(
-      order.status,
-      OrderStatus.VERIFYING,
-    );
-
-    if (
-      order.packingStatus !==
-      PackingStatus.COMPLETED
-    ) {
+    if (order.packingStatus !== PackingStatus.COMPLETED) {
       throw new BadRequestException(
         'Packing must be completed before verification.',
       );
     }
 
-    return this.repository.update(
-      id,
-      {
-        status:
-          OrderStatus.VERIFYING,
-
-        verificationStatus:
-          VerificationStatus.IN_PROGRESS,
-      },
-    );
+    return this.repository.update(id, {
+      status: OrderStatus.VERIFYING,
+      verificationStatus: VerificationStatus.IN_PROGRESS,
+    });
   }
 
-  /**
-   * -------------------------------------------------------
-   * COMPLETE VERIFICATION
-   * -------------------------------------------------------
-   */
-
-  async completeVerification(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
+  async completeVerification(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
 
     if (!order.evidenceId) {
       throw new BadRequestException(
@@ -349,63 +166,23 @@ export class OrderService
       );
     }
 
-    return this.repository.update(
-      id,
-      {
-        status:
-          OrderStatus.READY_TO_SHIP,
-
-        verificationStatus:
-          VerificationStatus.PASSED,
-      },
-    );
+    return this.repository.update(id, {
+      status: OrderStatus.READY_TO_SHIP,
+      verificationStatus: VerificationStatus.PASSED,
+    });
   }
 
-  /**
-   * -------------------------------------------------------
-   * READY TO SHIP
-   * -------------------------------------------------------
-   */
-
-  async readyToShip(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
-
-    this.validateTransition(
-      order.status,
-      OrderStatus.READY_TO_SHIP,
-    );
-
-    return this.repository.updateStatus(
-      id,
-      OrderStatus.READY_TO_SHIP,
-    );
+  async readyToShip(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
+    this.validateTransition(order.status, OrderStatus.READY_TO_SHIP);
+    return this.repository.updateStatus(id, OrderStatus.READY_TO_SHIP);
   }
 
-  /**
-   * -------------------------------------------------------
-   * SHIP ORDER
-   * -------------------------------------------------------
-   */
+  async ship(id: string, trackingNumber?: string): Promise<Order> {
+    const order = await this.getOrder(id);
+    this.validateTransition(order.status, OrderStatus.SHIPPED);
 
-  async ship(
-    id: string,
-    trackingNumber?: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
-
-    this.validateTransition(
-      order.status,
-      OrderStatus.SHIPPED,
-    );
-
-    if (
-      !trackingNumber &&
-      !order.trackingNumber
-    ) {
+    if (!trackingNumber && !order.trackingNumber) {
       throw new BadRequestException(
         'Tracking number is required before shipping.',
       );
@@ -419,154 +196,67 @@ export class OrderService
       );
     }
 
-    return this.repository.updateStatus(
-      id,
-      OrderStatus.SHIPPED,
-    );
+    return this.repository.updateStatus(id, OrderStatus.SHIPPED);
   }
 
-  /**
-   * -------------------------------------------------------
-   * DELIVER ORDER
-   * -------------------------------------------------------
-   */
-
-  async deliver(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
-
-    this.validateTransition(
-      order.status,
-      OrderStatus.DELIVERED,
-    );
-
-    return this.repository.updateStatus(
-      id,
-      OrderStatus.DELIVERED,
-    );
+  async deliver(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
+    this.validateTransition(order.status, OrderStatus.DELIVERED);
+    return this.repository.updateStatus(id, OrderStatus.DELIVERED);
   }
 
-  /**
-   * -------------------------------------------------------
-   * CANCEL ORDER
-   * -------------------------------------------------------
-   */
+  async cancel(id: string, reason?: string): Promise<Order> {
+    const order = await this.getOrder(id);
 
-  async cancel(
-    id: string,
-    reason?: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
-
-    if (
-      order.status ===
-      OrderStatus.DELIVERED
-    ) {
+    if (order.status === OrderStatus.DELIVERED) {
       throw new BadRequestException(
         'Delivered orders cannot be cancelled.',
       );
     }
 
-    this.validateTransition(
-      order.status,
-      OrderStatus.CANCELLED,
-    );
+    this.validateTransition(order.status, OrderStatus.CANCELLED);
 
-    return this.repository.update(
-      id,
-      {
-        status:
-          OrderStatus.CANCELLED,
-
-        remarks:
-          reason ??
-          order.remarks,
-      },
-    );
+    return this.repository.update(id, {
+      status: OrderStatus.CANCELLED,
+      remarks: reason ?? order.remarks ?? undefined,
+    });
   }
-    /**
-   * -------------------------------------------------------
-   * REOPEN ORDER
-   * -------------------------------------------------------
-   */
 
-  async reopen(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
+  async reopen(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
 
-    if (
-      order.status !==
-      OrderStatus.CANCELLED
-    ) {
+    if (order.status !== OrderStatus.CANCELLED) {
       throw new BadRequestException(
         'Only cancelled orders can be reopened.',
       );
     }
 
-    return this.repository.update(
-      id,
-      {
-        status: OrderStatus.CREATED,
-      },
-    );
+    return this.repository.update(id, {
+      status: OrderStatus.CREATED,
+    });
   }
 
-  /**
-   * -------------------------------------------------------
-   * ARCHIVE ORDER
-   * -------------------------------------------------------
-   */
-
-  async archive(
-    id: string,
-  ): Promise<Order> {
-    const order =
-      await this.getOrder(id);
+  async archive(id: string): Promise<Order> {
+    const order = await this.getOrder(id);
 
     if (
-      order.status !==
-        OrderStatus.DELIVERED &&
-      order.status !==
-        OrderStatus.CANCELLED
+      order.status !== OrderStatus.DELIVERED &&
+      order.status !== OrderStatus.CANCELLED
     ) {
       throw new BadRequestException(
         'Only completed or cancelled orders can be archived.',
       );
     }
 
-    return this.repository.softDelete(
-      id,
-    );
+    return this.repository.softDelete(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * ASSIGN OPERATOR
-   * -------------------------------------------------------
-   */
+  // ─── ATTACHMENTS / TRACKING ─────────────────────────────
 
-  async assignOperator(
-    id: string,
-    operatorId: string,
-  ): Promise<Order> {
+  async assignOperator(id: string, operatorId: string): Promise<Order> {
     await this.getOrder(id);
-
-    return this.repository.assignOperator(
-      id,
-      operatorId,
-    );
+    return this.repository.assignOperator(id, operatorId);
   }
-
-  /**
-   * -------------------------------------------------------
-   * UPDATE TRACKING
-   * -------------------------------------------------------
-   */
 
   async updateTracking(
     id: string,
@@ -574,106 +264,39 @@ export class OrderService
     courier: string,
   ): Promise<Order> {
     await this.getOrder(id);
-
-    return this.repository.updateTracking(
-      id,
-      trackingNumber,
-      courier,
-    );
+    return this.repository.updateTracking(id, trackingNumber, courier);
   }
 
-  /**
-   * -------------------------------------------------------
-   * ATTACH RECORDING
-   * -------------------------------------------------------
-   */
-
-  async attachRecording(
-    id: string,
-    recordingId: string,
-  ): Promise<Order> {
+  async attachRecording(id: string, recordingId: string): Promise<Order> {
     await this.getOrder(id);
-
-    return this.repository.attachRecording(
-      id,
-      recordingId,
-    );
+    return this.repository.attachRecording(id, recordingId);
   }
 
-  /**
-   * -------------------------------------------------------
-   * ATTACH EVIDENCE
-   * -------------------------------------------------------
-   */
-
-  async attachEvidence(
-    id: string,
-    evidenceId: string,
-  ): Promise<Order> {
+  async attachEvidence(id: string, evidenceId: string): Promise<Order> {
     await this.getOrder(id);
-
-    return this.repository.attachEvidence(
-      id,
-      evidenceId,
-    );
+    return this.repository.attachEvidence(id, evidenceId);
   }
 
-  /**
-   * -------------------------------------------------------
-   * ATTACH CLAIM
-   * -------------------------------------------------------
-   */
-
-  async attachClaim(
-    id: string,
-    claimId: string,
-  ): Promise<Order> {
+  async attachClaim(id: string, claimId: string): Promise<Order> {
     await this.getOrder(id);
-
-    return this.repository.attachClaim(
-      id,
-      claimId,
-    );
+    return this.repository.attachClaim(id, claimId);
   }
 
-  /**
-   * -------------------------------------------------------
-   * ATTACH RETURN
-   * -------------------------------------------------------
-   */
-
-  async attachReturn(
-    id: string,
-    returnId: string,
-  ): Promise<Order> {
+  async attachReturn(id: string, returnId: string): Promise<Order> {
     await this.getOrder(id);
-
-    return this.repository.attachReturn(
-      id,
-      returnId,
-    );
+    return this.repository.attachReturn(id, returnId);
   }
 
-  /**
-   * -------------------------------------------------------
-   * GET ORDER STATISTICS
-   * -------------------------------------------------------
-   */
+  // ─── STATS / QUEUES ─────────────────────────────────────
 
   async getStatistics(): Promise<OrderStatistics> {
     return this.repository.statistics();
   }
 
-  /**
-   * -------------------------------------------------------
-   * DASHBOARD SUMMARY
-   * -------------------------------------------------------
-   */
-
   async getDashboardSummary() {
     const [
       statistics,
-      todayOrders,
+      todayCount,
       packingQueue,
       verificationQueue,
       readyToShipQueue,
@@ -687,299 +310,172 @@ export class OrderService
 
     return {
       statistics,
-      todayOrders,
+      todayOrders: todayCount,
       packingQueue,
       verificationQueue,
       readyToShipQueue,
     };
   }
-    /**
-   * -------------------------------------------------------
-   * FIND BY COMPANY
-   * -------------------------------------------------------
-   */
 
-  async findByCompany(
-    companyId: string,
-  ): Promise<Order[]> {
-    return this.repository.findByCompany(
-      companyId,
-    );
+  async packingQueue(): Promise<Order[]> {
+    return this.repository.packingQueue();
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY WAREHOUSE
-   * -------------------------------------------------------
-   */
-
-  async findByWarehouse(
-    warehouseId: string,
-  ): Promise<Order[]> {
-    return this.repository.findByWarehouse(
-      warehouseId,
-    );
+  async verificationQueue(): Promise<Order[]> {
+    return this.repository.verificationQueue();
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY CUSTOMER
-   * -------------------------------------------------------
-   */
-
-  async findByCustomer(
-    customerId: string,
-  ): Promise<Order[]> {
-    return this.repository.findByCustomer(
-      customerId,
-    );
+  async readyToShipQueue(): Promise<Order[]> {
+    return this.repository.readyToShipQueue();
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY ASSIGNED USER
-   * -------------------------------------------------------
-   */
+  async todayOrders(): Promise<Order[]> {
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
 
-  async findByAssignedUser(
-    userId: string,
-  ): Promise<Order[]> {
-    return this.repository.findByAssignedUser(
-      userId,
-    );
+    const result = await this.repository.findAll({
+      fromDate: start.toISOString(),
+      page: 1,
+      limit: 1000,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    } as OrderQueryDto);
+
+    return result.items;
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY STATUS
-   * -------------------------------------------------------
-   */
-
-  async findByStatus(
-    status: OrderStatus,
-  ): Promise<Order[]> {
-    return this.repository.findByStatus(
-      status,
-    );
+  async cancelledOrders(): Promise<Order[]> {
+    return this.repository.cancelledOrders();
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY PRIORITY
-   * -------------------------------------------------------
-   */
-
-  async findByPriority(
-    priority: string,
-  ): Promise<Order[]> {
-    return this.repository.findByPriority(
-      priority,
-    );
+  async returnedOrders(): Promise<Order[]> {
+    return this.repository.returnedOrders();
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY PACKING STATUS
-   * -------------------------------------------------------
-   */
+  async claimedOrders(): Promise<Order[]> {
+    return this.repository.claimedOrders();
+  }
+
+  // ─── FINDERS ────────────────────────────────────────────
+
+  async findByCompany(companyId: string): Promise<Order[]> {
+    return this.repository.findByCompany(companyId);
+  }
+
+  async findByWarehouse(warehouseId: string): Promise<Order[]> {
+    return this.repository.findByWarehouse(warehouseId);
+  }
+
+  async findByCustomer(customerId: string): Promise<Order[]> {
+    return this.repository.findByCustomer(customerId);
+  }
+
+  async findByAssignedUser(userId: string): Promise<Order[]> {
+    return this.repository.findByAssignedUser(userId);
+  }
+
+  async findByStatus(status: OrderStatus): Promise<Order[]> {
+    return this.repository.findByStatus(status);
+  }
+
+  async findByPriority(priority: string): Promise<Order[]> {
+    return this.repository.findByPriority(priority as OrderPriority);
+  }
 
   async findByPackingStatus(
     packingStatus: PackingStatus,
   ): Promise<Order[]> {
-    return this.repository.findByPackingStatus(
-      packingStatus,
-    );
+    return this.repository.findByPackingStatus(packingStatus);
   }
-
-  /**
-   * -------------------------------------------------------
-   * FIND BY VERIFICATION STATUS
-   * -------------------------------------------------------
-   */
 
   async findByVerificationStatus(
     verificationStatus: VerificationStatus,
   ): Promise<Order[]> {
-    return this.repository.findByVerificationStatus(
-      verificationStatus,
-    );
+    return this.repository.findByVerificationStatus(verificationStatus);
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY MARKETPLACE
-   * -------------------------------------------------------
-   */
+  async findByMarketplace(marketplace: string): Promise<Order[]> {
+    const result = await this.repository.findAll({
+      marketplace: marketplace as any,
+      page: 1,
+      limit: 1000,
+      sortBy: 'createdAt',
+      sortOrder: 'desc',
+    } as OrderQueryDto);
 
-  async findByMarketplace(
-    marketplace: string,
-  ): Promise<Order[]> {
-    const result =
-      await this.repository.findAll({
-        marketplace,
-        page: 1,
-        limit: 1000,
-      });
-
-    return result.data;
+    return result.items;
   }
-
-  /**
-   * -------------------------------------------------------
-   * RECENT ORDERS
-   * -------------------------------------------------------
-   */
 
   async recentOrders(): Promise<Order[]> {
     return this.repository.recentOrders();
   }
 
-  /**
-   * -------------------------------------------------------
-   * HIGH PRIORITY ORDERS
-   * -------------------------------------------------------
-   */
-
   async highPriorityOrders(): Promise<Order[]> {
     return this.repository.highPriorityOrders();
   }
-
-  /**
-   * -------------------------------------------------------
-   * UNASSIGNED ORDERS
-   * -------------------------------------------------------
-   */
 
   async unassignedOrders(): Promise<Order[]> {
     return this.repository.unassignedOrders();
   }
 
-  /**
-   * -------------------------------------------------------
-   * ORDERS WITHOUT RECORDING
-   * -------------------------------------------------------
-   */
-
   async ordersWithoutRecording(): Promise<Order[]> {
     return this.repository.ordersWithoutRecording();
   }
-
-  /**
-   * -------------------------------------------------------
-   * ORDERS WITHOUT EVIDENCE
-   * -------------------------------------------------------
-   */
 
   async ordersWithoutEvidence(): Promise<Order[]> {
     return this.repository.ordersWithoutEvidence();
   }
 
-  /**
-   * -------------------------------------------------------
-   * OVERDUE ORDERS
-   * -------------------------------------------------------
-   */
-
   async overdueOrders(): Promise<Order[]> {
-    return this.repository.overdueOrders();
+    const before = new Date();
+    before.setDate(before.getDate() - 2);
+    return this.repository.overdueOrders(before);
   }
-    /**
-   * -------------------------------------------------------
-   * MARKETPLACE ANALYTICS
-   * -------------------------------------------------------
-   */
+
+  // ─── ANALYTICS ──────────────────────────────────────────
 
   async marketplaceAnalytics() {
     return this.repository.marketplaceAnalytics();
   }
 
-  /**
-   * -------------------------------------------------------
-   * WAREHOUSE ANALYTICS
-   * -------------------------------------------------------
-   */
-
   async warehouseAnalytics() {
     return this.repository.warehouseAnalytics();
   }
-
-  /**
-   * -------------------------------------------------------
-   * PRIORITY ANALYTICS
-   * -------------------------------------------------------
-   */
 
   async priorityAnalytics() {
     return this.repository.priorityAnalytics();
   }
 
-  /**
-   * -------------------------------------------------------
-   * STATUS ANALYTICS
-   * -------------------------------------------------------
-   */
-
   async statusAnalytics() {
     return this.repository.statusAnalytics();
   }
-
-  /**
-   * -------------------------------------------------------
-   * PACKING ANALYTICS
-   * -------------------------------------------------------
-   */
 
   async packingAnalytics() {
     return this.repository.packingAnalytics();
   }
 
-  /**
-   * -------------------------------------------------------
-   * VERIFICATION ANALYTICS
-   * -------------------------------------------------------
-   */
-
   async verificationAnalytics() {
     return this.repository.verificationAnalytics();
   }
 
-  /**
-   * -------------------------------------------------------
-   * DAILY ORDER TREND
-   * -------------------------------------------------------
-   */
-
   async dailyTrend() {
-    return this.repository.dailyTrend();
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+    return this.repository.dailyTrend(from);
   }
-
-  /**
-   * -------------------------------------------------------
-   * RECENT SHIPMENTS
-   * -------------------------------------------------------
-   */
 
   async recentShipments(): Promise<Order[]> {
     return this.repository.recentShipments();
   }
 
-  /**
-   * -------------------------------------------------------
-   * RECENT DELIVERIES
-   * -------------------------------------------------------
-   */
-
   async recentDeliveries(): Promise<Order[]> {
     return this.repository.recentDeliveries();
   }
 
-  /**
-   * -------------------------------------------------------
-   * DASHBOARD ANALYTICS
-   * -------------------------------------------------------
-   */
-
   async dashboardAnalytics() {
+    const from = new Date();
+    from.setDate(from.getDate() - 30);
+
     const [
       statistics,
       marketplace,
@@ -999,7 +495,7 @@ export class OrderService
       this.repository.statusAnalytics(),
       this.repository.packingAnalytics(),
       this.repository.verificationAnalytics(),
-      this.repository.dailyTrend(),
+      this.repository.dailyTrend(from),
       this.repository.recentShipments(),
       this.repository.recentDeliveries(),
     ]);
@@ -1022,120 +518,45 @@ export class OrderService
     };
   }
 
-  /**
-   * -------------------------------------------------------
-   * DATABASE STATISTICS
-   * -------------------------------------------------------
-   */
-
   async databaseStatistics() {
     return this.repository.databaseStatistics();
   }
-
-  /**
-   * -------------------------------------------------------
-   * HEALTH CHECK
-   * -------------------------------------------------------
-   */
 
   async healthCheck(): Promise<boolean> {
     return this.repository.healthCheck();
   }
 
-  /**
-   * -------------------------------------------------------
-   * DATABASE PING
-   * -------------------------------------------------------
-   */
-
   async ping(): Promise<boolean> {
     return this.repository.ping();
   }
-    /**
-   * -------------------------------------------------------
-   * BATCH UPDATE STATUS
-   * -------------------------------------------------------
-   */
 
-  async batchUpdateStatus(
-    ids: string[],
-    status: OrderStatus,
-  ) {
-    return this.repository.batchUpdateStatus(
-      ids,
-      status,
-    );
+  // ─── BATCH ──────────────────────────────────────────────
+
+  async batchUpdateStatus(ids: string[], status: OrderStatus) {
+    return this.repository.batchUpdateStatus(ids, status);
   }
 
-  /**
-   * -------------------------------------------------------
-   * BATCH ASSIGN WAREHOUSE
-   * -------------------------------------------------------
-   */
-
-  async batchAssignWarehouse(
-    ids: string[],
-    warehouseId: string,
-  ) {
-    return this.repository.batchAssignWarehouse(
-      ids,
-      warehouseId,
-    );
+  async batchAssignWarehouse(ids: string[], warehouseId: string) {
+    return this.repository.batchAssignWarehouse(ids, warehouseId);
   }
 
-  /**
-   * -------------------------------------------------------
-   * BATCH ASSIGN OPERATOR
-   * -------------------------------------------------------
-   */
-
-  async batchAssignOperator(
-    ids: string[],
-    operatorId: string,
-  ) {
-    return this.repository.batchAssignOperator(
-      ids,
-      operatorId,
-    );
+  async batchAssignOperator(ids: string[], operatorId: string) {
+    return this.repository.batchAssignOperator(ids, operatorId);
   }
 
-  /**
-   * -------------------------------------------------------
-   * BATCH UPDATE PRIORITY
-   * -------------------------------------------------------
-   */
-
-  async batchUpdatePriority(
-    ids: string[],
-    priority: string,
-  ) {
+  async batchUpdatePriority(ids: string[], priority: string) {
     return this.repository.batchUpdatePriority(
       ids,
-      priority,
+      priority as OrderPriority,
     );
   }
-
-  /**
-   * -------------------------------------------------------
-   * BATCH UPDATE PACKING STATUS
-   * -------------------------------------------------------
-   */
 
   async batchUpdatePackingStatus(
     ids: string[],
     packingStatus: PackingStatus,
   ) {
-    return this.repository.batchUpdatePackingStatus(
-      ids,
-      packingStatus,
-    );
+    return this.repository.batchUpdatePackingStatus(ids, packingStatus);
   }
-
-  /**
-   * -------------------------------------------------------
-   * BATCH UPDATE VERIFICATION STATUS
-   * -------------------------------------------------------
-   */
 
   async batchUpdateVerificationStatus(
     ids: string[],
@@ -1147,111 +568,43 @@ export class OrderService
     );
   }
 
-  /**
-   * -------------------------------------------------------
-   * BATCH ARCHIVE
-   * -------------------------------------------------------
-   */
-
-  async batchArchive(
-    ids: string[],
-  ) {
-    return this.repository.batchSoftDelete(
-      ids,
-    );
+  async batchArchive(ids: string[]) {
+    return this.repository.batchSoftDelete(ids);
   }
 
-  /**
-   * -------------------------------------------------------
-   * BATCH RESTORE
-   * -------------------------------------------------------
-   */
-
-  async batchRestore(
-    ids: string[],
-  ) {
-    return this.repository.batchRestore(
-      ids,
-    );
+  async batchRestore(ids: string[]) {
+    return this.repository.batchRestore(ids);
   }
 
-  /**
-   * -------------------------------------------------------
-   * EXECUTE TRANSACTION
-   * -------------------------------------------------------
-   */
+  // ─── TRANSACTIONS ───────────────────────────────────────
 
   async transaction<T>(
-    callback: Parameters<
-      OrderRepository['transaction']
-    >[0],
-  ): Promise<T> {
-    return this.repository.transaction<T>(
-      callback,
-    );
-  }
-
-  /**
-   * -------------------------------------------------------
-   * EXECUTE MULTIPLE DATABASE OPERATIONS
-   * -------------------------------------------------------
-   */
+  callback: (tx: Parameters<Parameters<OrderRepository['transaction']>[0]>[0]) => Promise<T>,
+): Promise<T> {
+  return this.repository.transaction(callback);
+}
 
   async executeTransaction(
-    operations: Parameters<
-      OrderRepository['executeTransaction']
-    >[0],
+    operations: Parameters<OrderRepository['executeTransaction']>[0],
   ) {
-    return this.repository.executeTransaction(
-      operations,
-    );
+    return this.repository.executeTransaction(operations);
   }
 
-  /**
-   * -------------------------------------------------------
-   * ORDER EXISTS
-   * -------------------------------------------------------
-   */
+  // ─── LOOKUPS ────────────────────────────────────────────
 
-  async exists(
-    id: string,
-  ): Promise<boolean> {
+  async exists(id: string): Promise<boolean> {
     return this.repository.exists(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * FIND BY ORDER NUMBER
-   * -------------------------------------------------------
-   */
-
-  async findByOrderNumber(
-    orderNumber: string,
-  ): Promise<Order | null> {
-    return this.repository.findByOrderNumber(
-      orderNumber,
-    );
+  async findByOrderNumber(orderNumber: string): Promise<Order | null> {
+    return this.repository.findByOrderNumber(orderNumber);
   }
-
-  /**
-   * -------------------------------------------------------
-   * FIND BY MARKETPLACE ORDER ID
-   * -------------------------------------------------------
-   */
 
   async findByMarketplaceOrderId(
     marketplaceOrderId: string,
   ): Promise<Order | null> {
-    return this.repository.findByMarketplaceOrderId(
-      marketplaceOrderId,
-    );
+    return this.repository.findByMarketplaceOrderId(marketplaceOrderId);
   }
-
-  /**
-   * -------------------------------------------------------
-   * MARKETPLACE ORDER EXISTS
-   * -------------------------------------------------------
-   */
 
   async marketplaceOrderExists(
     marketplace: string,
@@ -1263,254 +616,83 @@ export class OrderService
     );
   }
 
-  /**
-   * -------------------------------------------------------
-   * TRACKING NUMBER EXISTS
-   * -------------------------------------------------------
-   */
-
-  async trackingExists(
-    trackingNumber: string,
-  ): Promise<boolean> {
-    return this.repository.trackingExists(
-      trackingNumber,
-    );
+  async trackingExists(trackingNumber: string): Promise<boolean> {
+    return this.repository.trackingExists(trackingNumber);
   }
-    /**
-   * -------------------------------------------------------
-   * PENDING MARKETPLACE SYNC
-   * -------------------------------------------------------
-   */
 
   async pendingMarketplaceSync(): Promise<Order[]> {
     return this.repository.pendingMarketplaceSync();
   }
 
-  /**
-   * -------------------------------------------------------
-   * SLA BREACHED ORDERS
-   * -------------------------------------------------------
-   */
-
-  async slaBreachedOrders(
-    before: Date,
-  ): Promise<Order[]> {
-    return this.repository.slaBreachedOrders(
-      before,
-    );
+  async slaBreachedOrders(before: Date): Promise<Order[]> {
+    return this.repository.slaBreachedOrders(before);
   }
 
-  /**
-   * -------------------------------------------------------
-   * CREATED BETWEEN DATES
-   * -------------------------------------------------------
-   */
-
-  async createdBetween(
-    from: Date,
-    to: Date,
-  ): Promise<Order[]> {
-    return this.repository.createdBetween(
-      from,
-      to,
-    );
+  async createdBetween(from: Date, to: Date): Promise<Order[]> {
+    return this.repository.createdBetween(from, to);
   }
 
-  /**
-   * -------------------------------------------------------
-   * EXPORT ORDERS
-   * -------------------------------------------------------
-   */
-
-  async exportOrders(
-    query: OrderQueryDto,
-  ): Promise<Order[]> {
-    return this.repository.exportOrders(
-      query,
-    );
+  async exportOrders(query: OrderQueryDto): Promise<Order[]> {
+    return this.repository.exportOrders(query as any);
   }
-
-  /**
-   * -------------------------------------------------------
-   * ARCHIVED ORDERS
-   * -------------------------------------------------------
-   */
 
   async archivedOrders(): Promise<Order[]> {
     return this.repository.archivedOrders();
   }
 
-  /**
-   * -------------------------------------------------------
-   * LATEST ORDER
-   * -------------------------------------------------------
-   */
-
   async latestOrder(): Promise<Order | null> {
     return this.repository.latestOrder();
   }
-
-  /**
-   * -------------------------------------------------------
-   * OLDEST ORDER
-   * -------------------------------------------------------
-   */
 
   async oldestOrder(): Promise<Order | null> {
     return this.repository.oldestOrder();
   }
 
-  /**
-   * -------------------------------------------------------
-   * TOTAL ACTIVE ORDERS
-   * -------------------------------------------------------
-   */
-
   async totalActiveOrders(): Promise<number> {
     return this.repository.totalActiveOrders();
   }
-
-  /**
-   * -------------------------------------------------------
-   * TOTAL ARCHIVED ORDERS
-   * -------------------------------------------------------
-   */
 
   async totalArchivedOrders(): Promise<number> {
     return this.repository.totalArchivedOrders();
   }
 
-  /**
-   * -------------------------------------------------------
-   * CLEANUP SOFT-DELETED ORDERS
-   * -------------------------------------------------------
-   */
-
-  async cleanupSoftDeletedOrders(
-    before: Date,
-  ) {
-    return this.repository.cleanupSoftDeletedOrders(
-      before,
-    );
+  async cleanupSoftDeletedOrders(before: Date) {
+    return this.repository.cleanupSoftDeletedOrders(before);
   }
 
-  /**
-   * -------------------------------------------------------
-   * RESET ASSIGNMENT
-   * -------------------------------------------------------
-   */
+  // ─── MUTATIONS ──────────────────────────────────────────
 
-  async resetAssignment(
-    id: string,
-  ): Promise<Order> {
-    return this.repository.resetAssignment(
-      id,
-    );
+  async resetAssignment(id: string): Promise<Order> {
+    return this.repository.resetAssignment(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * CLEAR TRACKING
-   * -------------------------------------------------------
-   */
-
-  async clearTracking(
-    id: string,
-  ): Promise<Order> {
-    return this.repository.clearTracking(
-      id,
-    );
+  async clearTracking(id: string): Promise<Order> {
+    return this.repository.clearTracking(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * DETACH RECORDING
-   * -------------------------------------------------------
-   */
-
-  async detachRecording(
-    id: string,
-  ): Promise<Order> {
-    return this.repository.detachRecording(
-      id,
-    );
+  async detachRecording(id: string): Promise<Order> {
+    return this.repository.detachRecording(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * DETACH EVIDENCE
-   * -------------------------------------------------------
-   */
-
-  async detachEvidence(
-    id: string,
-  ): Promise<Order> {
-    return this.repository.detachEvidence(
-      id,
-    );
+  async detachEvidence(id: string): Promise<Order> {
+    return this.repository.detachEvidence(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * DETACH CLAIM
-   * -------------------------------------------------------
-   */
-
-  async detachClaim(
-    id: string,
-  ): Promise<Order> {
-    return this.repository.detachClaim(
-      id,
-    );
+  async detachClaim(id: string): Promise<Order> {
+    return this.repository.detachClaim(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * DETACH RETURN
-   * -------------------------------------------------------
-   */
-
-  async detachReturn(
-    id: string,
-  ): Promise<Order> {
-    return this.repository.detachReturn(
-      id,
-    );
+  async detachReturn(id: string): Promise<Order> {
+    return this.repository.detachReturn(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * TOUCH ORDER
-   * -------------------------------------------------------
-   */
-
-  async touch(
-    id: string,
-  ): Promise<Order> {
-    return this.repository.touch(
-      id,
-    );
+  async touch(id: string): Promise<Order> {
+    return this.repository.touch(id);
   }
 
-  /**
-   * -------------------------------------------------------
-   * ORDER NUMBER EXISTS
-   * -------------------------------------------------------
-   */
-
-  async orderNumberExists(
-    orderNumber: string,
-  ): Promise<boolean> {
-    return this.repository.orderNumberExists(
-      orderNumber,
-    );
+  async orderNumberExists(orderNumber: string): Promise<boolean> {
+    return this.repository.orderNumberExists(orderNumber);
   }
-
-  /**
-   * -------------------------------------------------------
-   * DATABASE SUMMARY
-   * -------------------------------------------------------
-   */
 
   async databaseSummary() {
     return this.repository.databaseStatistics();

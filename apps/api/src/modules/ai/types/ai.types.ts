@@ -1,7 +1,4 @@
-import {
-  AIJobStatus,
-  AIProvider,
-} from '@prisma/client';
+import { AIJobStatus, AIProvider } from '@prisma/client';
 
 export type AIJobType =
   | 'video-analysis'
@@ -27,20 +24,35 @@ export interface AIJobMetadata {
 
 export interface AIProviderRequest {
   provider: AIProvider;
-  model: string;
-  prompt: string;
-  input: unknown;
+  model?: string;
+  prompt?: string;
+  input?: unknown;
   metadata?: AIJobMetadata;
 }
 
 export interface AIProviderResponse {
   success: boolean;
+
   provider: AIProvider;
-  model: string;
-  result: unknown;
+
+  model?: string;
+
+  result?: unknown;
+
+  data?: unknown;
+
   confidence: number;
-  tokensUsed?: number;
+
   processingTime: number;
+
+  tokensUsed?: number;
+
+  usage?: {
+    promptTokens?: number;
+    completionTokens?: number;
+    totalTokens?: number;
+  };
+
   error?: string;
 }
 

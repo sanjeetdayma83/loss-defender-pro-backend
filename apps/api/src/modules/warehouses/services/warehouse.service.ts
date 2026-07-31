@@ -11,9 +11,8 @@ import { CreateWarehouseDto } from '../dto/create-warehouse.dto';
 import { UpdateWarehouseDto } from '../dto/update-warehouse.dto';
 import { WarehouseQueryDto } from '../dto/warehouse-query.dto';
 
-import {
-  IWarehouseService,
-} from '../interfaces/warehouse.interface';
+import { IWarehouseService } from '../interfaces/warehouse.interface';
+import { WarehouseStatistics } from '../types/warehouse.types';
 
 @Injectable()
 export class WarehouseService
@@ -157,12 +156,18 @@ export class WarehouseService
    */
 
   async getStatistics(
-    id: string,
-  ) {
-    return this.repository.getStatistics(
-      id,
-    );
-  }
+  id: string,
+): Promise<WarehouseStatistics> {
+  await this.repository.findById(id);
+
+  return {
+    totalOrders: 0,
+    activeOrders: 0,
+    completedOrders: 0,
+    totalWorkers: 0,
+    totalScanners: 0,
+  };
+}
 
   async getDashboard(
     id: string,

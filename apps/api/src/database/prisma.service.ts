@@ -16,8 +16,12 @@ export class PrismaService
 {
   constructor(configService: ConfigService) {
     const connectionString =
-      configService.get<string>('DATABASE_URL') ??
-      process.env.DATABASE_URL;
+  configService.get<string>('DATABASE_URL') ??
+  process.env.DATABASE_URL;
+
+if (!connectionString) {
+  throw new Error('DATABASE_URL is not configured.');
+}
 
     const pool = new Pool({
       connectionString,

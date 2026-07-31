@@ -11,6 +11,7 @@ import {
   ClaimStatus,
 } from '@prisma/client';
 
+import { Prisma } from '@prisma/client';
 import { CreateClaimDto } from '../dto/create-claim.dto';
 import { UpdateClaimDto } from '../dto/update-claim.dto';
 import { ClaimQueryDto } from '../dto/claim-query.dto';
@@ -183,10 +184,7 @@ export class ClaimService {
     id: string,
     resolutionType: ClaimResolutionType,
     resolvedBy: string,
-    resolutionData?: Record<
-      string,
-      unknown
-    >,
+    resolutionData?: Prisma.JsonValue,
   ): Promise<Claim> {
     const claim =
       await this.findById(id);

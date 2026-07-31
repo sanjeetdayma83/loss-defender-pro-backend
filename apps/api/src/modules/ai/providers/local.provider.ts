@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
-
+import { AIProvider } from '@prisma/client';
 import { AiProvider } from './ai.provider';
 
 import {
@@ -14,7 +14,7 @@ import {
 
 @Injectable()
 export class LocalProvider extends AiProvider {
-  readonly name = 'local';
+  readonly name = AIProvider.LOCAL;
 
   private readonly logger = new Logger(
     LocalProvider.name,
@@ -43,10 +43,9 @@ export class LocalProvider extends AiProvider {
   async analyze(
     request: AIProviderRequest,
   ): Promise<AIProviderResponse> {
-    this.logger.debug(
-      `Local AI analyze request (${request.jobType})`,
-    );
-
+   this.logger.debug(
+  `Local AI analyze request (${request.provider})`,
+);
     return this.execute(request);
   }
 
@@ -100,23 +99,31 @@ export class LocalProvider extends AiProvider {
      */
 
     return {
-      provider: this.name,
-      success: true,
-      model:
-        request.model ??
-        this.defaultModel,
-      confidence: 1,
-      usage: {
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      },
-      processingTime: 0,
-      data: {},
-      metadata: {
-        endpoint: this.baseUrl,
-      },
-      rawResponse: null,
-    };
+  success: true,
+
+  provider: this.name,
+
+  model:
+    request.model ??
+    this.defaultModel,
+
+  confidence: 1,
+
+  processingTime: 0,
+
+  data: {
+    endpoint: this.baseUrl,
+  },
+
+  result: {
+    endpoint: this.baseUrl,
+  },
+
+  usage: {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+  },
+};
   }
 }

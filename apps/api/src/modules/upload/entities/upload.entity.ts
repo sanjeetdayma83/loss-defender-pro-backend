@@ -1,4 +1,5 @@
 import {
+  Prisma,
   Upload,
   UploadCategory,
   UploadStatus,
@@ -46,7 +47,7 @@ export class UploadEntity implements Upload {
 
   etag: string | null;
 
-  metadata: unknown;
+  metadata: Prisma.JsonValue;
 
   uploadedAt: Date | null;
 

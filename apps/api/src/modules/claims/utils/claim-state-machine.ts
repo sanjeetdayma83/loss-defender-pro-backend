@@ -3,26 +3,13 @@ import {
   Injectable,
 } from '@nestjs/common';
 
-import {
-  ClaimStatus,
-} from '@prisma/client';
+import { ClaimStatus } from '@prisma/client';
 
 @Injectable()
 export class ClaimStateMachine {
-  private readonly transitions: Record<
-    ClaimStatus,
-    ClaimStatus[]
-  > = {
-    DRAFT: [
-      ClaimStatus.OPEN,
-      ClaimStatus.CANCELLED,
-    ],
-
-    OPEN: [
-      ClaimStatus.UNDER_REVIEW,
-      ClaimStatus.CANCELLED,
-    ],
-
+  private readonly transitions: Record<ClaimStatus, ClaimStatus[]> = {
+    DRAFT: [ClaimStatus.OPEN, ClaimStatus.CANCELLED],
+    OPEN: [ClaimStatus.UNDER_REVIEW, ClaimStatus.CANCELLED],
     UNDER_REVIEW: [
       ClaimStatus.AI_ANALYZING,
       ClaimStatus.APPROVED,
@@ -30,43 +17,25 @@ export class ClaimStateMachine {
       ClaimStatus.WAITING_FOR_EVIDENCE,
       ClaimStatus.CANCELLED,
     ],
-
     AI_ANALYZING: [
       ClaimStatus.APPROVED,
       ClaimStatus.REJECTED,
       ClaimStatus.WAITING_FOR_EVIDENCE,
       ClaimStatus.CANCELLED,
     ],
-
     WAITING_FOR_EVIDENCE: [
       ClaimStatus.UNDER_REVIEW,
       ClaimStatus.AI_ANALYZING,
       ClaimStatus.CANCELLED,
     ],
-
-    APPROVED: [
-      ClaimStatus.RESOLVED,
-      ClaimStatus.CANCELLED,
-    ],
-
-    REJECTED: [
-      ClaimStatus.CLOSED,
-      ClaimStatus.CANCELLED,
-    ],
-
-    RESOLVED: [
-      ClaimStatus.CLOSED,
-    ],
-
+    APPROVED: [ClaimStatus.RESOLVED, ClaimStatus.CANCELLED],
+    REJECTED: [ClaimStatus.CLOSED, ClaimStatus.CANCELLED],
+    RESOLVED: [ClaimStatus.CLOSED],
     CLOSED: [],
-
     CANCELLED: [],
   };
 
-  validateTransition(
-    current: ClaimStatus,
-    next: ClaimStatus,
-  ): void {
+  validateTransition(current: ClaimStatus, next: ClaimStatus): void {
     if (!this.canTransition(current, next)) {
       throw new BadRequestException(
         `Invalid claim transition: ${current} → ${next}`,
@@ -74,83 +43,62 @@ export class ClaimStateMachine {
     }
   }
 
-  canTransition(
-    current: ClaimStatus,
-    next: ClaimStatus,
-  ): boolean {
-    return this.transitions[
-      current
-    ].includes(next);
+  canTransition(current: ClaimStatus, next: ClaimStatus): boolean {
+    return (this.transitions[current] ?? []).includes(next);
   }
 
-  getAllowedTransitions(
-    current: ClaimStatus,
-  ): ClaimStatus[] {
-    return this.transitions[current];
+  getAllowedTransitions(current: ClaimStatus): ClaimStatus[] {
+    return this.transitions[current] ?? [];
   }
 
-  isTerminalState(
-    status: ClaimStatus,
-  ): boolean {
-    return [
+  isTerminalState(status: ClaimStatus): boolean {
+    const terminal: ClaimStatus[] = [
       ClaimStatus.CLOSED,
       ClaimStatus.CANCELLED,
-    ].includes(status);
+    ];
+    return terminal.includes(status);
   }
 
-  canReopen(
-    status: ClaimStatus,
-  ): boolean {
-    return [
+  canReopen(status: ClaimStatus): boolean {
+    const allowed: ClaimStatus[] = [
       ClaimStatus.REJECTED,
       ClaimStatus.RESOLVED,
       ClaimStatus.CLOSED,
-    ].includes(status);
+    ];
+    return allowed.includes(status);
   }
 
-  canAssign(
-    status: ClaimStatus,
-  ): boolean {
-    return [
+  canAssign(status: ClaimStatus): boolean {
+    const allowed: ClaimStatus[] = [
       ClaimStatus.OPEN,
       ClaimStatus.UNDER_REVIEW,
       ClaimStatus.AI_ANALYZING,
       ClaimStatus.WAITING_FOR_EVIDENCE,
-    ].includes(status);
+    ];
+    return allowed.includes(status);
   }
 
-  canAnalyze(
-    status: ClaimStatus,
-  ): boolean {
-    return [
+  canAnalyze(status: ClaimStatus): boolean {
+    const allowed: ClaimStatus[] = [
       ClaimStatus.OPEN,
       ClaimStatus.UNDER_REVIEW,
       ClaimStatus.WAITING_FOR_EVIDENCE,
-    ].includes(status);
+    ];
+    return allowed.includes(status);
   }
 
-  canResolve(
-    status: ClaimStatus,
-  ): boolean {
+  canResolve(status: ClaimStatus): boolean {
     return status === ClaimStatus.APPROVED;
   }
 
-  canClose(
-    status: ClaimStatus,
-  ): boolean {
+  canClose(status: ClaimStatus): boolean {
     return (
-      status ===
-        ClaimStatus.RESOLVED ||
-      status ===
-        ClaimStatus.REJECTED
+      status === ClaimStatus.RESOLVED ||
+      status === ClaimStatus.REJECTED
     );
   }
 
-  canCancel(
-    status: ClaimStatus,
-  ): boolean {
-    return !this.isTerminalState(
-      status,
-    );
+  canCancel(status: ClaimStatus): boolean {
+    return !this.isTerminalState(status);
   }
 }

@@ -73,13 +73,6 @@ enum PackingStatus {
   FAILED
 }
 
-enum OrderPriority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
 enum RecordingStatus {
   CREATED
   STARTED
@@ -265,50 +258,30 @@ enum ReportStatus {
 model Company {
   id String @id @default(uuid())
 
-  /// Primary business code (also exposed as companyCode in richer modules)
   code  String         @unique @db.VarChar(30)
   name  String         @db.VarChar(150)
   email String?        @unique @db.VarChar(150)
   phone String?        @db.VarChar(20)
   status CompanyStatus @default(ACTIVE)
 
-  /// Optional rich-module fields (companies/ module)
-  legalName     String? @db.VarChar(200)
-  companyType   String? @db.VarChar(50)
-  gstNumber     String? @db.VarChar(30)
-  panNumber     String? @db.VarChar(20)
-  emailVerified Boolean @default(false)
-  phoneVerified Boolean @default(false)
-  blockReason   String?
-  blockedAt     DateTime?
-
-  address      Json?
-  contact      Json?
-  branding     Json?
-  subscription Json?
-  settings     Json?
-  storage      Json?
-
-  users         User[]
-  warehouses    Warehouse[]
-  orders        Order[]
-  recordings    RecordingSession[]
-  evidences     Evidence[]
-  uploads       Upload[]
-  aiJobs        AIJob[]
+  users        User[]
+  warehouses   Warehouse[]
+  orders       Order[]
+  recordings   RecordingSession[]
+  evidences    Evidence[]
+  uploads      Upload[]
+  aiJobs       AIJob[]
   notifications Notification[]
-  claims        Claim[]
-  returns       Return[]
-  scanners      Scanner[]
-  reports       Report[]
+  claims       Claim[]
+  returns      Return[]
+  scans        Scan[]
+  reports      Report[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   deletedAt DateTime?
   isDeleted Boolean   @default(false)
 
-  @@index([gstNumber])
-  @@index([panNumber])
   @@map("companies")
 }
 
@@ -322,38 +295,24 @@ model User {
   lastName  String @db.VarChar(100)
   email     String @unique @db.VarChar(150)
 
-  /// Rich users/ module fields
-  username     String? @unique @db.VarChar(100)
-  employeeCode String? @db.VarChar(50)
-
   passwordHash     String
   refreshTokenHash String?
 
   role   UserRole   @default(OPERATOR)
   status UserStatus @default(PENDING)
 
-  lastLoginAt       DateTime?
-  passwordChangedAt DateTime?
+  lastLoginAt DateTime?
 
-  profile     Json?
-  assignment  Json?
-  permissions Json?
-  statistics  Json?
-
-  emailVerified    Boolean @default(false)
-  phoneVerified    Boolean @default(false)
-  twoFactorEnabled Boolean @default(false)
-
-  ordersCreated     Order[]            @relation("OrderCreatedBy")
-  recordings        RecordingSession[] @relation("RecordingOperator")
-  notifications     Notification[]
-  claimsAssigned    Claim[]            @relation("ClaimAssignedTo")
-  claimsResolved    Claim[]            @relation("ClaimResolvedBy")
-  returnsAssigned   Return[]           @relation("ReturnAssignedTo")
-  returnsResolved   Return[]           @relation("ReturnResolvedBy")
-  scansScanned      Scanner[]          @relation("ScanScannedBy")
-  scansVerified     Scanner[]          @relation("ScanVerifiedBy")
-  reportsGenerated  Report[]           @relation("ReportGeneratedBy")
+  ordersCreated Order[]            @relation("OrderCreatedBy")
+  recordings    RecordingSession[] @relation("RecordingOperator")
+  notifications Notification[]
+  claimsAssigned Claim[]           @relation("ClaimAssignedTo")
+  claimsResolved Claim[]           @relation("ClaimResolvedBy")
+  returnsAssigned Return[]         @relation("ReturnAssignedTo")
+  returnsResolved Return[]         @relation("ReturnResolvedBy")
+  scansScanned  Scan[]             @relation("ScanScannedBy")
+  scansVerified Scan[]             @relation("ScanVerifiedBy")
+  reportsGenerated Report[]        @relation("ReportGeneratedBy")
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -362,8 +321,6 @@ model User {
 
   @@index([companyId])
   @@index([email])
-  @@index([username])
-  @@index([employeeCode])
   @@map("users")
 }
 
@@ -376,40 +333,24 @@ model Warehouse {
   code        String  @db.VarChar(30)
   name        String  @db.VarChar(150)
   description String? @db.VarChar(500)
+  address     String? @db.VarChar(500)
+  city        String? @db.VarChar(100)
+  state       String? @db.VarChar(100)
+  country     String? @db.VarChar(100)
+  pincode     String? @db.VarChar(20)
+  phone       String? @db.VarChar(20)
+  email       String? @db.VarChar(150)
+  isActive    Boolean @default(true)
 
-  /// Flat address fields (lean warehouse module)
-  address String? @db.VarChar(500)
-  city    String? @db.VarChar(100)
-  state   String? @db.VarChar(100)
-  country String? @db.VarChar(100)
-  pincode String? @db.VarChar(20)
-  phone   String? @db.VarChar(20)
-  email   String? @db.VarChar(150)
-  isActive Boolean @default(true)
-
-  /// Rich warehouses/ module fields
-  warehouseType  String? @db.VarChar(50)
-  status         String? @db.VarChar(30)
-  timezone       String? @db.VarChar(50)
-  operatingHours String?
-  contactEmail   String? @db.VarChar(150)
-  contactPhone   String? @db.VarChar(30)
-  isDefault      Boolean @default(false)
-
-  addressJson Json? /// structured address object
-  location    Json?
-  manager     Json?
-  capacity    Json?
-
-  orders     Order[]
-  recordings RecordingSession[]
-  evidences  Evidence[]
-  uploads    Upload[]
-  aiJobs     AIJob[]
-  claims     Claim[]
-  returns    Return[]
-  scanners   Scanner[]
-  reports    Report[]
+  orders      Order[]
+  recordings  RecordingSession[]
+  evidences   Evidence[]
+  uploads     Upload[]
+  aiJobs      AIJob[]
+  claims      Claim[]
+  returns     Return[]
+  scans       Scan[]
+  reports     Report[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -433,9 +374,9 @@ model Order {
   warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
   createdBy User      @relation("OrderCreatedBy", fields: [createdById], references: [id])
 
-  marketplace           Marketplace
-  marketplaceOrderId    String? @db.VarChar(100)
-  marketplaceShipmentId String? @db.VarChar(100)
+  marketplace            Marketplace
+  marketplaceOrderId     String? @db.VarChar(100)
+  marketplaceShipmentId  String? @db.VarChar(100)
 
   orderNumber   String  @db.VarChar(100)
   awbNumber     String? @db.VarChar(100)
@@ -445,26 +386,9 @@ model Order {
   status             OrderStatus        @default(CREATED)
   packingStatus      PackingStatus      @default(PENDING)
   verificationStatus VerificationStatus @default(PENDING)
-  priority           OrderPriority      @default(MEDIUM)
 
   expectedItemCount Int @default(0)
   verifiedItemCount Int @default(0)
-
-  /// Rich orders/ module fields
-  customerId     String?
-  assignedTo     String?
-  trackingNumber String? @db.VarChar(100)
-  courier        String? @db.VarChar(100)
-  recordingId    String?
-  evidenceId     String?
-  claimId        String?
-  returnId       String?
-  remarks        String?
-
-  items           Json?
-  customer        Json?
-  shippingAddress Json?
-  metadata        Json?
 
   recordings RecordingSession[]
   evidences  Evidence[]
@@ -472,7 +396,7 @@ model Order {
   aiJobs     AIJob[]
   claims     Claim[]
   returns    Return[]
-  scanners   Scanner[]
+  scans      Scan[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -484,12 +408,9 @@ model Order {
   @@index([createdById])
   @@index([status])
   @@index([packingStatus])
-  @@index([priority])
   @@index([marketplace])
   @@index([orderNumber])
   @@index([awbNumber])
-  @@index([assignedTo])
-  @@index([customerId])
   @@map("orders")
 }
 
@@ -526,7 +447,7 @@ model RecordingSession {
   aiJobs    AIJob[]
   claims    Claim[]
   returns   Return[]
-  scanners  Scanner[]
+  scans     Scan[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -577,7 +498,7 @@ model Evidence {
   aiJobs  AIJob[]
   claims  Claim[]
   returns Return[]
-  scanners Scanner[]
+  scans   Scan[]
 
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
@@ -880,10 +801,10 @@ model Return {
 }
 
 // ------------------------------------------------------
-// Scanner (barcode scans) — model name Scanner → prisma.scanner
+// Scanner (barcode scans)
 // ------------------------------------------------------
 
-model Scanner {
+model Scan {
   id String @id @default(uuid())
 
   companyId   String
@@ -894,18 +815,19 @@ model Scanner {
   scannedBy   String
   verifiedBy  String?
 
-  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  order     Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  recording RecordingSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  evidence  Evidence?         @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
-  operator  User              @relation("ScanScannedBy", fields: [scannedBy], references: [id])
-  verifier  User?             @relation("ScanVerifiedBy", fields: [verifiedBy], references: [id], onDelete: SetNull)
+  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  warehouse Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  order     Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recording RecordingSession?  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  evidence  Evidence?          @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
+  scanner   User               @relation("ScanScannedBy", fields: [scannedBy], references: [id])
+  verifier  User?              @relation("ScanVerifiedBy", fields: [verifiedBy], references: [id], onDelete: SetNull)
 
   barcode     String
   barcodeType String
   status      ScanStatus @default(PENDING)
 
+  /// Nested device / location / result / stats stored as JSON
   location   Json?
   device     Json?
   result     Json?

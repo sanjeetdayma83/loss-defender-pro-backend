@@ -1,6 +1,4 @@
-import {
-  Injectable,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import {
   Claim,
@@ -22,58 +20,66 @@ export class ClaimRepository {
   ) {}
 
   async create(
-    data: CreateClaimDto & {
-      claimNumber: string;
-    },
+    data: CreateClaimDto & { claimNumber: string },
   ): Promise<Claim> {
     return this.prisma.claim.create({
-      data,
-    });
-  }
-
-  async findById(
-    id: string,
-  ): Promise<Claim | null> {
-    return this.prisma.claim.findUnique({
-      where: {
-        id,
-      },
-    });
-  }
-
-  async findByClaimNumber(
-    claimNumber: string,
-  ): Promise<Claim | null> {
-    return this.prisma.claim.findUnique({
-      where: {
-        claimNumber,
-      },
-    });
-  }
-
-  async update(
-    id: string,
-    data: UpdateClaimDto,
-  ): Promise<Claim> {
-    return this.prisma.claim.update({
-      where: {
-        id,
-      },
-      data,
-    });
-  }
-
-  async updateStatus(
-    id: string,
-    status: ClaimStatus,
-  ): Promise<Claim> {
-    return this.prisma.claim.update({
-      where: {
-        id,
-      },
       data: {
-        status,
-      },
+        claimNumber: data.claimNumber,
+        companyId: data.companyId,
+        warehouseId: data.warehouseId,
+        orderId: data.orderId,
+        recordingId: data.recordingId,
+        evidenceId: data.evidenceId,
+        aiJobId: data.aiJobId,
+        assignedTo: data.assignedTo,
+        status: data.status,
+        priority: data.priority,
+        title: data.title,
+        description: data.description,
+        customerRemarks: data.customerRemarks,
+        internalRemarks: data.internalRemarks,
+        metadata: data.metadata as Prisma.InputJsonValue,
+      } as Prisma.ClaimUncheckedCreateInput,
+    });
+  }
+
+  async findById(id: string): Promise<Claim | null> {
+    return this.prisma.claim.findUnique({
+      where: { id },
+    });
+  }
+
+  async findByClaimNumber(claimNumber: string): Promise<Claim | null> {
+    return this.prisma.claim.findUnique({
+      where: { claimNumber },
+    });
+  }
+
+  async update(id: string, data: UpdateClaimDto): Promise<Claim> {
+    return this.prisma.claim.update({
+      where: { id },
+      data: {
+        warehouseId: data.warehouseId,
+        orderId: data.orderId,
+        recordingId: data.recordingId,
+        evidenceId: data.evidenceId,
+        aiJobId: data.aiJobId,
+        assignedTo: data.assignedTo,
+        status: data.status,
+        priority: data.priority,
+        title: data.title,
+        description: data.description,
+        customerRemarks: data.customerRemarks,
+        internalRemarks: data.internalRemarks,
+        metadata: data.metadata as Prisma.InputJsonValue,
+      } as Prisma.ClaimUncheckedUpdateInput,
+    });
+  }
+
+  async updateStatus(id: string, status: ClaimStatus): Promise<Claim> {
+    return this.prisma.claim.update({
+      where: { id },
+      data: { status },
     });
   }
 
@@ -82,26 +88,15 @@ export class ClaimRepository {
     priority: ClaimPriority,
   ): Promise<Claim> {
     return this.prisma.claim.update({
-      where: {
-        id,
-      },
-      data: {
-        priority,
-      },
+      where: { id },
+      data: { priority },
     });
   }
 
-  async assign(
-    id: string,
-    assignedTo: string,
-  ): Promise<Claim> {
+  async assign(id: string, assignedTo: string): Promise<Claim> {
     return this.prisma.claim.update({
-      where: {
-        id,
-      },
-      data: {
-        assignedTo,
-      },
+      where: { id },
+      data: { assignedTo },
     });
   }
 
@@ -112,26 +107,23 @@ export class ClaimRepository {
     resolutionData?: Prisma.JsonValue,
   ): Promise<Claim> {
     return this.prisma.claim.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         status: ClaimStatus.RESOLVED,
         resolutionType,
         resolvedBy,
         resolvedAt: new Date(),
-        resolutionData,
+        resolutionData:
+          resolutionData == null
+            ? Prisma.DbNull
+            : (resolutionData as Prisma.InputJsonValue),
       },
     });
   }
 
-  async close(
-    id: string,
-  ): Promise<Claim> {
+  async close(id: string): Promise<Claim> {
     return this.prisma.claim.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         status: ClaimStatus.CLOSED,
         closedAt: new Date(),
@@ -139,13 +131,9 @@ export class ClaimRepository {
     });
   }
 
-  async softDelete(
-    id: string,
-  ): Promise<Claim> {
+  async softDelete(id: string): Promise<Claim> {
     return this.prisma.claim.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         isDeleted: true,
         deletedAt: new Date(),
@@ -153,23 +141,17 @@ export class ClaimRepository {
     });
   }
 
-  async count(
-    where: Prisma.ClaimWhereInput = {},
-  ): Promise<number> {
-    return this.prisma.claim.count({
-      where,
-    });
+  async count(where: Prisma.ClaimWhereInput = {}): Promise<number> {
+    return this.prisma.claim.count({ where });
   }
 
-  async findAll(
-    query: ClaimQueryDto,
-  ) {
+  async findAll(query: ClaimQueryDto) {
     const {
-      page,
-      limit,
+      page = 1,
+      limit = 20,
       search,
-      sortBy,
-      sortOrder,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
       ...filters
     } = query;
 
@@ -212,50 +194,22 @@ export class ClaimRepository {
   }
 
   async statistics() {
-    const [
-      total,
-      open,
-      resolved,
-      closed,
-      cancelled,
-    ] = await Promise.all([
+    const [total, open, resolved, closed, cancelled] = await Promise.all([
+      this.prisma.claim.count({ where: { isDeleted: false } }),
       this.prisma.claim.count({
-        where: {
-          isDeleted: false,
-        },
+        where: { status: ClaimStatus.OPEN, isDeleted: false },
       }),
       this.prisma.claim.count({
-        where: {
-          status: ClaimStatus.OPEN,
-          isDeleted: false,
-        },
+        where: { status: ClaimStatus.RESOLVED, isDeleted: false },
       }),
       this.prisma.claim.count({
-        where: {
-          status: ClaimStatus.RESOLVED,
-          isDeleted: false,
-        },
+        where: { status: ClaimStatus.CLOSED, isDeleted: false },
       }),
       this.prisma.claim.count({
-        where: {
-          status: ClaimStatus.CLOSED,
-          isDeleted: false,
-        },
-      }),
-      this.prisma.claim.count({
-        where: {
-          status: ClaimStatus.CANCELLED,
-          isDeleted: false,
-        },
+        where: { status: ClaimStatus.CANCELLED, isDeleted: false },
       }),
     ]);
 
-    return {
-      total,
-      open,
-      resolved,
-      closed,
-      cancelled,
-    };
+    return { total, open, resolved, closed, cancelled };
   }
 }

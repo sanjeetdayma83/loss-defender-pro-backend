@@ -514,15 +514,14 @@ export class CompanyService {
    */
 
   async getDashboard(
-    id: string,
-  ): Promise<CompanyDashboardSummary> {
-    await this.repository.findById(id);
+  id: string,
+): Promise<CompanyDashboardSummary> {
+  await this.repository.findById(id);
 
-    return this.repository.getDashboardSummary(
-      id,
-    );
-  }
-
+  return this.repository.getDashboardSummary(
+    id,
+  ) as unknown as CompanyDashboardSummary;
+}
   /**
    * -------------------------------------------------------
    * COMPANY OVERVIEW

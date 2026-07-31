@@ -12,7 +12,7 @@ import {
 
 import { Type } from 'class-transformer';
 
-import {
+import type {
   UserAssignment,
   UserPermission,
   UserProfile,

@@ -1,6 +1,4 @@
-import {
-  Injectable,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 
 import {
   Prisma,
@@ -22,22 +20,34 @@ export class ReturnRepository {
   ) {}
 
   async create(
-    data: CreateReturnDto & {
-      returnNumber: string;
-    },
+    data: CreateReturnDto & { returnNumber: string },
   ): Promise<Return> {
     return this.prisma.return.create({
-      data,
+      data: {
+        returnNumber: data.returnNumber,
+        companyId: data.companyId,
+        warehouseId: data.warehouseId,
+        orderId: data.orderId,
+        recordingId: data.recordingId,
+        marketplace: data.marketplace,
+        marketplaceReturnId: data.marketplaceReturnId,
+        evidenceId: data.evidenceId,
+        aiJobId: data.aiJobId,
+        assignedTo: data.assignedTo,
+        status: data.status,
+        priority: data.priority,
+        title: data.title,
+        description: data.description,
+        customerReason: data.customerReason,
+        internalRemarks: data.internalRemarks,
+        metadata: data.metadata as Prisma.InputJsonValue,
+      } as Prisma.ReturnUncheckedCreateInput,
     });
   }
 
-  async findById(
-    id: string,
-  ): Promise<Return | null> {
+  async findById(id: string): Promise<Return | null> {
     return this.prisma.return.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
     });
   }
 
@@ -45,35 +55,35 @@ export class ReturnRepository {
     returnNumber: string,
   ): Promise<Return | null> {
     return this.prisma.return.findUnique({
-      where: {
-        returnNumber,
-      },
+      where: { returnNumber },
     });
   }
 
-  async update(
-    id: string,
-    data: UpdateReturnDto,
-  ): Promise<Return> {
+  async update(id: string, data: UpdateReturnDto): Promise<Return> {
     return this.prisma.return.update({
-      where: {
-        id,
-      },
-      data,
-    });
-  }
-
-  async updateStatus(
-    id: string,
-    status: ReturnStatus,
-  ): Promise<Return> {
-    return this.prisma.return.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
-        status,
-      },
+  warehouseId: data.warehouseId,
+  orderId: data.orderId,
+  recordingId: data.recordingId,
+  evidenceId: data.evidenceId,
+  aiJobId: data.aiJobId,
+  assignedTo: data.assignedTo,
+  status: data.status,
+  priority: data.priority,
+  title: data.title,
+  description: data.description,
+  customerReason: data.customerReason,
+  internalRemarks: data.internalRemarks,
+  metadata: data.metadata as Prisma.InputJsonValue,
+} as Prisma.ReturnUncheckedUpdateInput,
+    });
+  }
+
+  async updateStatus(id: string, status: ReturnStatus): Promise<Return> {
+    return this.prisma.return.update({
+      where: { id },
+      data: { status },
     });
   }
 
@@ -82,26 +92,15 @@ export class ReturnRepository {
     priority: ReturnPriority,
   ): Promise<Return> {
     return this.prisma.return.update({
-      where: {
-        id,
-      },
-      data: {
-        priority,
-      },
+      where: { id },
+      data: { priority },
     });
   }
 
-  async assign(
-    id: string,
-    assignedTo: string,
-  ): Promise<Return> {
+  async assign(id: string, assignedTo: string): Promise<Return> {
     return this.prisma.return.update({
-      where: {
-        id,
-      },
-      data: {
-        assignedTo,
-      },
+      where: { id },
+      data: { assignedTo },
     });
   }
 
@@ -114,9 +113,7 @@ export class ReturnRepository {
     resolutionData?: Prisma.JsonValue,
   ): Promise<Return> {
     return this.prisma.return.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         status: ReturnStatus.REFUNDED,
         resolutionType,
@@ -124,7 +121,10 @@ export class ReturnRepository {
         resolvedAt: new Date(),
         refundAmount,
         refundCurrency,
-        resolutionData,
+        resolutionData:
+          resolutionData == null
+            ? Prisma.DbNull
+            : (resolutionData as Prisma.InputJsonValue),
       },
     });
   }
@@ -138,9 +138,7 @@ export class ReturnRepository {
     resolutionData?: Prisma.JsonValue,
   ): Promise<Return> {
     return this.prisma.return.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         status: ReturnStatus.REPLACED,
         resolutionType,
@@ -148,18 +146,17 @@ export class ReturnRepository {
         resolvedAt: new Date(),
         replacementOrderId,
         replacementTrackingNumber,
-        resolutionData,
+        resolutionData:
+          resolutionData == null
+            ? Prisma.DbNull
+            : (resolutionData as Prisma.InputJsonValue),
       },
     });
   }
 
-  async close(
-    id: string,
-  ): Promise<Return> {
+  async close(id: string): Promise<Return> {
     return this.prisma.return.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         status: ReturnStatus.CLOSED,
         closedAt: new Date(),
@@ -167,13 +164,9 @@ export class ReturnRepository {
     });
   }
 
-  async softDelete(
-    id: string,
-  ): Promise<Return> {
+  async softDelete(id: string): Promise<Return> {
     return this.prisma.return.update({
-      where: {
-        id,
-      },
+      where: { id },
       data: {
         isDeleted: true,
         deletedAt: new Date(),
@@ -181,23 +174,17 @@ export class ReturnRepository {
     });
   }
 
-  async count(
-    where: Prisma.ReturnWhereInput = {},
-  ): Promise<number> {
-    return this.prisma.return.count({
-      where,
-    });
+  async count(where: Prisma.ReturnWhereInput = {}): Promise<number> {
+    return this.prisma.return.count({ where });
   }
 
-  async findAll(
-    query: ReturnQueryDto,
-  ): Promise<Return[]> {
+  async findAll(query: ReturnQueryDto): Promise<Return[]> {
     const {
-      page,
-      limit,
+      page = 1,
+      limit = 20,
       search,
-      sortBy,
-      sortOrder,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
       fromDate,
       toDate,
       ...filters
@@ -233,17 +220,11 @@ export class ReturnRepository {
 
     if (fromDate || toDate) {
       where.createdAt = {};
-
       if (fromDate) {
-        where.createdAt.gte = new Date(
-          fromDate,
-        );
+        where.createdAt.gte = new Date(fromDate);
       }
-
       if (toDate) {
-        where.createdAt.lte = new Date(
-          toDate,
-        );
+        where.createdAt.lte = new Date(toDate);
       }
     }
 
@@ -267,46 +248,24 @@ export class ReturnRepository {
       rejected,
       closed,
     ] = await Promise.all([
+      this.prisma.return.count({ where: { isDeleted: false } }),
       this.prisma.return.count({
-        where: {
-          isDeleted: false,
-        },
+        where: { status: ReturnStatus.UNDER_REVIEW, isDeleted: false },
       }),
       this.prisma.return.count({
-        where: {
-          status: ReturnStatus.UNDER_REVIEW,
-          isDeleted: false,
-        },
+        where: { status: ReturnStatus.APPROVED, isDeleted: false },
       }),
       this.prisma.return.count({
-        where: {
-          status: ReturnStatus.APPROVED,
-          isDeleted: false,
-        },
+        where: { status: ReturnStatus.REFUNDED, isDeleted: false },
       }),
       this.prisma.return.count({
-        where: {
-          status: ReturnStatus.REFUNDED,
-          isDeleted: false,
-        },
+        where: { status: ReturnStatus.REPLACED, isDeleted: false },
       }),
       this.prisma.return.count({
-        where: {
-          status: ReturnStatus.REPLACED,
-          isDeleted: false,
-        },
+        where: { status: ReturnStatus.REJECTED, isDeleted: false },
       }),
       this.prisma.return.count({
-        where: {
-          status: ReturnStatus.REJECTED,
-          isDeleted: false,
-        },
-      }),
-      this.prisma.return.count({
-        where: {
-          status: ReturnStatus.CLOSED,
-          isDeleted: false,
-        },
+        where: { status: ReturnStatus.CLOSED, isDeleted: false },
       }),
     ]);
 

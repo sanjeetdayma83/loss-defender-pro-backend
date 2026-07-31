@@ -9,12 +9,16 @@ import { OrderStatus } from '@prisma/client';
 export class OrderStateMachine {
   /**
    * Allowed order state transitions.
+   * Every OrderStatus enum value must appear as a key.
    */
-  private readonly transitions: Record<
-    OrderStatus,
-    OrderStatus[]
-  > = {
+  private readonly transitions: Record<OrderStatus, OrderStatus[]> = {
     CREATED: [
+      OrderStatus.PENDING,
+      OrderStatus.ASSIGNED,
+      OrderStatus.CANCELLED,
+    ],
+
+    PENDING: [
       OrderStatus.ASSIGNED,
       OrderStatus.CANCELLED,
     ],
@@ -40,17 +44,32 @@ export class OrderStateMachine {
     ],
 
     VERIFYING: [
+      OrderStatus.VERIFIED,
       OrderStatus.READY_TO_SHIP,
       OrderStatus.PACKING,
       OrderStatus.CANCELLED,
     ],
 
+    VERIFIED: [
+      OrderStatus.READY_TO_SHIP,
+      OrderStatus.DISPATCHED,
+      OrderStatus.CANCELLED,
+    ],
+
     READY_TO_SHIP: [
       OrderStatus.SHIPPED,
+      OrderStatus.DISPATCHED,
       OrderStatus.CANCELLED,
     ],
 
     SHIPPED: [
+      OrderStatus.DISPATCHED,
+      OrderStatus.DELIVERED,
+      OrderStatus.RETURNED,
+      OrderStatus.CLAIMED,
+    ],
+
+    DISPATCHED: [
       OrderStatus.DELIVERED,
       OrderStatus.RETURNED,
       OrderStatus.CLAIMED,
@@ -68,112 +87,49 @@ export class OrderStateMachine {
     CANCELLED: [],
   };
 
-  /**
-   * Returns true if transition is allowed.
-   */
-  canTransition(
-    current: OrderStatus,
-    next: OrderStatus,
-  ): boolean {
-    return (
-      this.transitions[current]?.includes(next) ??
-      false
-    );
+  canTransition(current: OrderStatus, next: OrderStatus): boolean {
+    return this.transitions[current]?.includes(next) ?? false;
   }
 
-  /**
-   * Throws exception if transition is invalid.
-   */
-  validateTransition(
-    current: OrderStatus,
-    next: OrderStatus,
-  ): void {
-    if (
-      !this.canTransition(current, next)
-    ) {
+  validateTransition(current: OrderStatus, next: OrderStatus): void {
+    if (!this.canTransition(current, next)) {
       throw new BadRequestException(
         `Invalid order status transition: ${current} -> ${next}`,
       );
     }
   }
 
-  /**
-   * Returns all possible next states.
-   */
-  getAvailableTransitions(
-    current: OrderStatus,
-  ): OrderStatus[] {
+  getAvailableTransitions(current: OrderStatus): OrderStatus[] {
     return this.transitions[current] ?? [];
   }
 
-  /**
-   * Checks if order is finalized.
-   */
-  isFinalState(
-    status: OrderStatus,
-  ): boolean {
-    return [
+  isFinalState(status: OrderStatus): boolean {
+    const finalStates: OrderStatus[] = [
       OrderStatus.DELIVERED,
       OrderStatus.CANCELLED,
       OrderStatus.RETURNED,
       OrderStatus.CLAIMED,
-    ].includes(status);
+    ];
+    return finalStates.includes(status);
   }
 
-  /**
-   * Checks if order can still be modified.
-   */
-  canModify(
-    status: OrderStatus,
-  ): boolean {
+  canModify(status: OrderStatus): boolean {
     return !this.isFinalState(status);
   }
 
-  /**
-   * Checks if shipment is allowed.
-   */
-  canShip(
-    status: OrderStatus,
-  ): boolean {
-    return (
-      status ===
-      OrderStatus.READY_TO_SHIP
-    );
+  canShip(status: OrderStatus): boolean {
+    return status === OrderStatus.READY_TO_SHIP;
   }
 
-  /**
-   * Checks if verification may begin.
-   */
-  canStartVerification(
-    status: OrderStatus,
-  ): boolean {
-    return (
-      status ===
-      OrderStatus.RECORDING
-    );
+  canStartVerification(status: OrderStatus): boolean {
+    return status === OrderStatus.RECORDING;
   }
 
-  /**
-   * Checks if packing may begin.
-   */
-  canStartPacking(
-    status: OrderStatus,
-  ): boolean {
-    return (
-      status ===
-      OrderStatus.PICKING
-    );
+  canStartPacking(status: OrderStatus): boolean {
+    return status === OrderStatus.PICKING;
   }
 
-  /**
-   * Checks if recording may begin.
-   */
-  canStartRecording(
-    status: OrderStatus,
-  ): boolean {
-    return (
-      status ===
-      OrderStatus.PACKING
-    );
+  canStartRecording(status: OrderStatus): boolean {
+    return status === OrderStatus.PACKING;
   }
 }

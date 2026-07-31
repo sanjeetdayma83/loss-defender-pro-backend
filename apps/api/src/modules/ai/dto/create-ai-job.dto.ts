@@ -1,34 +1,26 @@
 import {
   IsEnum,
   IsNotEmpty,
-  IsNumber,
   IsObject,
   IsOptional,
   IsString,
   IsUUID,
-  Max,
-  MaxLength,
-  Min,
 } from 'class-validator';
 
-import {
-  AIProvider,
-} from '@prisma/client';
+import { AIJobStatus, AIProvider } from '@prisma/client';
 
 export class CreateAiJobDto {
   @IsUUID()
+  @IsNotEmpty()
   companyId: string;
 
   @IsUUID()
+  @IsNotEmpty()
   warehouseId: string;
 
   @IsOptional()
   @IsUUID()
   orderId?: string;
-
-  @IsOptional()
-  @IsUUID()
-  uploadId?: string;
 
   @IsOptional()
   @IsUUID()
@@ -38,36 +30,43 @@ export class CreateAiJobDto {
   @IsUUID()
   evidenceId?: string;
 
+  @IsOptional()
+  @IsUUID()
+  uploadId?: string;
+
+  @IsOptional()
   @IsEnum(AIProvider)
-  provider: AIProvider;
-
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  model: string;
-
-  @IsString()
-  @IsNotEmpty()
-  @MaxLength(100)
-  jobType: string;
-
-  @IsString()
-  @IsNotEmpty()
-  prompt: string;
-
-  @IsObject()
-  input: Record<string, unknown>;
+  provider?: AIProvider;
 
   @IsOptional()
-  @IsNumber()
-  @Min(0)
-  @Max(1)
-  confidence?: number;
+  @IsString()
+  model?: string;
+
+  @IsOptional()
+  @IsString()
+  prompt?: string;
+
+  @IsOptional()
+  @IsString()
+  jobType?: string;
 
   @IsOptional()
   @IsObject()
-  metadata?: Record<
-    string,
-    unknown
-  >;
+  input?: Record<string, unknown>;
+
+  /** @deprecated use input/output on the model — kept for compat */
+  @IsOptional()
+  response?: unknown;
+
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
+
+  @IsOptional()
+  @IsEnum(AIJobStatus)
+  status?: AIJobStatus;
+
+  @IsOptional()
+  @IsString()
+  error?: string;
 }

@@ -10,20 +10,11 @@ import {
   Min,
 } from 'class-validator';
 
-import {
-  AIJobStatus,
-  AIProvider,
-} from '@prisma/client';
+import { AIJobStatus } from '@prisma/client';
+
+import { AIProvider } from '@prisma/client';
 
 export class AiQueryDto {
-  @IsOptional()
-  @IsUUID()
-  companyId?: string;
-
-  @IsOptional()
-  @IsUUID()
-  warehouseId?: string;
-
   @IsOptional()
   @IsUUID()
   orderId?: string;
@@ -41,16 +32,12 @@ export class AiQueryDto {
   evidenceId?: string;
 
   @IsOptional()
-  @IsEnum(AIProvider)
+  @IsString()
   provider?: AIProvider;
 
   @IsOptional()
   @IsEnum(AIJobStatus)
   status?: AIJobStatus;
-
-  @IsOptional()
-  @IsString()
-  jobType?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -70,10 +57,6 @@ export class AiQueryDto {
   sortBy:
     | 'createdAt'
     | 'updatedAt'
-    | 'startedAt'
-    | 'completedAt'
-    | 'confidence'
-    | 'processingTime'
     | 'status'
     | 'provider' = 'createdAt';
 

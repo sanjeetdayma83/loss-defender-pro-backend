@@ -34,7 +34,6 @@ import { LocalProvider } from './providers/local.provider';
 
     ProviderFactory,
 
-    AiProvider,
     GeminiProvider,
     OpenAIProvider,
     LocalProvider,

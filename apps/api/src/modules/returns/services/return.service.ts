@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 
 import {
+  Prisma,
   Return,
   ReturnPriority,
   ReturnResolutionType,
@@ -234,10 +235,7 @@ export class ReturnService {
     id: string,
     resolutionType: ReturnResolutionType,
     refundedBy: string,
-    refundData?: Record<
-      string,
-      unknown
-    >,
+    refundData?: Prisma.JsonValue,
   ): Promise<Return> {
     const record =
       await this.findById(id);
@@ -267,10 +265,7 @@ export class ReturnService {
     id: string,
     resolutionType: ReturnResolutionType,
     processedBy: string,
-    replacementData?: Record<
-      string,
-      unknown
-    >,
+    replacementData?: Prisma.JsonValue,
   ): Promise<Return> {
     const record =
       await this.findById(id);

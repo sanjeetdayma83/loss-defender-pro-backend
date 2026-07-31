@@ -1,14 +1,9 @@
-import {
-  AIJobStatus,
-  AIProvider,
-} from '@prisma/client';
+import { AIJobStatus } from '@prisma/client';
+
+import { AIProvider } from '@prisma/client';
 
 export class AiResponseDto {
   id: string;
-
-  companyId: string;
-
-  warehouseId: string;
 
   orderId: string | null;
 
@@ -18,33 +13,17 @@ export class AiResponseDto {
 
   evidenceId: string | null;
 
-  provider: AIProvider;
+  provider: AIProvider | null;
 
-  model: string;
-
-  jobType: string;
+  model: string | null;
 
   status: AIJobStatus;
 
-  prompt: string;
+  prompt: string | null;
 
-  input: unknown;
-
-  output: unknown | null;
-
-  confidence: number;
-
-  tokensUsed: number | null;
-
-  processingTime: number | null;
+  response: unknown | null;
 
   error: string | null;
-
-  startedAt: Date | null;
-
-  completedAt: Date | null;
-
-  metadata: unknown | null;
 
   createdAt: Date;
 

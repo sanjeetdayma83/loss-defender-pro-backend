@@ -2,7 +2,10 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../../../database/prisma.service';
 
-import { User } from '@prisma/client';
+import {
+  Prisma,
+  User,
+} from '@prisma/client';
 
 @Injectable()
 export class UserRepository {
@@ -63,9 +66,9 @@ export class UserRepository {
   }
 
   async update(
-    id: string,
-    data: Partial<User>,
-  ): Promise<User> {
+  id: string,
+  data: Prisma.UserUncheckedUpdateInput,
+): Promise<User> {
     return this.prisma.user.update({
       where: { id },
       data,

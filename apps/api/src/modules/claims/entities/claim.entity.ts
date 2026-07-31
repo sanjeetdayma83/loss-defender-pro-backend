@@ -3,11 +3,10 @@ import {
   ClaimPriority,
   ClaimResolutionType,
   ClaimStatus,
+  Prisma,
 } from '@prisma/client';
 
-export class ClaimEntity
-  implements Claim
-{
+export class ClaimEntity implements Claim {
   id: string;
 
   claimNumber: string;
@@ -46,9 +45,9 @@ export class ClaimEntity
 
   aiRecommendation: string | null;
 
-  metadata: unknown | null;
+  metadata: Prisma.JsonValue;
 
-  resolutionData: unknown | null;
+  resolutionData: Prisma.JsonValue;
 
   resolvedBy: string | null;
 

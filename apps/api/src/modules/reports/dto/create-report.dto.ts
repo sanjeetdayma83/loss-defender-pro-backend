@@ -9,7 +9,7 @@ import {
 
 import { Type } from 'class-transformer';
 
-import { ReportDateRange } from '../types/reports.types';
+import type { ReportDateRange } from '../types/reports.types';
 
 export class CreateReportDto {
   @IsString()

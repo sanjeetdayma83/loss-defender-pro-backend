@@ -6,6 +6,7 @@ import {
 import {
   Prisma,
   Scanner,
+  ScanStatus,
 } from '@prisma/client';
 
 import { PrismaService } from '../../../database/prisma.service';
@@ -46,8 +47,8 @@ export class ScannerRepository {
     }
 
     if (query.status) {
-      where.status = query.status;
-    }
+  where.status = query.status as ScanStatus;
+}
 
     if (query.search) {
       where.OR = [
@@ -85,9 +86,8 @@ export class ScannerRepository {
     dto: CreateScannerDto,
   ): Promise<Scanner> {
     return this.prisma.scanner.create({
-      data:
-        dto as Prisma.ScannerCreateInput,
-    });
+  data: dto as unknown as Prisma.ScannerCreateInput,
+});
   }
 
   /**

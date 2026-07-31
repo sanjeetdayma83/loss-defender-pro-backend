@@ -3,6 +3,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import {
+  Prisma,
   Upload,
   UploadStatus,
   UploadVisibility,
@@ -82,7 +83,7 @@ export class UploadService {
         dto.visibility ??
         UploadVisibility.PRIVATE,
 
-      metadata: dto.metadata,
+      metadata: dto.metadata as Prisma.InputJsonValue,
 
       status: UploadStatus.PENDING,
     });
@@ -142,9 +143,13 @@ export class UploadService {
     await this.findById(id);
 
     return this.uploadRepository.update(
-      id,
-      dto,
-    );
+  id,
+  {
+    ...dto,
+    metadata:
+      dto.metadata as Prisma.InputJsonValue,
+  },
+);
   }
 
   async delete(

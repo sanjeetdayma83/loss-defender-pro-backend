@@ -13,7 +13,7 @@ import { CreateNotificationDto } from '../dto/create-notification.dto';
 import { NotificationQueryDto } from '../dto/notification-query.dto';
 import { UpdateNotificationDto } from '../dto/update-notification.dto';
 import { NotificationService } from '../services/notification.service';
-import {
+import type {
   BulkNotificationRequest,
   UserNotificationPreferences,
 } from '../types/notification.types';

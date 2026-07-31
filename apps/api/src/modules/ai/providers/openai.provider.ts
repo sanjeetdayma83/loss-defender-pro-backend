@@ -4,7 +4,7 @@ import {
 } from '@nestjs/common';
 
 import { ConfigService } from '@nestjs/config';
-
+import { AIProvider } from '@prisma/client';
 import { AiProvider } from './ai.provider';
 
 import {
@@ -14,7 +14,7 @@ import {
 
 @Injectable()
 export class OpenAIProvider extends AiProvider {
-  readonly name = 'openai';
+  readonly name = AIProvider.OPENAI;
 
   private readonly logger = new Logger(
     OpenAIProvider.name,
@@ -43,9 +43,7 @@ export class OpenAIProvider extends AiProvider {
   async analyze(
     request: AIProviderRequest,
   ): Promise<AIProviderResponse> {
-    this.logger.debug(
-      `OpenAI analyze request (${request.jobType})`,
-    );
+    this.logger.debug('OpenAI analyze request');
 
     return this.execute(request);
   }
@@ -100,21 +98,27 @@ export class OpenAIProvider extends AiProvider {
      */
 
     return {
-      provider: this.name,
-      success: true,
-      model:
-        request.model ??
-        this.defaultModel,
-      confidence: 1,
-      usage: {
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      },
-      processingTime: 0,
-      data: {},
-      metadata: {},
-      rawResponse: null,
-    };
+  success: true,
+
+  provider: this.name,
+
+  model:
+    request.model ??
+    this.defaultModel,
+
+  confidence: 1,
+
+  processingTime: 0,
+
+  data: {},
+
+  result: {},
+
+  usage: {
+    promptTokens: 0,
+    completionTokens: 0,
+    totalTokens: 0,
+  },
+};
   }
 }

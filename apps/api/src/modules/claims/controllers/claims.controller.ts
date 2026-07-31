@@ -13,6 +13,7 @@ import {
   ClaimPriority,
   ClaimResolutionType,
   ClaimStatus,
+  Prisma,
 } from '@prisma/client';
 
 import { CreateClaimDto } from '../dto/create-claim.dto';
@@ -130,10 +131,7 @@ export class ClaimsController {
     @Body('resolvedBy')
     resolvedBy: string,
     @Body('resolutionData')
-    resolutionData?: Record<
-      string,
-      unknown
-    >,
+resolutionData?: Prisma.JsonValue,
   ) {
     return this.claimsService.resolve(
       id,

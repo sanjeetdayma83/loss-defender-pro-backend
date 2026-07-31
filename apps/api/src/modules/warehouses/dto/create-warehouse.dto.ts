@@ -11,7 +11,7 @@ import {
 
 import { Type } from 'class-transformer';
 
-import {
+import type {
   WarehouseAddress,
   WarehouseCapacity,
   WarehouseLocation,

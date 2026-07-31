@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 
 import {
+  Prisma,
   ReturnPriority,
   ReturnResolutionType,
   ReturnStatus,
@@ -149,10 +150,7 @@ export class ReturnsController {
     @Body('refundedBy')
     refundedBy: string,
     @Body('refundData')
-    refundData?: Record<
-      string,
-      unknown
-    >,
+refundData?: Prisma.JsonValue,
   ) {
     return this.returnService.refund(
       id,
@@ -170,10 +168,7 @@ export class ReturnsController {
     @Body('processedBy')
     processedBy: string,
     @Body('replacementData')
-    replacementData?: Record<
-      string,
-      unknown
-    >,
+replacementData?: Prisma.JsonValue,
   ) {
     return this.returnService.replace(
       id,
