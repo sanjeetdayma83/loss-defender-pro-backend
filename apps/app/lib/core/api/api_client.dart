@@ -1,24 +1,22 @@
-import 'package:dio/dio.dart';
-
-import 'api_endpoints.dart';
+﻿import 'package:dio/dio.dart';
 
 class ApiClient {
-  ApiClient._();
-
-  static late Dio dio;
-
-  static void initialize() {
-    dio = Dio(
-      BaseOptions(
-        baseUrl: ApiEndpoints.baseUrl,
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
-        sendTimeout: const Duration(seconds: 30),
-        headers: const {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-      ),
-    );
-  }
+  static final Dio dio = Dio(
+    BaseOptions(
+      baseUrl: 'http://localhost:3000/api',
+      connectTimeout: const Duration(seconds: 10),
+      receiveTimeout: const Duration(seconds: 10),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    ),
+  )..interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        return handler.next(options);
+      },
+      onError: (DioException e, handler) {
+        return handler.next(e);
+      },
+    ));
 }

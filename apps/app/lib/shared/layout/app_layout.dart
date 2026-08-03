@@ -1,44 +1,62 @@
-import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-
+﻿import 'package:flutter/material.dart';
 import 'sidebar.dart';
-import 'topbar.dart';
 
 class AppLayout extends StatelessWidget {
-  final Widget child;
   final String title;
+  final Widget child;
 
-  const AppLayout({super.key, required this.child, required this.title});
+  const AppLayout({super.key, required this.title, required this.child});
 
   @override
   Widget build(BuildContext context) {
-    final desktop = MediaQuery.of(context).size.width >= 1100;
-
-    final currentRoute = GoRouter.of(
-      context,
-    ).routerDelegate.currentConfiguration.uri.toString();
-
-    if (!desktop) {
-      return Scaffold(
-        drawer: Drawer(child: Sidebar(currentRoute: currentRoute)),
-        body: Column(
-          children: [
-            TopBar(title: title, showMenuButton: true),
-            Expanded(child: child),
-          ],
-        ),
-      );
-    }
-
     return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
       body: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(width: 260, child: Sidebar(currentRoute: currentRoute)),
+          const Sidebar(),
           Expanded(
             child: Column(
               children: [
-                TopBar(title: title),
-                Expanded(child: child),
+                Container(
+                  height: 70,
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(bottom: BorderSide(color: Colors.grey.shade200)),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E2329)),
+                      ),
+                      Row(
+                        children: [
+                          IconButton(
+                            icon: const Icon(Icons.notifications_outlined, color: Colors.grey),
+                            onPressed: () {},
+                          ),
+                          const SizedBox(width: 12),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(Icons.person, color: Colors.blue.shade700, size: 20),
+                          ),
+                          const SizedBox(width: 8),
+                          const Text("Admin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: child,
+                ),
               ],
             ),
           ),

@@ -1,4 +1,4 @@
-import 'package:camera/camera.dart';
+﻿import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 
 class DeviceSelectorDialog extends StatelessWidget {
@@ -29,7 +29,7 @@ class DeviceSelectorDialog extends StatelessWidget {
             : ListView.separated(
                 shrinkWrap: true,
                 itemCount: cameras.length,
-                separatorBuilder: (_, __) => const Divider(height: 1),
+                separatorBuilder: (context, index) => const Divider(height: 1),
                 itemBuilder: (context, index) {
                   final camera = cameras[index];
 
