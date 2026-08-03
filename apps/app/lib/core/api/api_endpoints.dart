@@ -5,14 +5,14 @@
   /// Base URL
   /// ============================================
 
-  /// Chrome
-  static const String baseUrl = 'http://localhost:3000/api';
+  /// Chrome (Web)
+  // static const String baseUrl = 'http://localhost:3000/api';
 
   /// Android Emulator
   // static const String baseUrl = 'http://10.0.2.2:3000/api';
 
-  /// Real Device
-  // static const String baseUrl = 'http://192.168.1.100:3000/api';
+  /// Real Device (RMX3990)
+  static const String baseUrl = 'http://192.168.1.109:3000/api';
 
   /// ============================================
   /// Authentication

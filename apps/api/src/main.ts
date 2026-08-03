@@ -55,7 +55,7 @@ async function bootstrap(): Promise<void> {
 
   const port = config.get<number>('app.port') ?? 3000;
 
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
 
   console.log(
     `🚀 ${config.get<string>('app.name')} running on http://localhost:${port}`,

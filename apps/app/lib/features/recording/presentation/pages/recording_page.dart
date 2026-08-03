@@ -1,6 +1,13 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
+import 'package:camera/camera.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import '../../../../shared/layout/app_layout.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
@@ -36,11 +43,124 @@ class _RecordingPageState extends State<RecordingPage> {
   DateTime? _startedAt;
   bool _didAutostart = false;
 
+  // Camera
+  CameraController? _cameraController;
+  List<CameraDescription> _cameras = [];
+  bool _cameraReady = false;
+  bool _isInitializingCamera = false;
+  String? _cameraError;
+  XFile? _lastVideoFile;
+
   @override
   void initState() {
     super.initState();
     _load();
+    _initCamera();
   }
+
+  @override
+  void dispose() {
+    _cameraController?.dispose();
+    super.dispose();
+  }
+
+  // ─────────────────────────────────────────────
+  // Camera
+  // ─────────────────────────────────────────────
+
+  Future<void> _initCamera() async {
+    if (kIsWeb) {
+      // Web has limited recording support
+      setState(() {
+        _cameraError = 'Camera recording works best on mobile/tablet. Web preview limited.';
+      });
+      return;
+    }
+
+    setState(() => _isInitializingCamera = true);
+
+    try {
+      // Request permissions
+      final camStatus = await Permission.camera.request();
+      final micStatus = await Permission.microphone.request();
+
+      if (!camStatus.isGranted) {
+        setState(() {
+          _cameraError = 'Camera permission denied';
+          _isInitializingCamera = false;
+        });
+        return;
+      }
+
+      _cameras = await availableCameras();
+      if (_cameras.isEmpty) {
+        setState(() {
+          _cameraError = 'No cameras found';
+          _isInitializingCamera = false;
+        });
+        return;
+      }
+
+      // Prefer back camera
+      final camera = _cameras.firstWhere(
+        (c) => c.lensDirection == CameraLensDirection.back,
+        orElse: () => _cameras.first,
+      );
+
+      _cameraController = CameraController(
+        camera,
+        ResolutionPreset.high,
+        enableAudio: micStatus.isGranted,
+        imageFormatGroup: ImageFormatGroup.jpeg,
+      );
+
+      await _cameraController!.initialize();
+
+      if (!mounted) return;
+      setState(() {
+        _cameraReady = true;
+        _isInitializingCamera = false;
+        _cameraError = null;
+      });
+    } catch (e) {
+      setState(() {
+        _cameraError = 'Camera init failed: $e';
+        _isInitializingCamera = false;
+      });
+    }
+  }
+
+  Future<void> _startCameraRecording() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      return;
+    }
+    if (_cameraController!.value.isRecordingVideo) return;
+
+    try {
+      await _cameraController!.startVideoRecording();
+    } catch (e) {
+      debugPrint('Start video recording failed: $e');
+      _toast('Failed to start camera recording: $e', error: true);
+    }
+  }
+
+  Future<XFile?> _stopCameraRecording() async {
+    if (_cameraController == null || !_cameraController!.value.isRecordingVideo) {
+      return null;
+    }
+
+    try {
+      final file = await _cameraController!.stopVideoRecording();
+      return file;
+    } catch (e) {
+      debugPrint('Stop video recording failed: $e');
+      return null;
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // API helpers
+  // ─────────────────────────────────────────────
 
   Map<String, dynamic>? _unwrap(dynamic body) {
     if (body is! Map) return null;
@@ -48,7 +168,6 @@ class _RecordingPageState extends State<RecordingPage> {
     if (map['data'] is Map) {
       return Map<String, dynamic>.from(map['data'] as Map);
     }
-    // Some APIs nest under data.user
     if (map['data'] is Map && (map['data'] as Map)['user'] is Map) {
       return Map<String, dynamic>.from((map['data'] as Map)['user'] as Map);
     }
@@ -71,26 +190,22 @@ class _RecordingPageState extends State<RecordingPage> {
     });
 
     try {
-      // ── Profile (operator id) ──────────────────────────
+      // Profile
       try {
         final profileRes = await _dio.get(ApiEndpoints.profile);
         var p = _unwrap(profileRes.data);
-        // Flat response without data wrapper
         if (p == null && profileRes.data is Map) {
           p = Map<String, dynamic>.from(profileRes.data as Map);
         }
-        // Nested user
         if (p != null && p['id'] == null && p['user'] is Map) {
           p = Map<String, dynamic>.from(p['user'] as Map);
         }
         profile = p;
-        debugPrint('Profile loaded: id=${profile?['id']} email=${profile?['email']}');
       } catch (e) {
-        debugPrint('Profile error: $e');
         profile = null;
       }
 
-      // ── Order ──────────────────────────────────────────
+      // Order
       final oid = widget.orderId;
       if (oid != null && oid.isNotEmpty) {
         try {
@@ -100,16 +215,12 @@ class _RecordingPageState extends State<RecordingPage> {
                   ? Map<String, dynamic>.from(orderRes.data as Map)
                   : null);
         } catch (_) {
-          final listRes = await _safeGet(
-            ApiEndpoints.orders,
-            query: {'page': 1, 'limit': 50},
-          );
+          final listRes = await _safeGet(ApiEndpoints.orders, query: {'page': 1, 'limit': 50});
           final data = _unwrap(listRes?.data);
           if (data != null && data['items'] is List) {
             for (final e in data['items'] as List) {
               final m = Map<String, dynamic>.from(e as Map);
-              if (m['id']?.toString() == oid ||
-                  m['orderNumber']?.toString() == oid) {
+              if (m['id']?.toString() == oid || m['orderNumber']?.toString() == oid) {
                 order = m;
                 break;
               }
@@ -118,10 +229,10 @@ class _RecordingPageState extends State<RecordingPage> {
         }
       }
 
-      // ── Recordings ─────────────────────────────────────
+      // Recordings
       final recRes = await _safeGet(
         ApiEndpoints.recordings,
-        query: {'page': 1, 'limit': 30},
+        query: {'page': 1, 'limit': 50, 'sortBy': 'createdAt', 'sortOrder': 'desc'},
       );
       List items = [];
       final rd = _unwrap(recRes?.data);
@@ -137,8 +248,8 @@ class _RecordingPageState extends State<RecordingPage> {
         return {
           'id': m['id']?.toString() ?? '',
           'orderId': m['orderId']?.toString() ?? '',
-          'status': (m['status'] ?? 'CREATED').toString(),
-          'duration': m['durationSeconds'] ?? 0,
+          'status': (m['status'] ?? 'CREATED').toString().toUpperCase(),
+          'duration': m['durationSeconds'] ?? m['duration'] ?? 0,
           'fileUrl': m['fileUrl']?.toString(),
           'createdAt': m['createdAt']?.toString(),
           'raw': m,
@@ -151,20 +262,20 @@ class _RecordingPageState extends State<RecordingPage> {
         if (match.isNotEmpty) {
           activeSession = match.first;
           final st = activeSession!['status'].toString().toUpperCase();
-          isRecording = st == 'STARTED' || st == 'RESUMED';
+          isRecording = st == 'STARTED' || st == 'RESUMED' || st == 'RECORDING';
+          if (isRecording && _startedAt == null) {
+            _startedAt = DateTime.now();
+            elapsedSeconds = (activeSession!['duration'] as num?)?.toInt() ?? 0;
+            _tick();
+          }
         }
       }
 
       setState(() => isLoading = false);
 
-      // Auto-start once after load
-      if (widget.autostart &&
-          !_didAutostart &&
-          order != null &&
-          !isRecording) {
+      if (widget.autostart && !_didAutostart && order != null && !isRecording) {
         _didAutostart = true;
-        // small delay for UI
-        Future.delayed(const Duration(milliseconds: 300), () {
+        Future.delayed(const Duration(milliseconds: 500), () {
           if (mounted) _startRecording();
         });
       }
@@ -176,47 +287,65 @@ class _RecordingPageState extends State<RecordingPage> {
     }
   }
 
-  Future<void> _startRecording() async {
-    if (order == null) {
-      _toast('No order loaded — scan an order first', error: true);
-      return;
+  Future<String> _resolveWarehouseId(String companyId, String? currentId) async {
+    List<Map<String, dynamic>> warehouses = [];
+    try {
+      final res = await _dio.get(
+        ApiEndpoints.warehouses,
+        queryParameters: {'page': 1, 'limit': 50, 'companyId': companyId},
+      );
+      final data = _unwrap(res.data);
+      List items = [];
+      if (data != null) {
+        if (data['items'] is List) items = data['items'] as List;
+        else if (data['data'] is List) items = data['data'] as List;
+      } else if (res.data is List) {
+        items = res.data as List;
+      }
+      warehouses = items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+    } catch (_) {}
+
+    if (warehouses.isEmpty) {
+      throw Exception('No warehouses found');
     }
 
-    // Re-fetch profile if missing
-    if (profile == null || profile!['id'] == null) {
+    if (currentId != null && warehouses.any((w) => w['id']?.toString() == currentId)) {
+      return currentId;
+    }
+
+    final fallback = warehouses.first['id']?.toString()!;
+    final oid = order?['id']?.toString();
+    if (oid != null) {
       try {
-        final profileRes = await _dio.get(ApiEndpoints.profile);
-        profile = _unwrap(profileRes.data) ??
-            (profileRes.data is Map
-                ? Map<String, dynamic>.from(profileRes.data as Map)
-                : null);
-        if (profile != null && profile!['id'] == null && profile!['user'] is Map) {
-          profile = Map<String, dynamic>.from(profile!['user'] as Map);
-        }
+        await _dio.patch('${ApiEndpoints.orders}/$oid', data: {'warehouseId': fallback});
+        order = {...?order, 'warehouseId': fallback};
       } catch (_) {}
+    }
+    return fallback!;
+  }
+
+  Future<void> _startRecording() async {
+    if (order == null) {
+      _toast('No order loaded', error: true);
+      return;
     }
 
     setState(() => isActionLoading = true);
 
     try {
-      final companyId =
-          order!['companyId']?.toString() ?? profile?['companyId']?.toString();
-      final warehouseId = order!['warehouseId']?.toString();
+      final companyId = order!['companyId']?.toString() ?? profile?['companyId']?.toString();
+      var warehouseId = order!['warehouseId']?.toString();
       final orderId = order!['id']?.toString();
       final operatorId = profile?['id']?.toString();
 
       if (operatorId == null || operatorId.isEmpty) {
-        throw Exception(
-          'Operator id missing. Token may be invalid — logout and login again. '
-          'Profile: ${profile?.toString() ?? "null"}',
-        );
+        throw Exception('Operator missing. Please re-login.');
+      }
+      if (companyId == null || orderId == null) {
+        throw Exception('Missing company or order id');
       }
 
-      if (companyId == null || warehouseId == null || orderId == null) {
-        throw Exception(
-          'Missing ids (company=$companyId warehouse=$warehouseId order=$orderId)',
-        );
-      }
+      warehouseId = await _resolveWarehouseId(companyId, warehouseId);
 
       final createRes = await _dio.post(
         ApiEndpoints.recordings,
@@ -231,16 +360,17 @@ class _RecordingPageState extends State<RecordingPage> {
       );
 
       final session = _unwrap(createRes.data) ??
-          (createRes.data is Map
-              ? Map<String, dynamic>.from(createRes.data as Map)
-              : null);
+          (createRes.data is Map ? Map<String, dynamic>.from(createRes.data as Map) : null);
 
       if (session == null || session['id'] == null) {
-        throw Exception('Create recording returned no id: ${createRes.data}');
+        throw Exception('Create recording returned no id');
       }
 
       final sessionId = session['id'].toString();
       await _dio.post('${ApiEndpoints.recordings}/$sessionId/start');
+
+      // Start actual camera recording
+      await _startCameraRecording();
 
       setState(() {
         activeSession = {
@@ -253,10 +383,12 @@ class _RecordingPageState extends State<RecordingPage> {
         elapsedSeconds = 0;
         _startedAt = DateTime.now();
         isActionLoading = false;
+        _lastVideoFile = null;
       });
 
       _tick();
-      _toast('Recording started');
+      _toast('Recording started (camera + server)');
+      await _load();
     } catch (e) {
       setState(() => isActionLoading = false);
       _toast(_err(e), error: true);
@@ -268,8 +400,15 @@ class _RecordingPageState extends State<RecordingPage> {
     if (id == null) return;
 
     setState(() => isActionLoading = true);
+
     try {
+      // Stop camera first
+      final videoFile = await _stopCameraRecording();
+      _lastVideoFile = videoFile;
+
+      // Stop server session
       await _dio.post('${ApiEndpoints.recordings}/$id/stop');
+
       setState(() {
         isRecording = false;
         activeSession = {
@@ -278,8 +417,41 @@ class _RecordingPageState extends State<RecordingPage> {
           'duration': elapsedSeconds,
         };
         isActionLoading = false;
+        _startedAt = null;
       });
-      _toast('Recording stopped');
+
+      if (videoFile != null) {
+        _toast('Recording stopped. Video saved: ${path.basename(videoFile.path)}');
+      } else {
+        _toast('Recording stopped (${_fmtDuration(elapsedSeconds)})');
+      }
+
+      await _load();
+    } catch (e) {
+      setState(() => isActionLoading = false);
+      _toast(_err(e), error: true);
+    }
+  }
+
+  Future<void> _markCompleted() async {
+    final id = activeSession?['id']?.toString();
+    if (id == null) return;
+
+    setState(() => isActionLoading = true);
+
+    try {
+      try {
+        await _dio.post('${ApiEndpoints.recordings}/$id/complete');
+      } catch (_) {
+        await _dio.patch('${ApiEndpoints.recordings}/$id', data: {'status': 'COMPLETED'});
+      }
+
+      setState(() {
+        activeSession = {...?activeSession, 'status': 'COMPLETED'};
+        isActionLoading = false;
+      });
+
+      _toast('Marked as Completed');
       await _load();
     } catch (e) {
       setState(() => isActionLoading = false);
@@ -302,10 +474,9 @@ class _RecordingPageState extends State<RecordingPage> {
     if (e is DioException) {
       final d = e.response?.data;
       if (d is Map) {
-        return (d['message'] ?? d['error'] ?? e.message ?? 'Request failed')
-            .toString();
+        return (d['message'] ?? d['error'] ?? e.message ?? 'Request failed').toString();
       }
-      return e.message ?? 'Request failed (${e.response?.statusCode})';
+      return e.message ?? 'Request failed';
     }
     return e.toString().replaceFirst('Exception: ', '');
   }
@@ -315,9 +486,9 @@ class _RecordingPageState extends State<RecordingPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg),
-        backgroundColor: error ? Colors.red.shade700 : null,
+        backgroundColor: error ? Colors.red.shade700 : Colors.green.shade700,
         behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: error ? 6 : 3),
+        duration: Duration(seconds: error ? 5 : 3),
       ),
     );
   }
@@ -338,17 +509,26 @@ class _RecordingPageState extends State<RecordingPage> {
     }
   }
 
+  Color _statusColor(String status) {
+    final s = status.toUpperCase();
+    if (s.contains('START') || s.contains('RECORD')) return Colors.red;
+    if (s.contains('STOP')) return Colors.orange;
+    if (s.contains('COMPLETE') || s.contains('UPLOAD')) return Colors.green;
+    return Colors.blueGrey;
+  }
+
   String get _operatorLabel {
     if (profile == null) return 'Not logged in';
-    final name = [
-      profile!['firstName'],
-      profile!['lastName'],
-    ].where((e) => e != null && e.toString().isNotEmpty).join(' ');
+    final name = [profile!['firstName'], profile!['lastName']]
+        .where((e) => e != null && e.toString().isNotEmpty)
+        .join(' ');
     if (name.isNotEmpty) return name;
-    return profile!['email']?.toString() ??
-        profile!['id']?.toString() ??
-        '—';
+    return profile!['email']?.toString() ?? profile!['id']?.toString() ?? '—';
   }
+
+  // ─────────────────────────────────────────────
+  // UI
+  // ─────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -380,13 +560,11 @@ class _RecordingPageState extends State<RecordingPage> {
                             label: const Text('Back to Scanning'),
                           ),
                           const Spacer(),
-                          if (profile == null)
+                          if (!_cameraReady && !kIsWeb)
                             TextButton.icon(
-                              onPressed: () => context.go('/login'),
-                              icon: const Icon(Icons.login, size: 16),
-                              label: const Text('Re-login (profile missing)'),
-                              style: TextButton.styleFrom(
-                                  foregroundColor: Colors.red),
+                              onPressed: _initCamera,
+                              icon: const Icon(Icons.videocam, size: 16),
+                              label: const Text('Retry Camera'),
                             ),
                           OutlinedButton.icon(
                             onPressed: _load,
@@ -400,8 +578,7 @@ class _RecordingPageState extends State<RecordingPage> {
                         builder: (context, c) {
                           final wide = c.maxWidth > 1000;
                           return Flex(
-                            direction:
-                                wide ? Axis.horizontal : Axis.vertical,
+                            direction: wide ? Axis.horizontal : Axis.vertical,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Expanded(
@@ -414,8 +591,7 @@ class _RecordingPageState extends State<RecordingPage> {
                                   ],
                                 ),
                               ),
-                              SizedBox(
-                                  width: wide ? 16 : 0, height: wide ? 0 : 16),
+                              SizedBox(width: wide ? 16 : 0, height: wide ? 0 : 16),
                               Expanded(flex: 4, child: _detailsCard()),
                             ],
                           );
@@ -428,6 +604,10 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 
   Widget _playerCard() {
+    final status = (activeSession?['status'] ?? 'NONE').toString().toUpperCase();
+    final isStopped = status.contains('STOP');
+    final isCompleted = status.contains('COMPLETE') || status.contains('UPLOAD');
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -441,7 +621,7 @@ class _RecordingPageState extends State<RecordingPage> {
           Row(
             children: [
               const Text(
-                'Latest Recording',
+                'Live Camera + Recording',
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
@@ -451,8 +631,7 @@ class _RecordingPageState extends State<RecordingPage> {
               const Spacer(),
               if (isRecording)
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: Colors.red.shade50,
                     borderRadius: BorderRadius.circular(20),
@@ -462,8 +641,7 @@ class _RecordingPageState extends State<RecordingPage> {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                            color: Colors.red, shape: BoxShape.circle),
+                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -480,6 +658,8 @@ class _RecordingPageState extends State<RecordingPage> {
             ],
           ),
           const SizedBox(height: 14),
+
+          // Camera Preview / Placeholder
           AspectRatio(
             aspectRatio: 16 / 9,
             child: Container(
@@ -487,34 +667,48 @@ class _RecordingPageState extends State<RecordingPage> {
                 color: const Color(0xFF0B1220),
                 borderRadius: BorderRadius.circular(12),
               ),
+              clipBehavior: Clip.antiAlias,
               child: Stack(
-                alignment: Alignment.center,
+                fit: StackFit.expand,
                 children: [
-                  Icon(
-                    isRecording ? Icons.videocam : Icons.videocam_off,
-                    size: 56,
-                    color: Colors.white24,
-                  ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: Text(
-                      isRecording
-                          ? 'Session active on server — device camera next'
-                          : 'Press Start Recording (or scan again for auto-start)',
-                      textAlign: TextAlign.center,
-                      style:
-                          const TextStyle(color: Colors.white70, fontSize: 12),
+                  // Real camera preview
+                  if (_cameraReady && _cameraController != null)
+                    CameraPreview(_cameraController!)
+                  else
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_isInitializingCamera)
+                            const CircularProgressIndicator(color: Colors.white54)
+                          else
+                            Icon(
+                              isCompleted
+                                  ? Icons.check_circle_outline
+                                  : Icons.videocam_off,
+                              size: 56,
+                              color: Colors.white24,
+                            ),
+                          const SizedBox(height: 12),
+                          Text(
+                            _cameraError ??
+                                (kIsWeb
+                                    ? 'Web: Camera recording limited. Use mobile/tablet for full capture.'
+                                    : 'Camera not ready'),
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
+
+                  // REC badge
                   if (isRecording)
                     Positioned(
                       top: 12,
                       left: 12,
                       child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           color: Colors.red,
                           borderRadius: BorderRadius.circular(4),
@@ -529,57 +723,114 @@ class _RecordingPageState extends State<RecordingPage> {
                         ),
                       ),
                     ),
+
+                  // Bottom status text
+                  Positioned(
+                    bottom: 12,
+                    left: 12,
+                    right: 12,
+                    child: Text(
+                      isRecording
+                          ? 'Recording in progress (camera + server session)'
+                          : isCompleted
+                              ? 'Recording completed'
+                              : isStopped
+                                  ? 'Stopped — Mark Completed or start new'
+                                  : _cameraReady
+                                      ? 'Camera ready — press Start Recording'
+                                      : 'Initializing camera...',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                  ),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 14),
+
+          // Action buttons
           Row(
             children: [
-              if (!isRecording)
+              if (!isRecording) ...[
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: isActionLoading ? null : _startRecording,
                     icon: const Icon(Icons.fiber_manual_record, size: 18),
-                    label:
-                        Text(isActionLoading ? 'Starting…' : 'Start Recording'),
+                    label: Text(isActionLoading ? 'Starting…' : 'Start Recording'),
                     style: FilledButton.styleFrom(
                       backgroundColor: Colors.red.shade600,
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                ),
+                if (isStopped && !isCompleted) ...[
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: isActionLoading ? null : _markCompleted,
+                      icon: const Icon(Icons.check_circle_outline, size: 18),
+                      label: const Text('Mark Completed'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.green.shade700,
+                        side: BorderSide(color: Colors.green.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                       ),
                     ),
                   ),
-                )
-              else
+                ],
+              ] else ...[
                 Expanded(
                   child: FilledButton.icon(
                     onPressed: isActionLoading ? null : _stopRecording,
                     icon: const Icon(Icons.stop, size: 18),
-                    label:
-                        Text(isActionLoading ? 'Stopping…' : 'Stop Recording'),
+                    label: Text(isActionLoading ? 'Stopping…' : 'Stop Recording'),
                     style: FilledButton.styleFrom(
                       backgroundColor: const Color(0xFF1E2329),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                   ),
                 ),
+              ],
               const SizedBox(width: 10),
               OutlinedButton.icon(
                 onPressed: () => context.go('/scanning'),
                 icon: const Icon(Icons.qr_code_scanner, size: 16),
                 label: const Text('Scan next'),
                 style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 14),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                 ),
               ),
             ],
           ),
+
+          // Show last saved file
+          if (_lastVideoFile != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.video_file, color: Colors.green.shade700, size: 20),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Saved: ${path.basename(_lastVideoFile!.path)}',
+                      style: TextStyle(fontSize: 12, color: Colors.green.shade800),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -587,6 +838,8 @@ class _RecordingPageState extends State<RecordingPage> {
 
   Widget _detailsCard() {
     final o = order;
+    final status = (activeSession?['status'] ?? 'None').toString();
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -599,11 +852,7 @@ class _RecordingPageState extends State<RecordingPage> {
         children: [
           const Text(
             'Recording Details',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2329),
-            ),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329)),
           ),
           const SizedBox(height: 16),
           if (o == null)
@@ -611,12 +860,9 @@ class _RecordingPageState extends State<RecordingPage> {
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
                 children: [
-                  Text(
-                    'No order linked. Scan an order first.',
-                    style:
-                        TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                    textAlign: TextAlign.center,
-                  ),
+                  Text('No order linked. Scan an order first.',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                      textAlign: TextAlign.center),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: () => context.go('/scanning'),
@@ -630,25 +876,17 @@ class _RecordingPageState extends State<RecordingPage> {
             _row('Customer', (o['customerName'] ?? '—').toString()),
             _row('Status', (o['status'] ?? '—').toString()),
             _row('Marketplace', (o['marketplace'] ?? '—').toString()),
-            _row('AWB',
-                (o['awbNumber'] ?? o['trackingNumber'] ?? '—').toString()),
+            _row('AWB', (o['awbNumber'] ?? o['trackingNumber'] ?? '—').toString()),
             const Divider(height: 28),
-            _row(
-              'Session',
-              activeSession?['id'] != null
-                  ? activeSession!['id'].toString().substring(0, 8)
-                  : '—',
-            ),
-            _row('Session status',
-                (activeSession?['status'] ?? 'None').toString()),
-            _row(
-              'Duration',
-              isRecording
-                  ? _fmtDuration(elapsedSeconds)
-                  : _fmtDuration(
-                      (activeSession?['duration'] as num?)?.toInt() ?? 0),
-            ),
+            _row('Session', activeSession?['id'] != null
+                ? activeSession!['id'].toString().substring(0, 8)
+                : '—'),
+            _row('Session status', status),
+            _row('Duration', isRecording
+                ? _fmtDuration(elapsedSeconds)
+                : _fmtDuration((activeSession?['duration'] as num?)?.toInt() ?? 0)),
             _row('Operator', _operatorLabel),
+            _row('Camera', _cameraReady ? 'Ready' : (_cameraError ?? 'Not ready')),
           ],
         ],
       ),
@@ -663,18 +901,12 @@ class _RecordingPageState extends State<RecordingPage> {
         children: [
           SizedBox(
             width: 120,
-            child: Text(label,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
+            child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1E2329),
-              ),
-            ),
+            child: Text(value,
+                style: const TextStyle(
+                    fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E2329))),
           ),
         ],
       ),
@@ -694,50 +926,32 @@ class _RecordingPageState extends State<RecordingPage> {
         children: [
           const Text(
             'All Recordings',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2329),
-            ),
+            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329)),
           ),
           const SizedBox(height: 12),
           if (recordings.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
-                child: Text(
-                  'No recording sessions yet',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                ),
+                child: Text('No recording sessions yet',
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
               ),
             )
           else
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                headingRowColor:
-                    WidgetStateProperty.all(Colors.grey.shade50),
+                headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                 columns: const [
-                  DataColumn(
-                      label: Text('Session',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(
-                      label: Text('Order',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(
-                      label: Text('Status',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(
-                      label: Text('Created',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Session', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Order', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Duration', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Created', style: TextStyle(fontWeight: FontWeight.bold))),
                 ],
                 rows: recordings.take(15).map((r) {
                   final st = r['status'].toString();
-                  final color = st.contains('STOP') || st.contains('UPLOAD')
-                      ? Colors.green
-                      : st.contains('START') || st.contains('RESUME')
-                          ? Colors.red
-                          : Colors.orange;
+                  final color = _statusColor(st);
                   return DataRow(cells: [
                     DataCell(Text(r['id'].toString().length > 8
                         ? r['id'].toString().substring(0, 8)
@@ -746,21 +960,17 @@ class _RecordingPageState extends State<RecordingPage> {
                         ? r['orderId'].toString().substring(0, 8)
                         : r['orderId'].toString())),
                     DataCell(Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
                         color: color.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(st,
-                          style: TextStyle(
-                              color: color,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold)),
+                          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
                     )),
+                    DataCell(Text(_fmtDuration((r['duration'] as num?)?.toInt() ?? 0))),
                     DataCell(Text(_fmtDate(r['createdAt']),
-                        style: TextStyle(
-                            fontSize: 12, color: Colors.grey.shade600))),
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
                   ]);
                 }).toList(),
               ),
