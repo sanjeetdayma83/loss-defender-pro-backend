@@ -491,6 +491,7 @@ model Order {
   @@index([assignedTo])
   @@index([customerId])
   @@map("orders")
+  @@unique([companyId, marketplace, marketplaceOrderId])
 }
 
 model RecordingSession {

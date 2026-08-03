@@ -1,4 +1,6 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+// src/modules/orders/repositories/order.repository.ts
+
+import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
 
 import {
   Prisma,
@@ -166,33 +168,54 @@ export class OrderRepository {
   async create(dto: CreateOrderDto): Promise<Order> {
     const orderNumber = await this.generateOrderNumber();
 
-    return this.prisma.order.create({
-      data: {
-        orderNumber,
-        companyId: dto.companyId,
-        warehouseId: dto.warehouseId!,
-        customerId: dto.customerId,
-        marketplace: dto.marketplace as Marketplace,
-        marketplaceOrderId: dto.marketplaceOrderId,
-        priority: dto.priority ?? OrderPriority.MEDIUM,
-        status: dto.status ?? OrderStatus.CREATED,
-        packingStatus: dto.packingStatus ?? PackingStatus.PENDING,
-        verificationStatus:
-          dto.verificationStatus ?? VerificationStatus.PENDING,
-        assignedTo: dto.assignedTo,
-        trackingNumber: dto.trackingNumber,
-        courier: dto.courier,
-        items: dto.items as Prisma.InputJsonValue,
-        customer: dto.customer as Prisma.InputJsonValue,
-        shippingAddress: dto.shippingAddress as Prisma.InputJsonValue,
-        recordingId: dto.recordingId,
-        evidenceId: dto.evidenceId,
-        claimId: dto.claimId,
-        returnId: dto.returnId,
-        remarks: dto.remarks,
-        metadata: dto.metadata as Prisma.InputJsonValue,
-      } as Prisma.OrderUncheckedCreateInput,
-    });
+    try {
+      return await this.prisma.order.create({
+        data: {
+          orderNumber,
+          companyId: dto.companyId,
+          warehouseId: dto.warehouseId!,
+          createdById: dto.createdById,
+          customerId: dto.customerId,
+          
+          // Extracted for fast searching & dashboards
+          customerName: (dto.customer?.name as string) || null,
+          customerPhone: (dto.customer?.phone as string) || null,
+
+          marketplace: dto.marketplace as Marketplace,
+          marketplaceOrderId: dto.marketplaceOrderId,
+          priority: dto.priority ?? OrderPriority.MEDIUM,
+          status: dto.status ?? OrderStatus.CREATED,
+          packingStatus: dto.packingStatus ?? PackingStatus.PENDING,
+          verificationStatus:
+            dto.verificationStatus ?? VerificationStatus.PENDING,
+          assignedTo: dto.assignedTo,
+          trackingNumber: dto.trackingNumber,
+          courier: dto.courier,
+          
+          // Cast through unknown to satisfy TypeScript
+          items: dto.items as unknown as Prisma.InputJsonValue,
+          customer: dto.customer as unknown as Prisma.InputJsonValue,
+          shippingAddress: dto.shippingAddress as unknown as Prisma.InputJsonValue,
+          
+          recordingId: dto.recordingId,
+          evidenceId: dto.evidenceId,
+          claimId: dto.claimId,
+          returnId: dto.returnId,
+          remarks: dto.remarks,
+          metadata: dto.metadata as Prisma.InputJsonValue,
+        },
+      });
+    } catch (error) {
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002'
+      ) {
+        throw new ConflictException(
+          'Marketplace order already exists for this company.',
+        );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -509,12 +532,24 @@ export class OrderRepository {
   async update(id: string, dto: UpdateOrderDto): Promise<Order> {
     await this.findById(id);
 
+    // Prepare customer extraction fields conditionally if customer is being updated
+    const customerUpdateFields: any = {};
+    if (dto.customer) {
+      // Cast through unknown to satisfy TypeScript
+      const parsedCustomer = dto.customer as unknown as Record<string, unknown>;
+      if (parsedCustomer.name !== undefined) customerUpdateFields.customerName = parsedCustomer.name;
+      if (parsedCustomer.phone !== undefined) customerUpdateFields.customerPhone = parsedCustomer.phone;
+    }
+
     return this.prisma.order.update({
       where: { id },
       data: {
         companyId: dto.companyId,
         warehouseId: dto.warehouseId,
         customerId: dto.customerId,
+        
+        ...customerUpdateFields,
+
         marketplace: dto.marketplace as Marketplace | undefined,
         marketplaceOrderId: dto.marketplaceOrderId,
         priority: dto.priority,
@@ -524,9 +559,12 @@ export class OrderRepository {
         assignedTo: dto.assignedTo,
         trackingNumber: dto.trackingNumber,
         courier: dto.courier,
-        items: dto.items as Prisma.InputJsonValue,
-        customer: dto.customer as Prisma.InputJsonValue,
-        shippingAddress: dto.shippingAddress as Prisma.InputJsonValue,
+        
+        // Cast through unknown to satisfy TypeScript
+        items: dto.items as unknown as Prisma.InputJsonValue,
+        customer: dto.customer as unknown as Prisma.InputJsonValue,
+        shippingAddress: dto.shippingAddress as unknown as Prisma.InputJsonValue,
+        
         recordingId: dto.recordingId,
         evidenceId: dto.evidenceId,
         claimId: dto.claimId,
@@ -744,6 +782,8 @@ export class OrderRepository {
 
       data: {
         customer,
+        customerName: customer?.name ? String(customer.name) : undefined,
+        customerPhone: customer?.phone ? String(customer.phone) : undefined,
       },
     });
   }

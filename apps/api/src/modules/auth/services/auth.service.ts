@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 
-import { UserRepository } from '../../user/repositories/user.repository';
+import { UserRepository } from '../../users/repositories/user.repository';
 import { LoginDto } from '../dto/login.dto';
 import { LoginResponseDto } from '../dto/login-response.dto';
 import { ProfileResponseDto } from '../dto/profile-response.dto';

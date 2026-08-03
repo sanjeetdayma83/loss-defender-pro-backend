@@ -9,14 +9,11 @@ import {
   ValidateNested,
 } from 'class-validator';
 
+import { WarehouseAddressDto } from './warehouse-address.dto';
+import { WarehouseLocationDto } from './warehouse-location.dto';
+import { WarehouseManagerDto } from './warehouse-manager.dto';
+import { WarehouseCapacityDto } from './warehouse-capacity.dto';
 import { Type } from 'class-transformer';
-
-import type {
-  WarehouseAddress,
-  WarehouseCapacity,
-  WarehouseLocation,
-  WarehouseManager,
-} from '../types/warehouse.types';
 
 export class CreateWarehouseDto {
   @IsString()
@@ -40,23 +37,23 @@ export class CreateWarehouseDto {
 
   @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  address: WarehouseAddress;
+  @Type(() => WarehouseAddressDto)
+  address: WarehouseAddressDto;
 
   @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  location: WarehouseLocation;
+  @Type(() => WarehouseLocationDto)
+  location: WarehouseLocationDto;
 
   @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  manager: WarehouseManager;
+  @Type(() => WarehouseManagerDto)
+  manager: WarehouseManagerDto;
 
   @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  capacity: WarehouseCapacity;
+  @Type(() => WarehouseCapacityDto)
+  capacity: WarehouseCapacityDto;
 
   @IsString()
   timezone: string;

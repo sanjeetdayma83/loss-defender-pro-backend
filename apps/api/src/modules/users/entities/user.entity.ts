@@ -1,58 +1,44 @@
-import {
-  UserAssignment,
-  UserPermission,
-  UserProfile,
-  UserStatistics,
-} from '../types/user.types';
+import { Exclude } from 'class-transformer';
+import { User } from '@prisma/client';
 
-export class UserEntity {
+export class UserEntity implements User {
   id: string;
-
   companyId: string;
 
-  employeeCode: string;
+  firstName: string;
+  lastName: string;
 
   email: string;
+  username: string | null;
+  employeeCode: string | null;
 
-  username: string;
+  role: any;
+  status: any;
 
-  password: string;
+  @Exclude()
+  passwordHash: string;
 
-  role: string;
+  @Exclude()
+  refreshTokenHash: string | null;
 
-  status: string;
+  lastLoginAt: Date | null;
+  passwordChangedAt: Date | null;
 
-  profile: UserProfile;
-
-  assignment: UserAssignment;
-
-  permissions: UserPermission[];
-
-  statistics: UserStatistics;
+  profile: any;
+  assignment: any;
+  permissions: any;
+  statistics: any;
 
   emailVerified: boolean;
-
   phoneVerified: boolean;
-
   twoFactorEnabled: boolean;
 
-  lastLogin?: Date;
-
-  passwordChangedAt?: Date;
-
-  refreshToken?: string;
-
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt: Date | null;
   isDeleted: boolean;
 
-  createdBy?: string;
-
-  updatedBy?: string;
-
-  deletedBy?: string;
-
-  createdAt: Date;
-
-  updatedAt: Date;
-
-  deletedAt?: Date | null;
+  constructor(partial: Partial<UserEntity>) {
+    Object.assign(this, partial);
+  }
 }

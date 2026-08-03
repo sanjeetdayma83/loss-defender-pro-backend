@@ -1,3 +1,5 @@
+// src/modules/recordings/repositories/recording.repository.ts
+
 import { Injectable } from '@nestjs/common';
 import { Prisma, RecordingSession, RecordingStatus } from '@prisma/client';
 
@@ -73,5 +75,66 @@ export class RecordingRepository {
     return this.prisma.recordingSession.count({
       where,
     });
+  }
+
+  // -------------------------------------------------------
+  // NEW HELPER METHODS
+  // -------------------------------------------------------
+
+  /**
+   * Find Active Recording for an Order
+   * Prevents two operators from recording the same order simultaneously.
+   */
+  async findActiveByOrder(orderId: string): Promise<RecordingSession | null> {
+    return this.prisma.recordingSession.findFirst({
+      where: {
+        orderId,
+        isDeleted: false,
+        status: {
+          in: [
+            RecordingStatus.CREATED,
+            RecordingStatus.STARTED,
+            RecordingStatus.PAUSED,
+            RecordingStatus.RESUMED,
+          ],
+        },
+      },
+    });
+  }
+
+  /**
+   * Check if a recording session exists by ID
+   */
+  async exists(id: string): Promise<boolean> {
+    return (
+      (await this.prisma.recordingSession.count({
+        where: {
+          id,
+          isDeleted: false,
+        },
+      })) > 0
+    );
+  }
+
+  /**
+   * Database health check validation
+   */
+  async healthCheck(): Promise<boolean> {
+    await this.prisma.$queryRaw`SELECT 1`;
+    return true;
+  }
+
+  /**
+   * Execute operations within a Prisma transaction
+   */
+  transaction<T>(callback: (tx: Prisma.TransactionClient) => Promise<T>) {
+    return this.prisma.$transaction(callback);
+  }
+
+  /**
+   * Generic findMany utilizing full Prisma args
+   */
+  findMany(args: Prisma.RecordingSessionFindManyArgs) {
+    return this.prisma.recordingSession.findMany(args);
   }
 }

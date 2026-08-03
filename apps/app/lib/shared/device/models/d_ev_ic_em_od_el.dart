@@ -1,0 +1,3 @@
+class DeviceModel {
+  const DeviceModel();
+}

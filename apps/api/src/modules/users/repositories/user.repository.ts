@@ -56,10 +56,7 @@ export class UserRepository {
   }
 
   async create(dto: CreateUserDto): Promise<User> {
-    const profile = dto.profile as {
-      firstName?: string;
-      lastName?: string;
-    };
+    const profile = dto.profile;
 
     const data: Prisma.UserUncheckedCreateInput = {
       companyId: dto.companyId,
@@ -88,8 +85,8 @@ export class UserRepository {
 
   async findById(id: string): Promise<User> {
     const user = await this.prisma.user.findFirst({
-      where: { id, isDeleted: false },
-    });
+  where: { id, isDeleted: false },
+});
 
     if (!user) {
       throw new NotFoundException(`User ${id} not found.`);
@@ -105,13 +102,13 @@ export class UserRepository {
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.user.findMany({
-        where,
-        skip: (page - 1) * limit,
-        take: limit,
-        orderBy: {
-          [query.sortBy ?? 'createdAt']: query.sortOrder ?? 'desc',
-        },
-      }),
+  where,
+  skip: (page - 1) * limit,
+  take: limit,
+  orderBy: {
+    [query.sortBy ?? 'createdAt']: query.sortOrder ?? 'desc',
+  },
+}),
       this.prisma.user.count({ where }),
     ]);
 
@@ -139,7 +136,7 @@ export class UserRepository {
     }
     if (dto.profile !== undefined) {
       data.profile = dto.profile as unknown as Prisma.InputJsonValue;
-      const p = dto.profile as { firstName?: string; lastName?: string };
+      const p = dto.profile;
       if (p.firstName) data.firstName = p.firstName;
       if (p.lastName) data.lastName = p.lastName;
     }
@@ -196,6 +193,16 @@ export class UserRepository {
     });
   }
 
+  async findByEmailActive(email: string): Promise<User | null> {
+  return this.prisma.user.findFirst({
+    where: {
+      email,
+      isDeleted: false,
+      status: UserStatus.ACTIVE,
+    },
+  });
+}
+
   async findByUsername(username: string): Promise<User | null> {
     return this.prisma.user.findFirst({
       where: { username, isDeleted: false },
@@ -210,21 +217,23 @@ export class UserRepository {
 
   async findByCompany(companyId: string): Promise<User[]> {
     return this.prisma.user.findMany({
-      where: { companyId, isDeleted: false },
-      orderBy: { username: 'asc' },
-    });
+  where: { companyId, isDeleted: false },
+  orderBy: { username: 'asc' },
+});
   }
 
-  async findByWarehouse(warehouseId: string): Promise<User[]> {
+  async findByWarehouse(
+  warehouseId: string,
+): Promise<User[]> {
     return this.prisma.user.findMany({
-      where: {
-        assignment: {
-          path: ['warehouseIds'],
-          array_contains: warehouseId,
-        },
-        isDeleted: false,
-      },
-    });
+  where: {
+    assignment: {
+      path: ['warehouseIds'],
+      array_contains: warehouseId,
+    },
+    isDeleted: false,
+  },
+});
   }
 
   async updateLastLogin(id: string): Promise<User> {
@@ -243,6 +252,18 @@ export class UserRepository {
       },
     });
   }
+
+  async updateRefreshToken(
+  id: string,
+  refreshTokenHash: string | null,
+): Promise<User> {
+  return this.prisma.user.update({
+    where: { id },
+    data: {
+      refreshTokenHash,
+    },
+  });
+}
 
   async getStatistics(id: string) {
     const user = await this.findById(id);

@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { Prisma, Warehouse } from '@prisma/client';
 
@@ -59,7 +63,8 @@ export class WarehouseRepository {
   }
 
   async create(dto: CreateWarehouseDto): Promise<Warehouse> {
-    return this.prisma.warehouse.create({
+  try {
+    return await this.prisma.warehouse.create({
       data: {
         companyId: dto.companyId,
         code: dto.warehouseCode,
@@ -77,7 +82,19 @@ export class WarehouseRepository {
         capacity: dto.capacity as unknown as Prisma.InputJsonValue,
       } satisfies Prisma.WarehouseUncheckedCreateInput,
     });
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === 'P2002'
+    ) {
+      throw new ConflictException(
+        'Warehouse code already exists for this company.',
+      );
+    }
+
+    throw error;
   }
+}
 
   async findById(id: string): Promise<Warehouse> {
     const warehouse = await this.prisma.warehouse.findFirst({

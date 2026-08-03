@@ -29,7 +29,6 @@ export class OrdersController {
    * CREATE ORDER
    * -------------------------------------------------------
    */
-
   @Post()
   @ApiOperation({
     summary: 'Create new order',
@@ -50,7 +49,6 @@ export class OrdersController {
    * GET ALL ORDERS
    * -------------------------------------------------------
    */
-
   @Get()
   @ApiOperation({
     summary: 'Get paginated orders',
@@ -62,12 +60,337 @@ export class OrdersController {
     return this.orderService.findAll(query);
   }
 
+  /* =======================================================
+   * STATIC ROUTES (MUST BE DEFINED BEFORE :id ROUTES)
+   * ======================================================= */
+
+  /**
+   * -------------------------------------------------------
+   * ORDER STATISTICS
+   * -------------------------------------------------------
+   */
+  @Get('statistics')
+  @ApiOperation({
+    summary: 'Get order statistics',
+  })
+  async statistics() {
+    return this.orderService.getStatistics();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * DASHBOARD SUMMARY
+   * -------------------------------------------------------
+   */
+  @Get('dashboard')
+  @ApiOperation({
+    summary: 'Get dashboard summary',
+  })
+  async dashboard() {
+    return this.orderService.getDashboardSummary();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * RECENT ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('recent')
+  @ApiOperation({
+    summary: 'Get recent orders',
+  })
+  async recentOrders(): Promise<Order[]> {
+    return this.orderService.recentOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * HIGH PRIORITY ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('high-priority')
+  @ApiOperation({
+    summary: 'Get high priority orders',
+  })
+  async highPriorityOrders(): Promise<Order[]> {
+    return this.orderService.highPriorityOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * UNASSIGNED ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('unassigned')
+  @ApiOperation({
+    summary: 'Get unassigned orders',
+  })
+  async unassignedOrders(): Promise<Order[]> {
+    return this.orderService.unassignedOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * OVERDUE ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('overdue')
+  @ApiOperation({
+    summary: 'Get overdue orders',
+  })
+  async overdueOrders(): Promise<Order[]> {
+    return this.orderService.overdueOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * PACKING QUEUE
+   * -------------------------------------------------------
+   */
+  @Get('packing-queue')
+  @ApiOperation({
+    summary: 'Get packing queue',
+  })
+  async packingQueue(): Promise<Order[]> {
+    return this.orderService.packingQueue();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * VERIFICATION QUEUE
+   * -------------------------------------------------------
+   */
+  @Get('verification-queue')
+  @ApiOperation({
+    summary: 'Get verification queue',
+  })
+  async verificationQueue(): Promise<Order[]> {
+    return this.orderService.verificationQueue();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * READY TO SHIP QUEUE
+   * -------------------------------------------------------
+   */
+  @Get('ready-to-ship-queue')
+  @ApiOperation({
+    summary: 'Get ready to ship queue',
+  })
+  async readyToShipQueue(): Promise<Order[]> {
+    return this.orderService.readyToShipQueue();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * TODAY'S ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('today')
+  @ApiOperation({
+    summary: "Get today's orders",
+  })
+  async todayOrders(): Promise<Order[]> {
+    return this.orderService.todayOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * CANCELLED ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('cancelled')
+  @ApiOperation({
+    summary: 'Get cancelled orders',
+  })
+  async cancelledOrders(): Promise<Order[]> {
+    return this.orderService.cancelledOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * RETURNED ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('returned')
+  @ApiOperation({
+    summary: 'Get returned orders',
+  })
+  async returnedOrders(): Promise<Order[]> {
+    return this.orderService.returnedOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * CLAIMED ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('claimed')
+  @ApiOperation({
+    summary: 'Get claimed orders',
+  })
+  async claimedOrders(): Promise<Order[]> {
+    return this.orderService.claimedOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * MARKETPLACE ANALYTICS
+   * -------------------------------------------------------
+   */
+  @Get('analytics/marketplace')
+  @ApiOperation({
+    summary: 'Marketplace analytics',
+  })
+  async marketplaceAnalytics() {
+    return this.orderService.marketplaceAnalytics();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * WAREHOUSE ANALYTICS
+   * -------------------------------------------------------
+   */
+  @Get('analytics/warehouse')
+  @ApiOperation({
+    summary: 'Warehouse analytics',
+  })
+  async warehouseAnalytics() {
+    return this.orderService.warehouseAnalytics();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * PRIORITY ANALYTICS
+   * -------------------------------------------------------
+   */
+  @Get('analytics/priority')
+  @ApiOperation({
+    summary: 'Priority analytics',
+  })
+  async priorityAnalytics() {
+    return this.orderService.priorityAnalytics();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * STATUS ANALYTICS
+   * -------------------------------------------------------
+   */
+  @Get('analytics/status')
+  @ApiOperation({
+    summary: 'Status analytics',
+  })
+  async statusAnalytics() {
+    return this.orderService.statusAnalytics();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * DAILY TREND
+   * -------------------------------------------------------
+   */
+  @Get('analytics/daily-trend')
+  @ApiOperation({
+    summary: 'Daily order trend',
+  })
+  async dailyTrend() {
+    return this.orderService.dailyTrend();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * DATABASE SUMMARY
+   * -------------------------------------------------------
+   */
+  @Get('database/summary')
+  @ApiOperation({
+    summary: 'Database summary',
+  })
+  async databaseSummary() {
+    return this.orderService.databaseSummary();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * HEALTH CHECK
+   * -------------------------------------------------------
+   */
+  @Get('health')
+  @ApiOperation({
+    summary: 'Orders module health',
+  })
+  async health() {
+    return this.orderService.healthCheck();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * DATABASE PING
+   * -------------------------------------------------------
+   */
+  @Get('ping')
+  @ApiOperation({
+    summary: 'Database ping',
+  })
+  async ping() {
+    return this.orderService.ping();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * EXPORT ORDERS
+   * -------------------------------------------------------
+   */
+  @Post('export')
+  @ApiOperation({
+    summary: 'Export orders',
+  })
+  async exportOrders(
+    @Body()
+    query: OrderQueryDto,
+  ) {
+    return this.orderService.exportOrders(query);
+  }
+
+  /**
+   * -------------------------------------------------------
+   * ARCHIVED ORDERS
+   * -------------------------------------------------------
+   */
+  @Get('archived')
+  @ApiOperation({
+    summary: 'Archived orders',
+  })
+  async archivedOrders() {
+    return this.orderService.archivedOrders();
+  }
+
+  /**
+   * -------------------------------------------------------
+   * CLEANUP ARCHIVED ORDERS
+   * -------------------------------------------------------
+   */
+  @Delete('cleanup')
+  @ApiOperation({
+    summary: 'Cleanup archived orders',
+  })
+  async cleanup(
+    @Query('before')
+    before: string,
+  ) {
+    return this.orderService.cleanupSoftDeletedOrders(new Date(before));
+  }
+
+  /* =======================================================
+   * DYNAMIC ROUTES (:id SHOULD ALWAYS BE AT THE BOTTOM)
+   * ======================================================= */
+
   /**
    * -------------------------------------------------------
    * GET ORDER
    * -------------------------------------------------------
    */
-
   @Get(':id')
   @ApiOperation({
     summary: 'Get order by id',
@@ -84,7 +407,6 @@ export class OrdersController {
    * UPDATE ORDER
    * -------------------------------------------------------
    */
-
   @Patch(':id')
   @ApiOperation({
     summary: 'Update order',
@@ -104,7 +426,6 @@ export class OrdersController {
    * DELETE ORDER
    * -------------------------------------------------------
    */
-
   @Delete(':id')
   @ApiOperation({
     summary: 'Delete order',
@@ -115,12 +436,12 @@ export class OrdersController {
   ): Promise<Order> {
     return this.orderService.remove(id);
   }
+
   /**
    * -------------------------------------------------------
    * ASSIGN WAREHOUSE
    * -------------------------------------------------------
    */
-
   @Post(':id/assign')
   @ApiOperation({
     summary: 'Assign warehouse and operator',
@@ -147,7 +468,6 @@ export class OrdersController {
    * START PICKING
    * -------------------------------------------------------
    */
-
   @Post(':id/start-picking')
   @ApiOperation({
     summary: 'Start picking process',
@@ -164,7 +484,6 @@ export class OrdersController {
    * START PACKING
    * -------------------------------------------------------
    */
-
   @Post(':id/start-packing')
   @ApiOperation({
     summary: 'Start packing process',
@@ -181,7 +500,6 @@ export class OrdersController {
    * COMPLETE PACKING
    * -------------------------------------------------------
    */
-
   @Post(':id/complete-packing')
   @ApiOperation({
     summary: 'Complete packing process',
@@ -198,7 +516,6 @@ export class OrdersController {
    * START RECORDING
    * -------------------------------------------------------
    */
-
   @Post(':id/start-recording')
   @ApiOperation({
     summary: 'Start warehouse recording',
@@ -215,7 +532,6 @@ export class OrdersController {
    * COMPLETE RECORDING
    * -------------------------------------------------------
    */
-
   @Post(':id/complete-recording')
   @ApiOperation({
     summary: 'Complete warehouse recording',
@@ -226,12 +542,12 @@ export class OrdersController {
   ): Promise<Order> {
     return this.orderService.completeRecording(id);
   }
+
   /**
    * -------------------------------------------------------
    * START VERIFICATION
    * -------------------------------------------------------
    */
-
   @Post(':id/start-verification')
   @ApiOperation({
     summary: 'Start order verification',
@@ -248,7 +564,6 @@ export class OrdersController {
    * COMPLETE VERIFICATION
    * -------------------------------------------------------
    */
-
   @Post(':id/complete-verification')
   @ApiOperation({
     summary: 'Complete order verification',
@@ -265,7 +580,6 @@ export class OrdersController {
    * READY TO SHIP
    * -------------------------------------------------------
    */
-
   @Post(':id/ready-to-ship')
   @ApiOperation({
     summary: 'Mark order as ready to ship',
@@ -282,7 +596,6 @@ export class OrdersController {
    * SHIP ORDER
    * -------------------------------------------------------
    */
-
   @Post(':id/ship')
   @ApiOperation({
     summary: 'Ship order',
@@ -304,7 +617,6 @@ export class OrdersController {
    * DELIVER ORDER
    * -------------------------------------------------------
    */
-
   @Post(':id/deliver')
   @ApiOperation({
     summary: 'Mark order as delivered',
@@ -321,7 +633,6 @@ export class OrdersController {
    * CANCEL ORDER
    * -------------------------------------------------------
    */
-
   @Post(':id/cancel')
   @ApiOperation({
     summary: 'Cancel order',
@@ -337,12 +648,12 @@ export class OrdersController {
   ): Promise<Order> {
     return this.orderService.cancel(id, body.reason);
   }
+
   /**
    * -------------------------------------------------------
    * REOPEN ORDER
    * -------------------------------------------------------
    */
-
   @Post(':id/reopen')
   @ApiOperation({
     summary: 'Reopen cancelled order',
@@ -359,7 +670,6 @@ export class OrdersController {
    * ARCHIVE ORDER
    * -------------------------------------------------------
    */
-
   @Post(':id/archive')
   @ApiOperation({
     summary: 'Archive order',
@@ -376,7 +686,6 @@ export class OrdersController {
    * ASSIGN OPERATOR
    * -------------------------------------------------------
    */
-
   @Post(':id/assign-operator')
   @ApiOperation({
     summary: 'Assign operator to order',
@@ -398,7 +707,6 @@ export class OrdersController {
    * UPDATE TRACKING
    * -------------------------------------------------------
    */
-
   @Post(':id/update-tracking')
   @ApiOperation({
     summary: 'Update tracking information',
@@ -425,7 +733,6 @@ export class OrdersController {
    * ATTACH RECORDING
    * -------------------------------------------------------
    */
-
   @Post(':id/attach-recording')
   @ApiOperation({
     summary: 'Attach recording to order',
@@ -447,7 +754,6 @@ export class OrdersController {
    * ATTACH EVIDENCE
    * -------------------------------------------------------
    */
-
   @Post(':id/attach-evidence')
   @ApiOperation({
     summary: 'Attach evidence to order',
@@ -469,7 +775,6 @@ export class OrdersController {
    * ATTACH CLAIM
    * -------------------------------------------------------
    */
-
   @Post(':id/attach-claim')
   @ApiOperation({
     summary: 'Attach claim to order',
@@ -491,7 +796,6 @@ export class OrdersController {
    * ATTACH RETURN
    * -------------------------------------------------------
    */
-
   @Post(':id/attach-return')
   @ApiOperation({
     summary: 'Attach return to order',
@@ -506,345 +810,5 @@ export class OrdersController {
     },
   ): Promise<Order> {
     return this.orderService.attachReturn(id, body.returnId);
-  }
-  /**
-   * -------------------------------------------------------
-   * ORDER STATISTICS
-   * -------------------------------------------------------
-   */
-
-  @Get('statistics')
-  @ApiOperation({
-    summary: 'Get order statistics',
-  })
-  async statistics() {
-    return this.orderService.getStatistics();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * DASHBOARD SUMMARY
-   * -------------------------------------------------------
-   */
-
-  @Get('dashboard')
-  @ApiOperation({
-    summary: 'Get dashboard summary',
-  })
-  async dashboard() {
-    return this.orderService.getDashboardSummary();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * RECENT ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('recent')
-  @ApiOperation({
-    summary: 'Get recent orders',
-  })
-  async recentOrders(): Promise<Order[]> {
-    return this.orderService.recentOrders();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * HIGH PRIORITY ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('high-priority')
-  @ApiOperation({
-    summary: 'Get high priority orders',
-  })
-  async highPriorityOrders(): Promise<Order[]> {
-    return this.orderService.highPriorityOrders();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * UNASSIGNED ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('unassigned')
-  @ApiOperation({
-    summary: 'Get unassigned orders',
-  })
-  async unassignedOrders(): Promise<Order[]> {
-    return this.orderService.unassignedOrders();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * OVERDUE ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('overdue')
-  @ApiOperation({
-    summary: 'Get overdue orders',
-  })
-  async overdueOrders(): Promise<Order[]> {
-    return this.orderService.overdueOrders();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * PACKING QUEUE
-   * -------------------------------------------------------
-   */
-
-  @Get('packing-queue')
-  @ApiOperation({
-    summary: 'Get packing queue',
-  })
-  async packingQueue(): Promise<Order[]> {
-    return this.orderService.packingQueue();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * VERIFICATION QUEUE
-   * -------------------------------------------------------
-   */
-
-  @Get('verification-queue')
-  @ApiOperation({
-    summary: 'Get verification queue',
-  })
-  async verificationQueue(): Promise<Order[]> {
-    return this.orderService.verificationQueue();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * READY TO SHIP QUEUE
-   * -------------------------------------------------------
-   */
-
-  @Get('ready-to-ship-queue')
-  @ApiOperation({
-    summary: 'Get ready to ship queue',
-  })
-  async readyToShipQueue(): Promise<Order[]> {
-    return this.orderService.readyToShipQueue();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * TODAY'S ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('today')
-  @ApiOperation({
-    summary: "Get today's orders",
-  })
-  async todayOrders(): Promise<Order[]> {
-    return this.orderService.todayOrders();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * CANCELLED ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('cancelled')
-  @ApiOperation({
-    summary: 'Get cancelled orders',
-  })
-  async cancelledOrders(): Promise<Order[]> {
-    return this.orderService.cancelledOrders();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * RETURNED ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('returned')
-  @ApiOperation({
-    summary: 'Get returned orders',
-  })
-  async returnedOrders(): Promise<Order[]> {
-    return this.orderService.returnedOrders();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * CLAIMED ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('claimed')
-  @ApiOperation({
-    summary: 'Get claimed orders',
-  })
-  async claimedOrders(): Promise<Order[]> {
-    return this.orderService.claimedOrders();
-  }
-  /**
-   * -------------------------------------------------------
-   * MARKETPLACE ANALYTICS
-   * -------------------------------------------------------
-   */
-
-  @Get('analytics/marketplace')
-  @ApiOperation({
-    summary: 'Marketplace analytics',
-  })
-  async marketplaceAnalytics() {
-    return this.orderService.marketplaceAnalytics();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * WAREHOUSE ANALYTICS
-   * -------------------------------------------------------
-   */
-
-  @Get('analytics/warehouse')
-  @ApiOperation({
-    summary: 'Warehouse analytics',
-  })
-  async warehouseAnalytics() {
-    return this.orderService.warehouseAnalytics();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * PRIORITY ANALYTICS
-   * -------------------------------------------------------
-   */
-
-  @Get('analytics/priority')
-  @ApiOperation({
-    summary: 'Priority analytics',
-  })
-  async priorityAnalytics() {
-    return this.orderService.priorityAnalytics();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * STATUS ANALYTICS
-   * -------------------------------------------------------
-   */
-
-  @Get('analytics/status')
-  @ApiOperation({
-    summary: 'Status analytics',
-  })
-  async statusAnalytics() {
-    return this.orderService.statusAnalytics();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * DAILY TREND
-   * -------------------------------------------------------
-   */
-
-  @Get('analytics/daily-trend')
-  @ApiOperation({
-    summary: 'Daily order trend',
-  })
-  async dailyTrend() {
-    return this.orderService.dailyTrend();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * DATABASE SUMMARY
-   * -------------------------------------------------------
-   */
-
-  @Get('database/summary')
-  @ApiOperation({
-    summary: 'Database summary',
-  })
-  async databaseSummary() {
-    return this.orderService.databaseSummary();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * HEALTH CHECK
-   * -------------------------------------------------------
-   */
-
-  @Get('health')
-  @ApiOperation({
-    summary: 'Orders module health',
-  })
-  async health() {
-    return this.orderService.healthCheck();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * DATABASE PING
-   * -------------------------------------------------------
-   */
-
-  @Get('ping')
-  @ApiOperation({
-    summary: 'Database ping',
-  })
-  async ping() {
-    return this.orderService.ping();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * EXPORT ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Post('export')
-  @ApiOperation({
-    summary: 'Export orders',
-  })
-  async exportOrders(
-    @Body()
-    query: OrderQueryDto,
-  ) {
-    return this.orderService.exportOrders(query);
-  }
-
-  /**
-   * -------------------------------------------------------
-   * ARCHIVED ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Get('archived')
-  @ApiOperation({
-    summary: 'Archived orders',
-  })
-  async archivedOrders() {
-    return this.orderService.archivedOrders();
-  }
-
-  /**
-   * -------------------------------------------------------
-   * CLEANUP ARCHIVED ORDERS
-   * -------------------------------------------------------
-   */
-
-  @Delete('cleanup')
-  @ApiOperation({
-    summary: 'Cleanup archived orders',
-  })
-  async cleanup(
-    @Query('before')
-    before: string,
-  ) {
-    return this.orderService.cleanupSoftDeletedOrders(new Date(before));
   }
 }

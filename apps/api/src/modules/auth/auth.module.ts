@@ -4,7 +4,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { StringValue } from 'ms';
 
-import { UserModule } from '../user/user.module';
+import { UsersModule } from '../users/users.module';
 import { AuthController } from './controllers/auth.controller';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -21,7 +21,7 @@ import { TokenService } from './services/token.service';
       defaultStrategy: 'jwt',
     }),
 
-    forwardRef(() => UserModule),
+    forwardRef(() => UsersModule),
 
     JwtModule.registerAsync({
       imports: [ConfigModule],

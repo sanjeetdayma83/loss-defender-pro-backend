@@ -3,7 +3,6 @@ import {
   IsBoolean,
   IsEmail,
   IsNotEmpty,
-  IsObject,
   IsOptional,
   IsString,
   MinLength,
@@ -12,11 +11,9 @@ import {
 
 import { Type } from 'class-transformer';
 
-import type {
-  UserAssignment,
-  UserPermission,
-  UserProfile,
-} from '../types/user.types';
+import { UserAssignmentDto } from './user-assignment.dto';
+import { UserPermissionDto } from './user-permission.dto';
+import { UserProfileDto } from './user-profile.dto';
 
 export class CreateUserDto {
   @IsString()
@@ -31,6 +28,7 @@ export class CreateUserDto {
   email: string;
 
   @IsString()
+  @IsNotEmpty()
   username: string;
 
   @IsString()
@@ -40,18 +38,18 @@ export class CreateUserDto {
   @IsString()
   role: string;
 
-  @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  profile: UserProfile;
+  @Type(() => UserProfileDto)
+  profile: UserProfileDto;
 
-  @IsObject()
   @ValidateNested()
-  @Type(() => Object)
-  assignment: UserAssignment;
+  @Type(() => UserAssignmentDto)
+  assignment: UserAssignmentDto;
 
   @IsArray()
-  permissions: UserPermission[];
+  @ValidateNested({ each: true })
+  @Type(() => UserPermissionDto)
+  permissions: UserPermissionDto[];
 
   @IsOptional()
   @IsBoolean()

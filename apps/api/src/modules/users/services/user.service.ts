@@ -1,6 +1,7 @@
 import { ConflictException, Injectable } from '@nestjs/common';
 
 import { User } from '@prisma/client';
+import * as argon2 from 'argon2';
 
 import { UserRepository } from '../repositories/user.repository';
 
@@ -33,7 +34,14 @@ export class UserService implements IUserService {
       throw new ConflictException('Employee code already exists.');
     }
 
-    return this.repository.create(dto);
+    const passwordHash = await argon2.hash(dto.password);
+
+const user = await this.repository.create({
+  ...dto,
+  password: passwordHash,
+});
+
+return user;
   }
 
   /**
@@ -43,11 +51,18 @@ export class UserService implements IUserService {
    */
 
   async findAll(query: UserQueryDto) {
-    return this.repository.findAll(query);
+    const result = await this.repository.findAll(query);
+
+return {
+  ...result,
+  data: result.data,
+};
   }
 
   async findById(id: string): Promise<User> {
-    return this.repository.findById(id);
+    const user = await this.repository.findById(id);
+
+return user;
   }
 
   async findByEmail(email: string) {
@@ -63,12 +78,12 @@ export class UserService implements IUserService {
   }
 
   async findByCompany(companyId: string) {
-    return this.repository.findByCompany(companyId);
-  }
+  return this.repository.findByCompany(companyId);
+}
 
   async findByWarehouse(warehouseId: string) {
-    return this.repository.findByWarehouse(warehouseId);
-  }
+  return this.repository.findByWarehouse(warehouseId);
+}
 
   /**
    * -------------------------------------------------------
@@ -77,7 +92,9 @@ export class UserService implements IUserService {
    */
 
   async update(id: string, dto: UpdateUserDto): Promise<User> {
-    return this.repository.update(id, dto);
+    const user = await this.repository.update(id, dto);
+
+return user;
   }
 
   /**
@@ -87,11 +104,15 @@ export class UserService implements IUserService {
    */
 
   async remove(id: string): Promise<User> {
-    return this.repository.softDelete(id);
+    const user = await this.repository.softDelete(id);
+
+return user;
   }
 
   async restore(id: string): Promise<User> {
-    return this.repository.restore(id);
+    const user = await this.repository.restore(id);
+
+return user;
   }
 
   /**
@@ -101,11 +122,15 @@ export class UserService implements IUserService {
    */
 
   async activate(id: string): Promise<User> {
-    return this.repository.activate(id);
+    const user = await this.repository.activate(id);
+
+return user;
   }
 
   async deactivate(id: string): Promise<User> {
-    return this.repository.deactivate(id);
+    const user = await this.repository.deactivate(id);
+
+return user;
   }
 
   /**
@@ -119,8 +144,10 @@ export class UserService implements IUserService {
   }
 
   async updatePassword(id: string, password: string) {
-    return this.repository.updatePassword(id, password);
-  }
+  const passwordHash = await argon2.hash(password);
+
+  return this.repository.updatePassword(id, passwordHash);
+}
 
   /**
    * -------------------------------------------------------
