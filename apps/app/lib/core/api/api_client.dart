@@ -1,11 +1,8 @@
 ﻿import 'package:dio/dio.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import '../storage/token_storage.dart';
 import 'api_endpoints.dart';
 
 class ApiClient {
-  static const _tokenKey = 'access_token';
-  static const _refreshKey = 'refresh_token';
-
   static String? accessToken;
   static String? refreshToken;
 
@@ -42,9 +39,8 @@ class ApiClient {
       _interceptorAttached = true;
     }
 
-    final prefs = await SharedPreferences.getInstance();
-    accessToken = prefs.getString(_tokenKey);
-    refreshToken = prefs.getString(_refreshKey);
+    accessToken = await TokenStorage.accessToken();
+    refreshToken = await TokenStorage.refreshToken();
   }
 
   static Future<void> saveTokens({
@@ -53,17 +49,13 @@ class ApiClient {
   }) async {
     accessToken = access;
     refreshToken = refresh;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, access);
-    await prefs.setString(_refreshKey, refresh);
+    await TokenStorage.save(accessToken: access, refreshToken: refresh);
   }
 
   static Future<void> clearTokens() async {
     accessToken = null;
     refreshToken = null;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
-    await prefs.remove(_refreshKey);
+    await TokenStorage.clear();
   }
 
   static bool get isLoggedIn =>

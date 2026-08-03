@@ -2,13 +2,14 @@
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
+import 'dart:async';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import '../../../../shared/layout/app_layout.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/api_endpoints.dart';
 
 class ScanningDashboardPage extends StatefulWidget {
   const ScanningDashboardPage({super.key});
-
   @override
   State<ScanningDashboardPage> createState() => _ScanningDashboardPageState();
 }
@@ -18,25 +19,34 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
   final Dio _dio = ApiClient.dio;
   final TextEditingController _barcodeCtrl = TextEditingController();
   final FocusNode _barcodeFocus = FocusNode();
-
+  
+  // ADDED CONTROLLER FOR CAMERA FIX AND ROTATION
+  final MobileScannerController _scannerController = MobileScannerController(
+    formats: const [BarcodeFormat.all],
+    facing: CameraFacing.back,
+    detectionSpeed: DetectionSpeed.normal,
+  );
+  
   bool isLoading = true;
   bool isLookingUp = false;
   String? errorMessage;
-
   List<Map<String, dynamic>> scans = [];
   Map<String, dynamic>? scanResult;
   String? lookupError;
   String? lastRawInput;
-
+  
   int totalScans = 0;
   int verifiedScans = 0;
   int pendingScans = 0;
   int exceptionScans = 0;
-
   String _wedgeBuffer = '';
   DateTime? _lastKeyAt;
-
   late AnimationController _laserCtrl;
+
+  Timer? _redirectTimer;
+  int _countdown = 10;
+  DateTime? _lastCameraScan;
+  String? _lastCameraCode;
 
   @override
   void initState() {
@@ -45,28 +55,24 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       vsync: this,
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _barcodeFocus.requestFocus();
     });
-
     fetchData();
   }
 
   @override
   void dispose() {
+    _redirectTimer?.cancel();
     _barcodeCtrl.dispose();
     _barcodeFocus.dispose();
     _laserCtrl.dispose();
+    _scannerController.dispose();
     super.dispose();
   }
 
   String _sanitize(String raw) {
-    return raw
-        .replaceAll('\r', '')
-        .replaceAll('\n', '')
-        .replaceAll('\t', '')
-        .trim();
+    return raw.replaceAll('\r', '').replaceAll('\n', '').replaceAll('\t', '').trim();
   }
 
   Map<String, dynamic>? _unwrap(dynamic body) {
@@ -91,13 +97,8 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       isLoading = true;
       errorMessage = null;
     });
-
     try {
-      final scanRes = await _safeGet(
-        ApiEndpoints.scans,
-        query: {'page': 1, 'limit': 30},
-      );
-
+      final scanRes = await _safeGet(ApiEndpoints.scans, query: {'page': 1, 'limit': 30});
       List items = [];
       final data = _unwrap(scanRes?.data);
       if (data != null) {
@@ -112,7 +113,6 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
         items = scanRes!.data as List;
         totalScans = items.length;
       }
-
       scans = items.map<Map<String, dynamic>>((e) {
         final m = Map<String, dynamic>.from(e as Map);
         return {
@@ -123,23 +123,15 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
           'scannedAt': _formatTime(m['scannedAt'] ?? m['createdAt']),
         };
       }).toList();
-
-      pendingScans = scans
-          .where((s) => s['status'].toString().toUpperCase().contains('PEND'))
-          .length;
+      pendingScans = scans.where((s) => s['status'].toString().toUpperCase().contains('PEND')).length;
       verifiedScans = scans.where((s) {
         final st = s['status'].toString().toUpperCase();
-        return st.contains('VERIF') ||
-            st.contains('MATCH') ||
-            st.contains('SUCCESS');
+        return st.contains('VERIF') || st.contains('MATCH') || st.contains('SUCCESS');
       }).length;
       exceptionScans = scans.where((s) {
         final st = s['status'].toString().toUpperCase();
-        return st.contains('FAIL') ||
-            st.contains('EXCEPT') ||
-            st.contains('ERROR');
+        return st.contains('FAIL') || st.contains('EXCEPT') || st.contains('ERROR');
       }).length;
-
       if (totalScans == 0) totalScans = scans.length;
       setState(() => isLoading = false);
     } catch (e) {
@@ -153,12 +145,8 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
   bool _matchesOrder(Map<String, dynamic> m, String code) {
     final c = code.toUpperCase();
     final fields = [
-      m['orderNumber'],
-      m['awbNumber'],
-      m['trackingNumber'],
-      m['marketplaceOrderId'],
-      m['marketplaceShipmentId'],
-      m['id'],
+      m['orderNumber'], m['awbNumber'], m['trackingNumber'],
+      m['marketplaceOrderId'], m['marketplaceShipmentId'], m['id'],
     ];
     for (final f in fields) {
       if (f == null) continue;
@@ -169,14 +157,25 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
     return false;
   }
 
+  void _navigateToRecording(String orderId, String autostart) async {
+    _redirectTimer?.cancel();
+    await _scannerController.stop(); // CRITICAL: Stop scanner to release camera hardware
+    if (!mounted) return;
+    context.go('/recording?orderId=$orderId&autostart=$autostart');
+  }
+
   Future<void> lookupBarcode([String? code]) async {
     final raw = code ?? _barcodeCtrl.text;
     final barcode = _sanitize(raw);
-
     setState(() => lastRawInput = raw);
-
+    
     if (barcode.isEmpty) {
       setState(() => lookupError = 'Empty barcode — scan again');
+      return;
+    }
+
+    if (scanResult != null && scanResult!['valid'] == true && scanResult!['matchedCode'] == barcode) {
+      _navigateToRecording(scanResult!['orderId'].toString(), '1');
       return;
     }
 
@@ -184,108 +183,78 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       text: barcode,
       selection: TextSelection.collapsed(offset: barcode.length),
     );
-
     setState(() {
       isLookingUp = true;
       lookupError = null;
       scanResult = null;
+      _redirectTimer?.cancel();
     });
 
     try {
       Map<String, dynamic>? found;
-
       try {
-        final res = await _dio.get(
-          '${ApiEndpoints.scans}/barcode/${Uri.encodeComponent(barcode)}',
-        );
-        found = _unwrap(res.data) ??
-            (res.data is Map ? Map<String, dynamic>.from(res.data as Map) : null);
+        final res = await _dio.get('${ApiEndpoints.scans}/barcode/${Uri.encodeComponent(barcode)}');
+        found = _unwrap(res.data) ?? (res.data is Map ? Map<String, dynamic>.from(res.data as Map) : null);
       } catch (_) {}
 
       if (found == null) {
-        final ordersRes = await _safeGet(
-          ApiEndpoints.orders,
-          query: {
-            'page': 1,
-            'limit': 100,
-            'sortBy': 'createdAt',
-            'sortOrder': 'desc'
-          },
-        );
+        final ordersRes = await _safeGet(ApiEndpoints.orders, query: {'page': 1, 'limit': 100, 'sortBy': 'createdAt', 'sortOrder': 'desc'});
         final od = _unwrap(ordersRes?.data);
         List list = [];
         if (od != null && od['items'] is List) list = od['items'] as List;
-
         for (final e in list) {
           final m = Map<String, dynamic>.from(e as Map);
           if (_matchesOrder(m, barcode)) {
             found = {
-              'valid': true,
-              'orderNumber': m['orderNumber'],
-              'orderId': m['id'],
+              'valid': true, 'orderNumber': m['orderNumber'], 'orderId': m['id'],
               'awb': m['awbNumber'] ?? m['trackingNumber'] ?? barcode,
-              'customer': m['customerName'] ?? '—',
-              'status': m['status'],
-              'marketplace': m['marketplace'],
-              'priority': m['priority'],
-              'items': m['items'],
-              'scannedAt': DateTime.now().toIso8601String(),
-              'source': 'orders',
-              'matchedCode': barcode,
+              'customer': m['customerName'] ?? '—', 'status': m['status'],
+              'marketplace': m['marketplace'], 'priority': m['priority'],
+              'items': m['items'], 'scannedAt': DateTime.now().toIso8601String(),
+              'source': 'orders', 'matchedCode': barcode,
             };
             break;
           }
         }
       } else {
-        found = {
-          ...found,
-          'valid': true,
-          'source': 'scanner',
-          'matchedCode': barcode
-        };
+        found = {...found, 'valid': true, 'source': 'scanner', 'matchedCode': barcode};
       }
 
       if (found == null) {
         setState(() {
           isLookingUp = false;
-          lookupError =
-              'No order for "$barcode". Check barcode encodes exact Order ID.';
+          lookupError = 'No order for "$barcode". Check barcode encodes exact Order ID.';
           scanResult = {'valid': false, 'barcode': barcode};
         });
         _barcodeFocus.requestFocus();
-        _barcodeCtrl.selection = TextSelection(
-          baseOffset: 0,
-          extentOffset: _barcodeCtrl.text.length,
-        );
+        _barcodeCtrl.selection = TextSelection(baseOffset: 0, extentOffset: _barcodeCtrl.text.length);
         return;
       }
 
       setState(() {
         isLookingUp = false;
         scanResult = found;
+        _countdown = 10; 
       });
 
-      final oid = found['orderId']?.toString();
-      if (oid != null && oid.isNotEmpty) {
-        Future.delayed(const Duration(milliseconds: 400), () {
-          if (!mounted) return;
-          context.go('/recording?orderId=$oid&autostart=1');
-        });
-      }
+      _redirectTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+        if (!mounted) {
+          timer.cancel();
+          return;
+        }
+        if (_countdown > 1) {
+          setState(() => _countdown--);
+        } else {
+          _navigateToRecording(found!['orderId'].toString(), '0');
+        }
+      });
 
       _barcodeFocus.requestFocus();
-      _barcodeCtrl.selection = TextSelection(
-        baseOffset: 0,
-        extentOffset: _barcodeCtrl.text.length,
-      );
+      _barcodeCtrl.selection = TextSelection(baseOffset: 0, extentOffset: _barcodeCtrl.text.length);
     } catch (e) {
       setState(() {
         isLookingUp = false;
-        lookupError = e is DioException
-            ? (e.response?.statusCode == 404
-                ? 'Barcode not found'
-                : (e.message ?? 'Lookup failed'))
-            : e.toString();
+        lookupError = e is DioException ? (e.response?.statusCode == 404 ? 'Barcode not found' : (e.message ?? 'Lookup failed')) : e.toString();
       });
       _barcodeFocus.requestFocus();
     }
@@ -293,16 +262,12 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
 
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
-
     final now = DateTime.now();
-    if (_lastKeyAt != null &&
-        now.difference(_lastKeyAt!).inMilliseconds > 80) {
+    if (_lastKeyAt != null && now.difference(_lastKeyAt!).inMilliseconds > 80) {
       _wedgeBuffer = '';
     }
     _lastKeyAt = now;
-
-    if (event.logicalKey == LogicalKeyboardKey.enter ||
-        event.logicalKey == LogicalKeyboardKey.numpadEnter) {
+    if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.numpadEnter) {
       if (_wedgeBuffer.isNotEmpty) {
         final code = _sanitize(_wedgeBuffer);
         _wedgeBuffer = '';
@@ -313,7 +278,6 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       }
       return KeyEventResult.ignored;
     }
-
     final ch = event.character;
     if (ch != null && ch.isNotEmpty && ch != '\n' && ch != '\r') {
       if (!_barcodeFocus.hasFocus) {
@@ -338,26 +302,12 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
 
   Color _statusColor(String status) {
     final s = status.toUpperCase();
-    if (s.contains('VERIF') ||
-        s.contains('MATCH') ||
-        s.contains('SUCCESS') ||
-        s.contains('DELIVER') ||
-        s.contains('SHIP')) {
-      return Colors.green;
-    }
-    if (s.contains('FAIL') ||
-        s.contains('EXCEPT') ||
-        s.contains('ERROR') ||
-        s.contains('CANCEL')) {
-      return Colors.red;
-    }
+    if (s.contains('VERIF') || s.contains('MATCH') || s.contains('SUCCESS') || s.contains('DELIVER') || s.contains('SHIP')) return Colors.green;
+    if (s.contains('FAIL') || s.contains('EXCEPT') || s.contains('ERROR') || s.contains('CANCEL')) return Colors.red;
     return Colors.orange;
   }
 
-  double get successRate {
-    if (totalScans == 0) return 0;
-    return (verifiedScans / totalScans) * 100;
-  }
+  double get successRate => totalScans == 0 ? 0 : (verifiedScans / totalScans) * 100;
 
   @override
   Widget build(BuildContext context) {
@@ -375,8 +325,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                       children: [
                         Text(errorMessage!),
                         const SizedBox(height: 12),
-                        FilledButton(
-                            onPressed: fetchData, child: const Text('Retry')),
+                        FilledButton(onPressed: fetchData, child: const Text('Retry')),
                       ],
                     ),
                   )
@@ -384,49 +333,28 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                     builder: (context, constraints) {
                       final isMobile = constraints.maxWidth < 700;
                       final wide = constraints.maxWidth > 1000;
-
                       return SingleChildScrollView(
                         padding: EdgeInsets.all(isMobile ? 12 : 24),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Header
                             if (isMobile)
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Scanning',
-                                    style: TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1E2329),
-                                    ),
-                                  ),
+                                  const Text('Scanning', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
                                   const SizedBox(height: 8),
                                   Wrap(
-                                    spacing: 8,
-                                    runSpacing: 8,
+                                    spacing: 8, runSpacing: 8,
                                     children: [
                                       OutlinedButton.icon(
-                                        onPressed: () {
-                                          _barcodeFocus.requestFocus();
-                                          _barcodeCtrl.selection =
-                                              TextSelection(
-                                            baseOffset: 0,
-                                            extentOffset:
-                                                _barcodeCtrl.text.length,
-                                          );
-                                        },
-                                        icon: const Icon(
-                                            Icons.center_focus_strong,
-                                            size: 16),
+                                        onPressed: () => _barcodeFocus.requestFocus(),
+                                        icon: const Icon(Icons.center_focus_strong, size: 16),
                                         label: const Text('Focus'),
                                       ),
                                       OutlinedButton.icon(
                                         onPressed: fetchData,
-                                        icon: const Icon(Icons.refresh,
-                                            size: 16),
+                                        icon: const Icon(Icons.refresh, size: 16),
                                         label: const Text('Refresh'),
                                       ),
                                     ],
@@ -436,48 +364,26 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                             else
                               Row(
                                 children: [
-                                  Text('Dashboard',
-                                      style: TextStyle(
-                                          color: Colors.grey.shade500,
-                                          fontSize: 13)),
-                                  Icon(Icons.chevron_right,
-                                      size: 16,
-                                      color: Colors.grey.shade400),
-                                  const Text('Scanning',
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.w600,
-                                          fontSize: 13)),
+                                  Text('Dashboard', style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
+                                  Icon(Icons.chevron_right, size: 16, color: Colors.grey.shade400),
+                                  const Text('Scanning', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                                   const Spacer(),
                                   TextButton.icon(
-                                    onPressed: () {
-                                      _barcodeFocus.requestFocus();
-                                      _barcodeCtrl.selection = TextSelection(
-                                        baseOffset: 0,
-                                        extentOffset:
-                                            _barcodeCtrl.text.length,
-                                      );
-                                    },
-                                    icon: const Icon(
-                                        Icons.center_focus_strong,
-                                        size: 16),
-                                    label:
-                                        const Text('Focus scanner input'),
+                                    onPressed: () => _barcodeFocus.requestFocus(),
+                                    icon: const Icon(Icons.center_focus_strong, size: 16),
+                                    label: const Text('Focus scanner input'),
                                   ),
                                   const SizedBox(width: 8),
                                   OutlinedButton.icon(
                                     onPressed: fetchData,
-                                    icon: const Icon(Icons.refresh,
-                                        size: 16),
+                                    icon: const Icon(Icons.refresh, size: 16),
                                     label: const Text('Refresh'),
                                   ),
                                 ],
                               ),
                             SizedBox(height: isMobile ? 12 : 16),
-
-                            // Main content
                             Flex(
-                              direction:
-                                  wide ? Axis.horizontal : Axis.vertical,
+                              direction: wide ? Axis.horizontal : Axis.vertical,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
@@ -490,9 +396,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                                     ],
                                   ),
                                 ),
-                                SizedBox(
-                                    width: wide ? 16 : 0,
-                                    height: wide ? 0 : 12),
+                                SizedBox(width: wide ? 16 : 0, height: wide ? 0 : 12),
                                 Expanded(
                                   flex: wide ? 4 : 0,
                                   child: Column(
@@ -527,243 +431,131 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Scan Barcode / QR Code',
-            style: TextStyle(
-              fontSize: isMobile ? 15 : 16,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF1E2329),
-            ),
-          ),
+          Text('Scan Barcode / QR Code', style: TextStyle(fontSize: isMobile ? 15 : 16, fontWeight: FontWeight.bold, color: const Color(0xFF1E2329))),
           SizedBox(height: isMobile ? 10 : 14),
           AspectRatio(
             aspectRatio: isMobile ? 4 / 3 : 16 / 9,
-            child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF0B1220),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Positioned.fill(
-                    child: CustomPaint(painter: _FramePainter()),
-                  ),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                        horizontal: isMobile ? 16 : 28,
-                        vertical: isMobile ? 12 : 18),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.qr_code_scanner,
-                            size: isMobile ? 36 : 48,
-                            color: Colors.grey.shade800),
-                        const SizedBox(height: 6),
-                        Text(
-                          _barcodeCtrl.text.isEmpty
-                              ? 'Ready to scan'
-                              : _barcodeCtrl.text,
-                          style: TextStyle(
-                            fontWeight: FontWeight.w600,
-                            fontSize: isMobile ? 12 : 13,
-                            letterSpacing: 1.1,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  AnimatedBuilder(
-                    animation: _laserCtrl,
-                    builder: (_, __) {
-                      return Positioned(
-                        top: 20 + (_laserCtrl.value * (isMobile ? 120 : 160)),
-                        left: 30,
-                        right: 30,
-                        child: Container(
-                          height: 2,
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [
-                                Colors.transparent,
-                                Colors.blue.shade400,
-                                Colors.blue.shade200,
-                                Colors.blue.shade400,
-                                Colors.transparent,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: isMobile 
+                  ? MobileScanner(
+                      controller: _scannerController,
+                      // Fit cover removes the squished/90deg appearance on most phones
+                      fit: BoxFit.cover,
+                      onDetect: (capture) {
+                        final barcodes = capture.barcodes;
+                        if (barcodes.isNotEmpty && barcodes.first.rawValue != null) {
+                          final code = barcodes.first.rawValue!;
+                          final now = DateTime.now();
+                          if (_lastCameraCode == code && _lastCameraScan != null && now.difference(_lastCameraScan!).inSeconds < 2) {
+                            return;
+                          }
+                          _lastCameraCode = code;
+                          _lastCameraScan = now;
+                          lookupBarcode(code);
+                        }
+                      },
+                    )
+                  : Container(
+                      color: const Color(0xFF0B1220),
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          Positioned.fill(child: CustomPaint(painter: _FramePainter())),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(6)),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.qr_code_scanner, size: 48, color: Colors.grey.shade800),
+                                const SizedBox(height: 6),
+                                Text(
+                                  _barcodeCtrl.text.isEmpty ? 'Ready to scan' : _barcodeCtrl.text,
+                                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13, letterSpacing: 1.1),
+                                  maxLines: 1, overflow: TextOverflow.ellipsis,
+                                ),
                               ],
                             ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.blue.withValues(alpha: 0.6),
-                                blurRadius: 8,
-                              ),
-                            ],
                           ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
+                          AnimatedBuilder(
+                            animation: _laserCtrl,
+                            builder: (_, __) {
+                              return Positioned(
+                                top: 20 + (_laserCtrl.value * 160),
+                                left: 30, right: 30,
+                                child: Container(
+                                  height: 2,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(colors: [Colors.transparent, Colors.blue.shade400, Colors.blue.shade200, Colors.blue.shade400, Colors.transparent]),
+                                    boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha: 0.6), blurRadius: 8)],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
             ),
           ),
           const SizedBox(height: 10),
           Center(
             child: Text(
-              isMobile
-                  ? 'Focus input & scan barcode'
-                  : 'Click the input below, then scan with your hardware scanner',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
-              textAlign: TextAlign.center,
+              isMobile ? 'Point camera at barcode to scan' : 'Focus the input below, then scan with hardware scanner',
+              style: TextStyle(color: Colors.grey.shade500, fontSize: 12), textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 8),
           Row(
             children: [
               Expanded(child: Divider(color: Colors.grey.shade200)),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: Text('OR',
-                    style: TextStyle(
-                        color: Colors.grey.shade400, fontSize: 11)),
-              ),
+              Padding(padding: const EdgeInsets.symmetric(horizontal: 10), child: Text('OR', style: TextStyle(color: Colors.grey.shade400, fontSize: 11))),
               Expanded(child: Divider(color: Colors.grey.shade200)),
             ],
           ),
           const SizedBox(height: 10),
-          // Input + Lookup (stacks on very small screens)
-          if (isMobile)
-            Column(
-              children: [
-                SizedBox(
+          Row(
+            children: [
+              Expanded(
+                child: SizedBox(
                   height: 48,
                   child: TextField(
                     controller: _barcodeCtrl,
                     focusNode: _barcodeFocus,
-                    autofocus: true,
                     textInputAction: TextInputAction.done,
                     onSubmitted: (v) => lookupBarcode(v),
-                    onChanged: (v) {
-                      if (v.endsWith('\t')) lookupBarcode(v);
-                    },
-                    decoration: _barcodeDecoration(),
-                    style: const TextStyle(
-                        fontSize: 15, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: FilledButton(
-                    onPressed: isLookingUp ? null : () => lookupBarcode(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF155EEF),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                    onChanged: (v) { if (v.endsWith('\t')) lookupBarcode(v); },
+                    decoration: InputDecoration(
+                      hintText: 'Enter barcode manually...',
+                      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                      prefixIcon: Icon(Icons.qr_code_2, color: Colors.grey.shade500, size: 20),
+                      filled: true, fillColor: _barcodeFocus.hasFocus ? Colors.blue.shade50 : Colors.grey.shade50,
+                      contentPadding: EdgeInsets.zero,
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade200)),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: const BorderSide(color: Color(0xFF155EEF), width: 2)),
                     ),
-                    child: isLookingUp
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Lookup'),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ],
-            )
-          else
-            Row(
-              children: [
-                Expanded(
-                  child: SizedBox(
-                    height: 48,
-                    child: TextField(
-                      controller: _barcodeCtrl,
-                      focusNode: _barcodeFocus,
-                      autofocus: true,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (v) => lookupBarcode(v),
-                      onChanged: (v) {
-                        if (v.endsWith('\t')) lookupBarcode(v);
-                      },
-                      decoration: _barcodeDecoration(),
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w600),
-                    ),
-                  ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                height: 48,
+                child: FilledButton(
+                  onPressed: isLookingUp ? null : () => lookupBarcode(),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF155EEF), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                  child: isLookingUp ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Lookup'),
                 ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  height: 48,
-                  child: FilledButton(
-                    onPressed: isLookingUp ? null : () => lookupBarcode(),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF155EEF),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: isLookingUp
-                        ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white),
-                          )
-                        : const Text('Lookup'),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
+          ),
           if (lookupError != null) ...[
             const SizedBox(height: 8),
-            Text(lookupError!,
-                style: TextStyle(color: Colors.red.shade600, fontSize: 12)),
-          ],
-          if (lastRawInput != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              'Last input: "$lastRawInput"',
-              style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
-            ),
+            Text(lookupError!, style: TextStyle(color: Colors.red.shade600, fontSize: 12)),
           ],
         ],
-      ),
-    );
-  }
-
-  InputDecoration _barcodeDecoration() {
-    return InputDecoration(
-      hintText: 'Focus here & scan barcode…',
-      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-      prefixIcon:
-          Icon(Icons.qr_code_2, color: Colors.grey.shade500, size: 20),
-      filled: true,
-      fillColor:
-          _barcodeFocus.hasFocus ? Colors.blue.shade50 : Colors.grey.shade50,
-      contentPadding: EdgeInsets.zero,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: Colors.grey.shade200),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: BorderSide(color: Colors.grey.shade200),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(color: Color(0xFF155EEF), width: 2),
       ),
     );
   }
@@ -771,28 +563,17 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
   Widget _statusRow() {
     return Row(
       children: [
-        Expanded(
-          child: _statusChip(
-              Icons.wifi, 'Scanner Status', 'Connected', Colors.green),
-        ),
+        Expanded(child: _statusChip(Icons.wifi, 'Scanner Status', 'Connected', Colors.green)),
         const SizedBox(width: 10),
-        Expanded(
-          child: _statusChip(
-              Icons.videocam, 'Camera', 'Active', Colors.green),
-        ),
+        Expanded(child: _statusChip(Icons.videocam, 'Camera', 'Active', Colors.green)),
       ],
     );
   }
 
-  Widget _statusChip(
-      IconData icon, String label, String value, Color color) {
+  Widget _statusChip(IconData icon, String label, String value, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12), border: Border.all(color: Colors.grey.shade200)),
       child: Row(
         children: [
           Icon(icon, size: 16, color: color),
@@ -801,26 +582,12 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label,
-                    style: TextStyle(
-                        fontSize: 10, color: Colors.grey.shade500)),
+                Text(label, style: TextStyle(fontSize: 10, color: Colors.grey.shade500)),
                 Row(
                   children: [
-                    Container(
-                      width: 6,
-                      height: 6,
-                      decoration: BoxDecoration(
-                          color: color, shape: BoxShape.circle),
-                    ),
+                    Container(width: 6, height: 6, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
                     const SizedBox(width: 4),
-                    Flexible(
-                      child: Text(value,
-                          style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: color),
-                          overflow: TextOverflow.ellipsis),
-                    ),
+                    Flexible(child: Text(value, style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: color), overflow: TextOverflow.ellipsis)),
                   ],
                 ),
               ],
@@ -834,83 +601,34 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
   Widget _scanResultCard({required bool isMobile}) {
     final r = scanResult;
     final valid = r != null && r['valid'] == true;
-
     return Container(
       width: double.infinity,
       padding: EdgeInsets.all(isMobile ? 14 : 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Scan Result',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2329),
-            ),
-          ),
+          const Text('Scan Result', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
           const SizedBox(height: 12),
           if (r == null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
-              child: Center(
-                child: Text(
-                  'Scan or enter a barcode to see results',
-                  style:
-                      TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                  textAlign: TextAlign.center,
-                ),
-              ),
+              child: Center(child: Text('Scan or enter a barcode to see results', style: TextStyle(color: Colors.grey.shade500, fontSize: 13), textAlign: TextAlign.center)),
             )
           else ...[
             Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: valid ? Colors.green.shade50 : Colors.red.shade50,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color:
-                      valid ? Colors.green.shade200 : Colors.red.shade200,
-                ),
-              ),
+              width: double.infinity, padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(color: valid ? Colors.green.shade50 : Colors.red.shade50, borderRadius: BorderRadius.circular(10), border: Border.all(color: valid ? Colors.green.shade200 : Colors.red.shade200)),
               child: Row(
                 children: [
-                  Icon(
-                    valid ? Icons.check_circle : Icons.error,
-                    color: valid ? Colors.green : Colors.red,
-                    size: 22,
-                  ),
+                  Icon(valid ? Icons.check_circle : Icons.error, color: valid ? Colors.green : Colors.red, size: 22),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          valid ? 'Valid Order' : 'Not Found',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: valid
-                                ? Colors.green.shade800
-                                : Colors.red.shade800,
-                          ),
-                        ),
-                        Text(
-                          valid
-                              ? 'Order verified successfully'
-                              : 'No matching order for this code',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: valid
-                                ? Colors.green.shade700
-                                : Colors.red.shade700,
-                          ),
-                        ),
+                        Text(valid ? 'Valid Order' : 'Not Found', style: TextStyle(fontWeight: FontWeight.bold, color: valid ? Colors.green.shade800 : Colors.red.shade800)),
+                        Text(valid ? 'Order verified successfully' : 'No matching order for this code', style: TextStyle(fontSize: 12, color: valid ? Colors.green.shade700 : Colors.red.shade700)),
                       ],
                     ),
                   ),
@@ -919,30 +637,35 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
             ),
             if (valid) ...[
               const SizedBox(height: 12),
-              _detailRow('Order ID',
-                  (r['orderNumber'] ?? r['orderId'] ?? '—').toString()),
-              _detailRow('AWB / Tracking',
-                  (r['awb'] ?? r['barcode'] ?? '—').toString()),
+              _detailRow('Order ID', (r['orderNumber'] ?? r['orderId'] ?? '—').toString()),
+              _detailRow('AWB / Tracking', (r['awb'] ?? r['barcode'] ?? '—').toString()),
               _detailRow('Customer', (r['customer'] ?? '—').toString()),
-              _detailRow('Status', (r['status'] ?? '—').toString()),
-              _detailRow(
-                  'Marketplace', (r['marketplace'] ?? '—').toString()),
+              
+              const SizedBox(height: 14),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.blue.shade200)
+                ),
+                child: Column(
+                  children: [
+                    Text('Auto-redirecting in $_countdown sec', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue.shade800, fontSize: 14)),
+                    const SizedBox(height: 4),
+                    Text('Scan the same code again to START recording instantly!', style: TextStyle(color: Colors.blue.shade700, fontSize: 11), textAlign: TextAlign.center),
+                  ],
+                ),
+              ),
+
               const SizedBox(height: 12),
               SizedBox(
-                width: double.infinity,
-                height: 44,
+                width: double.infinity, height: 44,
                 child: FilledButton(
-                  onPressed: () {
-                    final id = r['orderId']?.toString() ?? '';
-                    context.go('/recording?orderId=$id&autostart=1');
-                  },
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF155EEF),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: const Text('Start Recording'),
+                  onPressed: () => _navigateToRecording(r['orderId'].toString(), '1'),
+                  style: FilledButton.styleFrom(backgroundColor: const Color(0xFF155EEF), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                  child: const Text('Start Recording Now'),
                 ),
               ),
             ],
@@ -958,19 +681,8 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 100,
-            child: Text(label,
-                style:
-                    TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-          ),
-          Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1E2329))),
-          ),
+          SizedBox(width: 100, child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E2329)))),
         ],
       ),
     );
@@ -978,39 +690,22 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
 
   Widget _summaryCard() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+      width: double.infinity, padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            "Today's Scanning Summary",
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2329),
-            ),
-          ),
+          const Text("Today's Scanning Summary", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
           const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: Column(
                   children: [
-                    Icon(Icons.qr_code_scanner,
-                        color: Colors.blue.shade600, size: 26),
+                    Icon(Icons.qr_code_scanner, color: Colors.blue.shade600, size: 26),
                     const SizedBox(height: 4),
-                    Text('$totalScans',
-                        style: const TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.bold)),
-                    Text('Total Scans',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade500)),
+                    Text('$totalScans', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                    Text('Total Scans', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                   ],
                 ),
               ),
@@ -1018,31 +713,17 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                 child: Column(
                   children: [
                     SizedBox(
-                      width: 56,
-                      height: 56,
+                      width: 56, height: 56,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
-                          CircularProgressIndicator(
-                            value: totalScans == 0 ? 0 : successRate / 100,
-                            strokeWidth: 5,
-                            backgroundColor: Colors.grey.shade100,
-                            color: Colors.green,
-                          ),
-                          Text(
-                            totalScans == 0
-                                ? '—'
-                                : '${successRate.toStringAsFixed(0)}%',
-                            style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 12),
-                          ),
+                          CircularProgressIndicator(value: totalScans == 0 ? 0 : successRate / 100, strokeWidth: 5, backgroundColor: Colors.grey.shade100, color: Colors.green),
+                          Text(totalScans == 0 ? '—' : '${successRate.toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                         ],
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text('Success Rate',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade500)),
+                    Text('Success Rate', style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
                   ],
                 ),
               ),
@@ -1065,12 +746,8 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
     return Expanded(
       child: Column(
         children: [
-          Text(value,
-              style: TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.bold, color: color)),
-          Text(label,
-              style:
-                  TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+          Text(value, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+          Text(label, style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
         ],
       ),
     );
@@ -1078,63 +755,31 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
 
   Widget _recentScansCard({required bool isMobile}) {
     return Container(
-      width: double.infinity,
-      padding: EdgeInsets.all(isMobile ? 14 : 18),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+      width: double.infinity, padding: EdgeInsets.all(isMobile ? 14 : 18),
+      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.grey.shade200)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Text(
-                'Recent Scans',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E2329),
-                ),
-              ),
+              const Text('Recent Scans', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
               const Spacer(),
-              TextButton(
-                  onPressed: fetchData, child: const Text('View All')),
+              TextButton(onPressed: fetchData, child: const Text('View All')),
             ],
           ),
           const SizedBox(height: 8),
           if (scans.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text(
-                  'No scans yet',
-                  style:
-                      TextStyle(color: Colors.grey.shade500, fontSize: 13),
-                ),
-              ),
-            )
+            Padding(padding: const EdgeInsets.symmetric(vertical: 24), child: Center(child: Text('No scans yet', style: TextStyle(color: Colors.grey.shade500, fontSize: 13))))
           else
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: DataTable(
-                headingRowColor:
-                    WidgetStateProperty.all(Colors.grey.shade50),
+                headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                 columnSpacing: isMobile ? 16 : 24,
                 columns: const [
-                  DataColumn(
-                      label: Text('Barcode',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(
-                      label: Text('Order',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(
-                      label: Text('Status',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(
-                      label: Text('Time',
-                          style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Barcode', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Order', style: TextStyle(fontWeight: FontWeight.bold))),
+                  DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
                 ],
                 rows: scans.take(8).map((s) {
                   final color = _statusColor(s['status'].toString());
@@ -1142,21 +787,10 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                     DataCell(Text(s['barcode'].toString())),
                     DataCell(Text(s['orderId'].toString())),
                     DataCell(Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(s['status'].toString(),
-                          style: TextStyle(
-                              color: color,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold)),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
+                      child: Text(s['status'].toString(), style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
                     )),
-                    DataCell(Text(s['scannedAt'].toString(),
-                        style: TextStyle(
-                            color: Colors.grey.shade600, fontSize: 12))),
                   ]);
                 }).toList(),
               ),
@@ -1170,30 +804,17 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
 class _FramePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.7)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-
-    const len = 28.0;
-    const pad = 24.0;
-
+    final paint = Paint()..color = Colors.white.withValues(alpha: 0.7)..strokeWidth = 3..style = PaintingStyle.stroke;
+    const len = 28.0; const pad = 24.0;
     canvas.drawLine(const Offset(pad, pad), const Offset(pad + len, pad), paint);
     canvas.drawLine(const Offset(pad, pad), const Offset(pad, pad + len), paint);
-    canvas.drawLine(Offset(size.width - pad, pad),
-        Offset(size.width - pad - len, pad), paint);
-    canvas.drawLine(Offset(size.width - pad, pad),
-        Offset(size.width - pad, pad + len), paint);
-    canvas.drawLine(Offset(pad, size.height - pad),
-        Offset(pad + len, size.height - pad), paint);
-    canvas.drawLine(Offset(pad, size.height - pad),
-        Offset(pad, size.height - pad - len), paint);
-    canvas.drawLine(Offset(size.width - pad, size.height - pad),
-        Offset(size.width - pad - len, size.height - pad), paint);
-    canvas.drawLine(Offset(size.width - pad, size.height - pad),
-        Offset(size.width - pad, size.height - pad - len), paint);
+    canvas.drawLine(Offset(size.width - pad, pad), Offset(size.width - pad - len, pad), paint);
+    canvas.drawLine(Offset(size.width - pad, pad), Offset(size.width - pad, pad + len), paint);
+    canvas.drawLine(Offset(pad, size.height - pad), Offset(pad + len, size.height - pad), paint);
+    canvas.drawLine(Offset(pad, size.height - pad), Offset(pad, size.height - pad - len), paint);
+    canvas.drawLine(Offset(size.width - pad, size.height - pad), Offset(size.width - pad - len, size.height - pad), paint);
+    canvas.drawLine(Offset(size.width - pad, size.height - pad), Offset(size.width - pad, size.height - pad - len), paint);
   }
-
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

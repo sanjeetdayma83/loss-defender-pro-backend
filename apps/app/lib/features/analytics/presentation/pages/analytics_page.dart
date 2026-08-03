@@ -220,148 +220,67 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                           const SizedBox(height: 24),
 
                           // KPI cards
-                          Wrap(
-                            spacing: isMobile ? 12 : 16,
-                            runSpacing: isMobile ? 12 : 16,
-                            children: [
-                              _kpi('Total Orders', '$total', Icons.receipt_long,
-                                  Colors.blue, 'Today: $todayOrders', isMobile, wide),
-                              _kpi(
-                                  'Verified / Shipped',
-                                  '$verified',
-                                  Icons.verified,
-                                  Colors.green,
-                                  total > 0
-                                      ? '${((verified / total) * 100).toStringAsFixed(1)}% of total'
-                                      : '0%',
-                                  isMobile,
-                                  wide),
-                              _kpi(
-                                  'Pending Pipeline',
-                                  '$pending',
-                                  Icons.hourglass_top,
-                                  Colors.orange,
-                                  'Packing: $packingCount · Verifying: $verificationCount',
-                                  isMobile,
-                                  wide),
-                              _kpi(
-                                  'Exceptions',
-                                  '$exceptions',
-                                  Icons.warning_amber,
-                                  Colors.red,
-                                  'Ready to ship: $readyToShipCount',
-                                  isMobile,
-                                  wide),
-                            ],
-                          ),
+                          if (isMobile)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _kpi('Total Orders', '$total', Icons.receipt_long, Colors.blue, 'Today: $todayOrders', isMobile, wide),
+                                const SizedBox(height: 12),
+                                _kpi('Verified / Shipped', '$verified', Icons.verified, Colors.green, total > 0 ? '${((verified / total) * 100).toStringAsFixed(1)}% of total' : '0%', isMobile, wide),
+                                const SizedBox(height: 12),
+                                _kpi('Pending Pipeline', '$pending', Icons.hourglass_top, Colors.orange, 'Packing: $packingCount · Verifying: $verificationCount', isMobile, wide),
+                                const SizedBox(height: 12),
+                                _kpi('Exceptions', '$exceptions', Icons.warning_amber, Colors.red, 'Ready to ship: $readyToShipCount', isMobile, wide),
+                              ],
+                            )
+                          else
+                            Wrap(
+                              spacing: 16,
+                              runSpacing: 16,
+                              children: [
+                                _kpi('Total Orders', '$total', Icons.receipt_long, Colors.blue, 'Today: $todayOrders', isMobile, wide),
+                                _kpi('Verified / Shipped', '$verified', Icons.verified, Colors.green, total > 0 ? '${((verified / total) * 100).toStringAsFixed(1)}% of total' : '0%', isMobile, wide),
+                                _kpi('Pending Pipeline', '$pending', Icons.hourglass_top, Colors.orange, 'Packing: $packingCount · Verifying: $verificationCount', isMobile, wide),
+                                _kpi('Exceptions', '$exceptions', Icons.warning_amber, Colors.red, 'Ready to ship: $readyToShipCount', isMobile, wide),
+                              ],
+                            ),
                           const SizedBox(height: 24),
 
-                          // Two columns: status breakdown + pipeline
-                          Flex(
-                            direction: wide ? Axis.horizontal : Axis.vertical,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: _card(
+                          // Status breakdown + pipeline
+                          if (wide)
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: _card(
+                                    title: 'Order Status Breakdown',
+                                    child: _buildBreakdownList(),
+                                  ),
+                                ),
+                                const SizedBox(width: 20),
+                                Expanded(
+                                  child: _card(
+                                    title: 'Pipeline Queues',
+                                    child: _buildPipelineList(),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                _card(
                                   title: 'Order Status Breakdown',
-                                  child: Column(
-                                    children: byStatus.isEmpty
-                                        ? [
-                                            Padding(
-                                              padding: const EdgeInsets.all(24),
-                                              child: Text(
-                                                'No status data',
-                                                style: TextStyle(
-                                                    color: Colors.grey.shade500),
-                                              ),
-                                            )
-                                          ]
-                                        : byStatus.map((row) {
-                                            final label = (row['status'] ??
-                                                    row['name'] ??
-                                                    '—')
-                                                .toString();
-                                            final count = (row['count'] as num?)
-                                                    ?.toInt() ??
-                                                0;
-                                            final pct = total > 0
-                                                ? (count / total)
-                                                : 0.0;
-                                            return Padding(
-                                              padding: const EdgeInsets.symmetric(
-                                                  vertical: 8),
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                children: [
-                                                  Row(
-                                                    mainAxisAlignment:
-                                                        MainAxisAlignment
-                                                            .spaceBetween,
-                                                    children: [
-                                                      Text(
-                                                        label.toUpperCase(),
-                                                        style: const TextStyle(
-                                                          fontSize: 12,
-                                                          fontWeight:
-                                                              FontWeight.w600,
-                                                          color:
-                                                              Color(0xFF1E2329),
-                                                        ),
-                                                      ),
-                                                      Text(
-                                                        '$count  (${(pct * 100).toStringAsFixed(0)}%)',
-                                                        style: TextStyle(
-                                                          fontSize: 12,
-                                                          color: Colors
-                                                              .grey.shade600,
-                                                        ),
-                                                      ),
-                                                    ],
-                                                  ),
-                                                  const SizedBox(height: 6),
-                                                  ClipRRect(
-                                                    borderRadius:
-                                                        BorderRadius.circular(4),
-                                                    child: LinearProgressIndicator(
-                                                      value: pct.clamp(0.0, 1.0),
-                                                      minHeight: 6,
-                                                      backgroundColor:
-                                                          Colors.grey.shade100,
-                                                      color: _barColor(label),
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
-                                            );
-                                          }).toList(),
-                                  ),
+                                  child: _buildBreakdownList(),
                                 ),
-                              ),
-                              SizedBox(
-                                  width: wide ? 20 : 0, height: wide ? 0 : 20),
-                              Expanded(
-                                child: _card(
+                                const SizedBox(height: 20),
+                                _card(
                                   title: 'Pipeline Queues',
-                                  child: Column(
-                                    children: [
-                                      _queueRow('Packing queue', packingCount,
-                                          Colors.orange),
-                                      const Divider(height: 24),
-                                      _queueRow('Verification queue',
-                                          verificationCount, Colors.blue),
-                                      const Divider(height: 24),
-                                      _queueRow('Ready to ship',
-                                          readyToShipCount, Colors.green),
-                                      const Divider(height: 24),
-                                      _queueRow("Today's orders", todayOrders,
-                                          Colors.indigo),
-                                    ],
-                                  ),
+                                  child: _buildPipelineList(),
                                 ),
-                              ),
-                            ],
-                          ),
+                              ],
+                            ),
                           const SizedBox(height: 20),
 
                           // Info
@@ -374,16 +293,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                             ),
                             child: Row(
                               children: [
-                                Icon(Icons.info_outline,
-                                    color: Colors.blue.shade700, size: 18),
+                                Icon(Icons.info_outline, color: Colors.blue.shade700, size: 18),
                                 const SizedBox(width: 10),
                                 Expanded(
                                   child: Text(
                                     'Charts and Loss Prevented metrics are live from the API service.',
-                                    style: TextStyle(
-                                      fontSize: 12.5,
-                                      color: Colors.blue.shade900,
-                                    ),
+                                    style: TextStyle(fontSize: 12.5, color: Colors.blue.shade900),
                                   ),
                                 ),
                               ],
@@ -394,6 +309,71 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                     );
                   },
                 ),
+    );
+  }
+
+  Widget _buildBreakdownList() {
+    return Column(
+      children: byStatus.isEmpty
+          ? [
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text('No status data', style: TextStyle(color: Colors.grey.shade500)),
+              )
+            ]
+          : byStatus.map((row) {
+              final label = (row['status'] ?? row['name'] ?? '—').toString();
+              final count = (row['count'] as num?)?.toInt() ?? 0;
+              final pct = total > 0 ? (count / total) : 0.0;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            label.toUpperCase(),
+                            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF1E2329)),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        Text(
+                          '$count  (${ (pct * 100).toStringAsFixed(0) }%)',
+                          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: pct.clamp(0.0, 1.0),
+                        minHeight: 6,
+                        backgroundColor: Colors.grey.shade100,
+                        color: _barColor(label),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+    );
+  }
+
+  Widget _buildPipelineList() {
+    return Column(
+      children: [
+        _queueRow('Packing queue', packingCount, Colors.orange),
+        const Divider(height: 24),
+        _queueRow('Verification queue', verificationCount, Colors.blue),
+        const Divider(height: 24),
+        _queueRow('Ready to ship', readyToShipCount, Colors.green),
+        const Divider(height: 24),
+        _queueRow("Today's orders", todayOrders, Colors.indigo),
+      ],
     );
   }
 
@@ -409,15 +389,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     return Colors.blue;
   }
 
-  Widget _kpi(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-    String subtitle,
-    bool isMobile,
-    bool wide,
-  ) {
+  Widget _kpi(String title, String value, IconData icon, Color color, String subtitle, bool isMobile, bool wide) {
     return SizedBox(
       width: isMobile ? double.infinity : (wide ? 240 : 300),
       child: Container(
@@ -436,41 +408,20 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
                 Expanded(
                   child: Text(
                     title,
-                    style: TextStyle(
-                      color: Colors.grey.shade600,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(color: Colors.grey.shade600, fontSize: 12, fontWeight: FontWeight.w600),
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.all(7),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                   child: Icon(icon, color: color, size: 18),
                 ),
               ],
             ),
             const SizedBox(height: 10),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF1E2329),
-              ),
-            ),
+            Text(value, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
             const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                color: color,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+            Text(subtitle, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w600)),
           ],
         ),
       ),
@@ -485,18 +436,14 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 10, offset: const Offset(0, 2)),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2329),
-            ),
-          ),
+          Text(title, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
           const SizedBox(height: 16),
           child,
         ],
@@ -507,24 +454,12 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
   Widget _queueRow(String label, int count, Color color) {
     return Row(
       children: [
-        Container(
-          width: 10,
-          height: 10,
-          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        ),
+        Container(width: 10, height: 10, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
         const SizedBox(width: 10),
         Expanded(
-          child: Text(label,
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+          child: Text(label, style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
         ),
-        Text(
-          '$count',
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1E2329),
-          ),
-        ),
+        Text('$count', style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
       ],
     );
   }
@@ -538,20 +473,11 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
           children: [
             Icon(Icons.cloud_off, size: 56, color: Colors.grey.shade400),
             const SizedBox(height: 16),
-            const Text('Could not load analytics',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const Text('Could not load analytics', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
             const SizedBox(height: 8),
-            Text(
-              errorMessage ?? '',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-            ),
+            Text(errorMessage ?? '', textAlign: TextAlign.center, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
             const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: fetchAnalytics,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
+            FilledButton.icon(onPressed: fetchAnalytics, icon: const Icon(Icons.refresh), label: const Text('Retry')),
           ],
         ),
       ),

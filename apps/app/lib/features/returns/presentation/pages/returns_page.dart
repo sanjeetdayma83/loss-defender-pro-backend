@@ -92,7 +92,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
                                 onPressed: fetchReturns,
                                 icon: const Icon(Icons.refresh, size: 16),
                                 label: const Text("Sync Returns API"),
-                                style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
+                                style: OutlinedButton.styleFrom(backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
                               ),
                             ),
                           ],
@@ -101,19 +101,21 @@ class _ReturnsPageState extends State<ReturnsPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text("Returned & Discrepant Orders", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                SizedBox(height: 4),
-                                Text("Audit return claims and verify video proof against packaging discrepancies", style: TextStyle(color: Colors.grey, fontSize: 13)),
-                              ],
+                            const Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("Returned & Discrepant Orders", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                  SizedBox(height: 4),
+                                  Text("Audit return claims and verify video proof against packaging discrepancies", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                ],
+                              ),
                             ),
                             OutlinedButton.icon(
                               onPressed: fetchReturns,
                               icon: const Icon(Icons.refresh, size: 16),
                               label: const Text("Sync Returns API"),
-                              style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
+                              style: OutlinedButton.styleFrom(backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
                             ),
                           ],
                         ),
@@ -129,10 +131,10 @@ class _ReturnsPageState extends State<ReturnsPage> {
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: SizedBox(
-                              width: 900,
+                              width: isMobile ? null : 900,
                               child: DataTable(
                                 headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                                columnSpacing: 20,
+                                columnSpacing: isMobile ? 16 : 20,
                                 columns: const [
                                   DataColumn(label: Text("Return ID", style: TextStyle(fontWeight: FontWeight.bold))),
                                   DataColumn(label: Text("Order ID", style: TextStyle(fontWeight: FontWeight.bold))),

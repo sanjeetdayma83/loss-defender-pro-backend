@@ -172,7 +172,7 @@ class _OrdersPageState extends State<OrdersPage> {
                     final isMobile = constraints.maxWidth < 650;
                     
                     return Padding(
-                      padding: EdgeInsets.all(isMobile ? 16 : 28),
+                      padding: EdgeInsets.all(isMobile ? 12 : 28),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -256,7 +256,7 @@ class _OrdersPageState extends State<OrdersPage> {
 
                           // Search + filters
                           Container(
-                            padding: const EdgeInsets.all(16),
+                            padding: EdgeInsets.all(isMobile ? 12 : 16),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(12),
@@ -266,12 +266,12 @@ class _OrdersPageState extends State<OrdersPage> {
                               ? Column(
                                   children: [
                                     SizedBox(
-                                      height: 42,
+                                      height: 44,
                                       child: TextField(
                                         controller: _searchCtrl,
                                         onChanged: (_) => _applyFilters(),
                                         decoration: InputDecoration(
-                                          hintText: 'Search order #, AWB, customer…',
+                                          hintText: 'Search order #, AWB...',
                                           hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
                                           prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
                                           filled: true,
@@ -295,7 +295,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                     ),
                                     const SizedBox(height: 12),
                                     Container(
-                                      height: 42,
+                                      height: 44,
                                       width: double.infinity,
                                       padding: const EdgeInsets.symmetric(horizontal: 12),
                                       decoration: BoxDecoration(
@@ -417,6 +417,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                           headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
                                           dataRowMinHeight: 52,
                                           dataRowMaxHeight: 56,
+                                          columnSpacing: isMobile ? 16 : 24, // Kam spacing for mobile
                                           columns: const [
                                             DataColumn(label: Text('Order ID', style: TextStyle(fontWeight: FontWeight.bold))),
                                             DataColumn(label: Text('AWB / Tracking', style: TextStyle(fontWeight: FontWeight.bold))),
@@ -466,7 +467,6 @@ class _OrdersPageState extends State<OrdersPage> {
                                               DataCell(
                                                 TextButton(
                                                   onPressed: () {
-                                                    // Future: order detail page
                                                     ScaffoldMessenger.of(context).showSnackBar(
                                                       SnackBar(
                                                         content: Text('Order ${order['orderNumber']}'),

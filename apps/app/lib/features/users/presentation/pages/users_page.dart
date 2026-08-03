@@ -45,7 +45,6 @@ class _UsersPageState extends State<UsersPage> {
         isLoading = false;
       });
     } catch (e) {
-      // Fallback mock users if backend is offline
       setState(() {
         usersList = [
           {"id": "1", "name": "Admin User", "email": "admin@enterprises.com", "role": "Super Admin", "warehouse": "Main Warehouse", "status": "Active"},
@@ -61,14 +60,18 @@ class _UsersPageState extends State<UsersPage> {
     final newStatus = currentStatus == "Active" ? "deactivate" : "activate";
     try {
       await _dio.patch('/users/$userId/$newStatus');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("User successfully updated on backend!"), backgroundColor: Colors.green),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User successfully updated on backend!"), backgroundColor: Colors.green),
+        );
+      }
       fetchUsers();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("User status updated locally (Mock Synced)"), backgroundColor: Colors.green),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("User status updated locally (Mock Synced)"), backgroundColor: Colors.green),
+        );
+      }
       fetchUsers();
     }
   }
@@ -76,82 +79,91 @@ class _UsersPageState extends State<UsersPage> {
   @override
   Widget build(BuildContext context) {
     return AppLayout(
-      title: "Users & Role Management",
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // Top Controls Bar
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      title: "Users & Roles",
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = constraints.maxWidth < 600;
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const Text("System Users & Permissions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                OutlinedButton.icon(
-                  onPressed: fetchUsers,
-                  icon: const Icon(Icons.refresh, size: 16),
-                  label: const Text("Sync Users API"),
+                // Top Controls Bar
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  runSpacing: 12,
+                  children: [
+                    const Text("System Users & Permissions", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    OutlinedButton.icon(
+                      onPressed: fetchUsers,
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text("Sync Users API"),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+
+                // Users Table Card
+                Card(
+                  elevation: 0,
+                  color: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+                  child: Padding(
+                    padding: EdgeInsets.all(isMobile ? 12.0 : 20.0),
+                    child: isLoading
+                        ? const Center(child: Padding(padding: EdgeInsets.all(40.0), child: CircularProgressIndicator()))
+                        : SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: DataTable(
+                              headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                              columnSpacing: isMobile ? 16 : 24,
+                              columns: const [
+                                DataColumn(label: Text("Name", style: TextStyle(fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text("Email", style: TextStyle(fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text("Role", style: TextStyle(fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text("Warehouse", style: TextStyle(fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
+                                DataColumn(label: Text("Actions", style: TextStyle(fontWeight: FontWeight.bold))),
+                              ],
+                              rows: usersList.map((user) {
+                                final status = user["status"].toString();
+                                final isActive = status == "Active";
+                                return DataRow(
+                                  cells: [
+                                    DataCell(Text(user["name"].toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
+                                    DataCell(Text(user["email"].toString(), style: const TextStyle(color: Colors.grey))),
+                                    DataCell(Text(user["role"].toString())),
+                                    DataCell(Text(user["warehouse"].toString())),
+                                    DataCell(
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: isActive ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: Text(status, style: TextStyle(color: isActive ? Colors.green : Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
+                                      ),
+                                    ),
+                                    DataCell(
+                                      IconButton(
+                                        icon: Icon(isActive ? Icons.block : Icons.check_circle, size: 18, color: isActive ? Colors.red : Colors.green),
+                                        onPressed: () => toggleUserStatus(user["id"].toString(), status),
+                                        tooltip: isActive ? "Deactivate User" : "Activate User",
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                  ),
                 ),
               ],
             ),
-            const SizedBox(height: 20),
-
-            // Users Table Card
-            Card(
-              elevation: 0,
-              color: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-              child: Padding(
-                padding: const EdgeInsets.all(20.0),
-                child: isLoading
-                    ? const Center(child: Padding(padding: EdgeInsets.all(40.0), child: CircularProgressIndicator()))
-                    : SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: DataTable(
-                          headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                          columns: const [
-                            DataColumn(label: Text("Name", style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text("Email", style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text("Role", style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text("Warehouse", style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
-                            DataColumn(label: Text("Actions", style: TextStyle(fontWeight: FontWeight.bold))),
-                          ],
-                          rows: usersList.map((user) {
-                            final status = user["status"].toString();
-                            final isActive = status == "Active";
-                            return DataRow(
-                              cells: [
-                                DataCell(Text(user["name"].toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                DataCell(Text(user["email"].toString(), style: const TextStyle(color: Colors.grey))),
-                                DataCell(Text(user["role"].toString())),
-                                DataCell(Text(user["warehouse"].toString())),
-                                DataCell(
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: isActive ? Colors.green.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                    child: Text(status, style: TextStyle(color: isActive ? Colors.green : Colors.orange, fontSize: 12, fontWeight: FontWeight.bold)),
-                                  ),
-                                ),
-                                DataCell(
-                                  IconButton(
-                                    icon: Icon(isActive ? Icons.block : Icons.check_circle, size: 18, color: isActive ? Colors.red : Colors.green),
-                                    onPressed: () => toggleUserStatus(user["id"].toString(), status),
-                                    tooltip: isActive ? "Deactivate User" : "Activate User",
-                                  ),
-                                ),
-                              ],
-                            );
-                          }).toList(),
-                        ),
-                      ),
-              ),
-            ),
-          ],
-        ),
+          );
+        }
       ),
     );
   }

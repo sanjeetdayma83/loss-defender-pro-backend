@@ -65,7 +65,7 @@ dependencies:
   fl_chart: ^1.1.1
 
   # Camera & Scanner
-  mobile_scanner: ^7.0.1
+  mobile_scanner: ^7.4.0
   camera: ^0.11.2+1
   video_player: ^2.10.0
   image_picker: ^1.2.0

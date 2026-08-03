@@ -6,7 +6,6 @@ import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import '../../../../shared/layout/app_layout.dart';
 import '../../../../core/api/api_client.dart';
@@ -64,23 +63,20 @@ class _RecordingPageState extends State<RecordingPage> {
     super.dispose();
   }
 
-  // ─────────────────────────────────────────────
-  // Camera
-  // ─────────────────────────────────────────────
-
   Future<void> _initCamera() async {
     if (kIsWeb) {
-      // Web has limited recording support
       setState(() {
-        _cameraError = 'Camera recording works best on mobile/tablet. Web preview limited.';
+        _cameraError = 'Camera recording works best on mobile/tablet.';
       });
       return;
     }
 
     setState(() => _isInitializingCamera = true);
 
+    // CRUCIAL FIX: Wait for previous scanner (mobile_scanner) to release camera lock
+    await Future.delayed(const Duration(milliseconds: 800));
+
     try {
-      // Request permissions
       final camStatus = await Permission.camera.request();
       final micStatus = await Permission.microphone.request();
 
@@ -101,7 +97,6 @@ class _RecordingPageState extends State<RecordingPage> {
         return;
       }
 
-      // Prefer back camera
       final camera = _cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.back,
         orElse: () => _cameras.first,
@@ -131,9 +126,7 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 
   Future<void> _startCameraRecording() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) {
-      return;
-    }
+    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
     if (_cameraController!.value.isRecordingVideo) return;
 
     try {
@@ -145,29 +138,19 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 
   Future<XFile?> _stopCameraRecording() async {
-    if (_cameraController == null || !_cameraController!.value.isRecordingVideo) {
-      return null;
-    }
-
+    if (_cameraController == null || !_cameraController!.value.isRecordingVideo) return null;
     try {
-      final file = await _cameraController!.stopVideoRecording();
-      return file;
+      return await _cameraController!.stopVideoRecording();
     } catch (e) {
       debugPrint('Stop video recording failed: $e');
       return null;
     }
   }
 
-  // ─────────────────────────────────────────────
-  // API helpers
-  // ─────────────────────────────────────────────
-
   Map<String, dynamic>? _unwrap(dynamic body) {
     if (body is! Map) return null;
     final map = Map<String, dynamic>.from(body);
-    if (map['data'] is Map) {
-      return Map<String, dynamic>.from(map['data'] as Map);
-    }
+    if (map['data'] is Map) return Map<String, dynamic>.from(map['data'] as Map);
     if (map['data'] is Map && (map['data'] as Map)['user'] is Map) {
       return Map<String, dynamic>.from((map['data'] as Map)['user'] as Map);
     }
@@ -178,7 +161,6 @@ class _RecordingPageState extends State<RecordingPage> {
     try {
       return await _dio.get(path, queryParameters: query);
     } catch (e) {
-      debugPrint('GET $path failed: $e');
       return null;
     }
   }
@@ -190,30 +172,21 @@ class _RecordingPageState extends State<RecordingPage> {
     });
 
     try {
-      // Profile
       try {
         final profileRes = await _dio.get(ApiEndpoints.profile);
         var p = _unwrap(profileRes.data);
-        if (p == null && profileRes.data is Map) {
-          p = Map<String, dynamic>.from(profileRes.data as Map);
-        }
-        if (p != null && p['id'] == null && p['user'] is Map) {
-          p = Map<String, dynamic>.from(p['user'] as Map);
-        }
+        if (p == null && profileRes.data is Map) p = Map<String, dynamic>.from(profileRes.data as Map);
+        if (p != null && p['id'] == null && p['user'] is Map) p = Map<String, dynamic>.from(p['user'] as Map);
         profile = p;
-      } catch (e) {
+      } catch (_) {
         profile = null;
       }
 
-      // Order
       final oid = widget.orderId;
       if (oid != null && oid.isNotEmpty) {
         try {
           final orderRes = await _dio.get('${ApiEndpoints.orders}/$oid');
-          order = _unwrap(orderRes.data) ??
-              (orderRes.data is Map
-                  ? Map<String, dynamic>.from(orderRes.data as Map)
-                  : null);
+          order = _unwrap(orderRes.data) ?? (orderRes.data is Map ? Map<String, dynamic>.from(orderRes.data as Map) : null);
         } catch (_) {
           final listRes = await _safeGet(ApiEndpoints.orders, query: {'page': 1, 'limit': 50});
           final data = _unwrap(listRes?.data);
@@ -229,11 +202,7 @@ class _RecordingPageState extends State<RecordingPage> {
         }
       }
 
-      // Recordings
-      final recRes = await _safeGet(
-        ApiEndpoints.recordings,
-        query: {'page': 1, 'limit': 50, 'sortBy': 'createdAt', 'sortOrder': 'desc'},
-      );
+      final recRes = await _safeGet(ApiEndpoints.recordings, query: {'page': 1, 'limit': 50, 'sortBy': 'createdAt', 'sortOrder': 'desc'});
       List items = [];
       final rd = _unwrap(recRes?.data);
       if (rd != null) {
@@ -252,7 +221,6 @@ class _RecordingPageState extends State<RecordingPage> {
           'duration': m['durationSeconds'] ?? m['duration'] ?? 0,
           'fileUrl': m['fileUrl']?.toString(),
           'createdAt': m['createdAt']?.toString(),
-          'raw': m,
         };
       }).toList();
 
@@ -290,10 +258,7 @@ class _RecordingPageState extends State<RecordingPage> {
   Future<String> _resolveWarehouseId(String companyId, String? currentId) async {
     List<Map<String, dynamic>> warehouses = [];
     try {
-      final res = await _dio.get(
-        ApiEndpoints.warehouses,
-        queryParameters: {'page': 1, 'limit': 50, 'companyId': companyId},
-      );
+      final res = await _dio.get(ApiEndpoints.warehouses, queryParameters: {'page': 1, 'limit': 50, 'companyId': companyId});
       final data = _unwrap(res.data);
       List items = [];
       if (data != null) {
@@ -305,13 +270,8 @@ class _RecordingPageState extends State<RecordingPage> {
       warehouses = items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } catch (_) {}
 
-    if (warehouses.isEmpty) {
-      throw Exception('No warehouses found');
-    }
-
-    if (currentId != null && warehouses.any((w) => w['id']?.toString() == currentId)) {
-      return currentId;
-    }
+    if (warehouses.isEmpty) throw Exception('No warehouses found');
+    if (currentId != null && warehouses.any((w) => w['id']?.toString() == currentId)) return currentId;
 
     final fallback = warehouses.first['id']?.toString()!;
     final oid = order?['id']?.toString();
@@ -329,21 +289,15 @@ class _RecordingPageState extends State<RecordingPage> {
       _toast('No order loaded', error: true);
       return;
     }
-
     setState(() => isActionLoading = true);
-
     try {
       final companyId = order!['companyId']?.toString() ?? profile?['companyId']?.toString();
       var warehouseId = order!['warehouseId']?.toString();
       final orderId = order!['id']?.toString();
       final operatorId = profile?['id']?.toString();
 
-      if (operatorId == null || operatorId.isEmpty) {
-        throw Exception('Operator missing. Please re-login.');
-      }
-      if (companyId == null || orderId == null) {
-        throw Exception('Missing company or order id');
-      }
+      if (operatorId == null || operatorId.isEmpty) throw Exception('Operator missing. Please re-login.');
+      if (companyId == null || orderId == null) throw Exception('Missing company or order id');
 
       warehouseId = await _resolveWarehouseId(companyId, warehouseId);
 
@@ -354,31 +308,19 @@ class _RecordingPageState extends State<RecordingPage> {
           'warehouseId': warehouseId,
           'orderId': orderId,
           'operatorId': operatorId,
-          'originalFileName':
-              'pack_${order!['orderNumber'] ?? orderId}_${DateTime.now().millisecondsSinceEpoch}.mp4',
+          'originalFileName': 'pack_${order!['orderNumber'] ?? orderId}_${DateTime.now().millisecondsSinceEpoch}.mp4',
         },
       );
 
-      final session = _unwrap(createRes.data) ??
-          (createRes.data is Map ? Map<String, dynamic>.from(createRes.data as Map) : null);
-
-      if (session == null || session['id'] == null) {
-        throw Exception('Create recording returned no id');
-      }
+      final session = _unwrap(createRes.data) ?? (createRes.data is Map ? Map<String, dynamic>.from(createRes.data as Map) : null);
+      if (session == null || session['id'] == null) throw Exception('Create recording returned no id');
 
       final sessionId = session['id'].toString();
       await _dio.post('${ApiEndpoints.recordings}/$sessionId/start');
-
-      // Start actual camera recording
       await _startCameraRecording();
 
       setState(() {
-        activeSession = {
-          'id': sessionId,
-          'orderId': orderId,
-          'status': 'STARTED',
-          'duration': 0,
-        };
+        activeSession = {'id': sessionId, 'orderId': orderId, 'status': 'STARTED', 'duration': 0};
         isRecording = true;
         elapsedSeconds = 0;
         _startedAt = DateTime.now();
@@ -387,7 +329,7 @@ class _RecordingPageState extends State<RecordingPage> {
       });
 
       _tick();
-      _toast('Recording started (camera + server)');
+      _toast('Recording started');
       await _load();
     } catch (e) {
       setState(() => isActionLoading = false);
@@ -398,24 +340,15 @@ class _RecordingPageState extends State<RecordingPage> {
   Future<void> _stopRecording() async {
     final id = activeSession?['id']?.toString();
     if (id == null) return;
-
     setState(() => isActionLoading = true);
-
     try {
-      // Stop camera first
       final videoFile = await _stopCameraRecording();
       _lastVideoFile = videoFile;
-
-      // Stop server session
       await _dio.post('${ApiEndpoints.recordings}/$id/stop');
 
       setState(() {
         isRecording = false;
-        activeSession = {
-          ...?activeSession,
-          'status': 'STOPPED',
-          'duration': elapsedSeconds,
-        };
+        activeSession = {...?activeSession, 'status': 'STOPPED', 'duration': elapsedSeconds};
         isActionLoading = false;
         _startedAt = null;
       });
@@ -425,7 +358,6 @@ class _RecordingPageState extends State<RecordingPage> {
       } else {
         _toast('Recording stopped (${_fmtDuration(elapsedSeconds)})');
       }
-
       await _load();
     } catch (e) {
       setState(() => isActionLoading = false);
@@ -436,21 +368,17 @@ class _RecordingPageState extends State<RecordingPage> {
   Future<void> _markCompleted() async {
     final id = activeSession?['id']?.toString();
     if (id == null) return;
-
     setState(() => isActionLoading = true);
-
     try {
       try {
         await _dio.post('${ApiEndpoints.recordings}/$id/complete');
       } catch (_) {
         await _dio.patch('${ApiEndpoints.recordings}/$id', data: {'status': 'COMPLETED'});
       }
-
       setState(() {
         activeSession = {...?activeSession, 'status': 'COMPLETED'};
         isActionLoading = false;
       });
-
       _toast('Marked as Completed');
       await _load();
     } catch (e) {
@@ -473,9 +401,7 @@ class _RecordingPageState extends State<RecordingPage> {
   String _err(Object e) {
     if (e is DioException) {
       final d = e.response?.data;
-      if (d is Map) {
-        return (d['message'] ?? d['error'] ?? e.message ?? 'Request failed').toString();
-      }
+      if (d is Map) return (d['message'] ?? d['error'] ?? e.message ?? 'Request failed').toString();
       return e.message ?? 'Request failed';
     }
     return e.toString().replaceFirst('Exception: ', '');
@@ -483,14 +409,7 @@ class _RecordingPageState extends State<RecordingPage> {
 
   void _toast(String msg, {bool error = false}) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(msg),
-        backgroundColor: error ? Colors.red.shade700 : Colors.green.shade700,
-        behavior: SnackBarBehavior.floating,
-        duration: Duration(seconds: error ? 5 : 3),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: error ? Colors.red.shade700 : Colors.green.shade700, behavior: SnackBarBehavior.floating, duration: Duration(seconds: error ? 5 : 3)));
   }
 
   String _fmtDuration(int secs) {
@@ -519,21 +438,20 @@ class _RecordingPageState extends State<RecordingPage> {
 
   String get _operatorLabel {
     if (profile == null) return 'Not logged in';
-    final name = [profile!['firstName'], profile!['lastName']]
-        .where((e) => e != null && e.toString().isNotEmpty)
-        .join(' ');
+    final name = [profile!['firstName'], profile!['lastName']].where((e) => e != null && e.toString().isNotEmpty).join(' ');
     if (name.isNotEmpty) return name;
     return profile!['email']?.toString() ?? profile!['id']?.toString() ?? '—';
   }
 
-  // ─────────────────────────────────────────────
-  // UI
-  // ─────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 800;
+    final wide = screenWidth > 1000;
+
     return AppLayout(
-      title: 'Recordings & Evidence',
+      title: 'Recordings',
+      showBackButton: true,
       child: isLoading
           ? const Center(child: CircularProgressIndicator())
           : errorMessage != null
@@ -548,83 +466,96 @@ class _RecordingPageState extends State<RecordingPage> {
                   ),
                 )
               : SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
+                  padding: EdgeInsets.all(isMobile ? 14 : 24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          TextButton.icon(
-                            onPressed: () => context.go('/scanning'),
-                            icon: const Icon(Icons.arrow_back, size: 16),
-                            label: const Text('Back to Scanning'),
-                          ),
-                          const Spacer(),
-                          if (!_cameraReady && !kIsWeb)
-                            TextButton.icon(
-                              onPressed: _initCamera,
-                              icon: const Icon(Icons.videocam, size: 16),
-                              label: const Text('Retry Camera'),
-                            ),
-                          OutlinedButton.icon(
-                            onPressed: _load,
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Refresh'),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      LayoutBuilder(
-                        builder: (context, c) {
-                          final wide = c.maxWidth > 1000;
-                          
-                          // FIX: Removed Expanded inside SingleChildScrollView when stacked vertically (mobile view)
-                          if (wide) {
-                             return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                      // Header Actions
+                      if (isMobile)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
                               children: [
-                                Expanded(
-                                  flex: 6,
-                                  child: Column(
-                                    children: [
-                                      _playerCard(),
-                                      const SizedBox(height: 16),
-                                      _allRecordingsCard(),
-                                    ],
+                                if (!_cameraReady && !kIsWeb)
+                                  OutlinedButton.icon(
+                                    onPressed: _initCamera,
+                                    icon: const Icon(Icons.videocam, size: 16),
+                                    label: const Text('Retry Camera'),
                                   ),
+                                OutlinedButton.icon(
+                                  onPressed: _load,
+                                  icon: const Icon(Icons.refresh, size: 16),
+                                  label: const Text('Refresh'),
                                 ),
-                                const SizedBox(width: 16),
-                                Expanded(flex: 4, child: _detailsCard()),
                               ],
-                            );
-                          } else {
-                            // Mobile layout: Stack items vertically without Expanded
-                            return Column(
-                               crossAxisAlignment: CrossAxisAlignment.stretch,
-                               children: [
-                                 _playerCard(),
-                                 const SizedBox(height: 16),
-                                 _detailsCard(),
-                                 const SizedBox(height: 16),
-                                 _allRecordingsCard(),
-                               ],
-                            );
-                          }
-                        },
-                      ),
+                            ),
+                          ],
+                        )
+                      else
+                        Row(
+                          children: [
+                            const Spacer(),
+                            if (!_cameraReady && !kIsWeb)
+                              TextButton.icon(
+                                onPressed: _initCamera,
+                                icon: const Icon(Icons.videocam, size: 16),
+                                label: const Text('Retry Camera'),
+                              ),
+                            OutlinedButton.icon(
+                              onPressed: _load,
+                              icon: const Icon(Icons.refresh, size: 16),
+                              label: const Text('Refresh'),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 16),
+
+                      // Main Content Area
+                      if (wide)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(
+                              flex: 6,
+                              child: Column(
+                                children: [
+                                  _playerCard(isMobile),
+                                  const SizedBox(height: 16),
+                                  _allRecordingsCard(),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(flex: 4, child: _detailsCard(isMobile)),
+                          ],
+                        )
+                      else
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _playerCard(isMobile),
+                            const SizedBox(height: 16),
+                            _detailsCard(isMobile),
+                            const SizedBox(height: 16),
+                            _allRecordingsCard(),
+                          ],
+                        ),
                     ],
                   ),
                 ),
     );
   }
 
-  Widget _playerCard() {
+  Widget _playerCard(bool isMobile) {
     final status = (activeSession?['status'] ?? 'NONE').toString().toUpperCase();
     final isStopped = status.contains('STOP');
     final isCompleted = status.contains('COMPLETE') || status.contains('UPLOAD');
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -635,38 +566,27 @@ class _RecordingPageState extends State<RecordingPage> {
         children: [
           Row(
             children: [
-              const Text(
-                'Live Camera + Recording',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E2329),
+              Flexible(
+                child: Text(
+                  'Live Camera + Recording',
+                  style: TextStyle(
+                    fontSize: isMobile ? 15 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF1E2329),
+                  ),
                 ),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               if (isRecording)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
+                  decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(20)),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                      ),
+                      Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
                       const SizedBox(width: 6),
-                      Text(
-                        'REC  ${_fmtDuration(elapsedSeconds)}',
-                        style: TextStyle(
-                          color: Colors.red.shade700,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
+                      Text('REC  ${_fmtDuration(elapsedSeconds)}', style: TextStyle(color: Colors.red.shade700, fontWeight: FontWeight.bold, fontSize: 12)),
                     ],
                   ),
                 ),
@@ -674,19 +594,14 @@ class _RecordingPageState extends State<RecordingPage> {
           ),
           const SizedBox(height: 14),
 
-          // Camera Preview / Placeholder
           AspectRatio(
-            aspectRatio: 16 / 9,
+            aspectRatio: isMobile ? 4 / 3 : 16 / 9,
             child: Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF0B1220),
-                borderRadius: BorderRadius.circular(12),
-              ),
+              decoration: BoxDecoration(color: const Color(0xFF0B1220), borderRadius: BorderRadius.circular(12)),
               clipBehavior: Clip.antiAlias,
               child: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Real camera preview
                   if (_cameraReady && _cameraController != null)
                     CameraPreview(_cameraController!)
                   else
@@ -697,63 +612,32 @@ class _RecordingPageState extends State<RecordingPage> {
                           if (_isInitializingCamera)
                             const CircularProgressIndicator(color: Colors.white54)
                           else
-                            Icon(
-                              isCompleted
-                                  ? Icons.check_circle_outline
-                                  : Icons.videocam_off,
-                              size: 56,
-                              color: Colors.white24,
-                            ),
+                            Icon(isCompleted ? Icons.check_circle_outline : Icons.videocam_off, size: 56, color: Colors.white24),
                           const SizedBox(height: 12),
-                          Text(
-                            _cameraError ??
-                                (kIsWeb
-                                    ? 'Web: Camera recording limited. Use mobile/tablet for full capture.'
-                                    : 'Camera not ready'),
-                            textAlign: TextAlign.center,
-                            style: const TextStyle(color: Colors.white54, fontSize: 12),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              _cameraError ?? (kIsWeb ? 'Web: Camera recording limited. Use mobile/tablet.' : 'Camera not ready'),
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Colors.white54, fontSize: 12),
+                            ),
                           ),
                         ],
                       ),
                     ),
-
-                  // REC badge
                   if (isRecording)
                     Positioned(
-                      top: 12,
-                      left: 12,
+                      top: 12, left: 12,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Text(
-                          '● REC',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
-                          ),
-                        ),
+                        decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
+                        child: const Text('● REC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
                       ),
                     ),
-
-                  // Bottom status text
                   Positioned(
-                    bottom: 12,
-                    left: 12,
-                    right: 12,
+                    bottom: 12, left: 12, right: 12,
                     child: Text(
-                      isRecording
-                          ? 'Recording in progress (camera + server session)'
-                          : isCompleted
-                              ? 'Recording completed'
-                              : isStopped
-                                  ? 'Stopped — Mark Completed or start new'
-                                  : _cameraReady
-                                      ? 'Camera ready — press Start Recording'
-                                      : 'Initializing camera...',
+                      isRecording ? 'Recording in progress' : isCompleted ? 'Recording completed' : isStopped ? 'Stopped — Mark Completed' : _cameraReady ? 'Camera ready — press Start' : 'Initializing...',
                       textAlign: TextAlign.center,
                       style: const TextStyle(color: Colors.white70, fontSize: 12),
                     ),
@@ -764,84 +648,96 @@ class _RecordingPageState extends State<RecordingPage> {
           ),
           const SizedBox(height: 14),
 
-          // Action buttons
-          Row(
-            children: [
-              if (!isRecording) ...[
-                Expanded(
-                  child: FilledButton.icon(
+          if (isMobile)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (!isRecording) ...[
+                  FilledButton.icon(
                     onPressed: isActionLoading ? null : _startRecording,
                     icon: const Icon(Icons.fiber_manual_record, size: 18),
                     label: Text(isActionLoading ? 'Starting…' : 'Start Recording'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.red.shade600,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                   ),
-                ),
-                if (isStopped && !isCompleted) ...[
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: OutlinedButton.icon(
+                  if (isStopped && !isCompleted) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
                       onPressed: isActionLoading ? null : _markCompleted,
                       icon: const Icon(Icons.check_circle_outline, size: 18),
                       label: const Text('Mark Completed'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.green.shade700,
-                        side: BorderSide(color: Colors.green.shade300),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
+                      style: OutlinedButton.styleFrom(foregroundColor: Colors.green.shade700, side: BorderSide(color: Colors.green.shade300), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                     ),
-                  ),
-                ],
-              ] else ...[
-                Expanded(
-                  child: FilledButton.icon(
+                  ],
+                ] else ...[
+                  FilledButton.icon(
                     onPressed: isActionLoading ? null : _stopRecording,
                     icon: const Icon(Icons.stop, size: 18),
                     label: Text(isActionLoading ? 'Stopping…' : 'Stop Recording'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF1E2329),
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
+                    style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1E2329), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                   ),
+                ],
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/scanning'),
+                  icon: const Icon(Icons.qr_code_scanner, size: 16),
+                  label: const Text('Scan next'),
+                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                 ),
               ],
-              const SizedBox(width: 10),
-              OutlinedButton.icon(
-                onPressed: () => context.go('/scanning'),
-                icon: const Icon(Icons.qr_code_scanner, size: 16),
-                label: const Text('Scan next'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            )
+          else
+            Row(
+              children: [
+                if (!isRecording) ...[
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: isActionLoading ? null : _startRecording,
+                      icon: const Icon(Icons.fiber_manual_record, size: 18),
+                      label: Text(isActionLoading ? 'Starting…' : 'Start Recording'),
+                      style: FilledButton.styleFrom(backgroundColor: Colors.red.shade600, padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                    ),
+                  ),
+                  if (isStopped && !isCompleted) ...[
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: isActionLoading ? null : _markCompleted,
+                        icon: const Icon(Icons.check_circle_outline, size: 18),
+                        label: const Text('Mark Completed'),
+                        style: OutlinedButton.styleFrom(foregroundColor: Colors.green.shade700, side: BorderSide(color: Colors.green.shade300), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                      ),
+                    ),
+                  ],
+                ] else ...[
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: isActionLoading ? null : _stopRecording,
+                      icon: const Icon(Icons.stop, size: 18),
+                      label: Text(isActionLoading ? 'Stopping…' : 'Stop Recording'),
+                      style: FilledButton.styleFrom(backgroundColor: const Color(0xFF1E2329), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 10),
+                OutlinedButton.icon(
+                  onPressed: () => context.go('/scanning'),
+                  icon: const Icon(Icons.qr_code_scanner, size: 16),
+                  label: const Text('Scan next'),
+                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
                 ),
-              ),
-            ],
-          ),
+              ],
+            ),
 
-          // Show last saved file
           if (_lastVideoFile != null) ...[
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green.shade200),
-              ),
+              decoration: BoxDecoration(color: Colors.green.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.green.shade200)),
               child: Row(
                 children: [
                   Icon(Icons.video_file, color: Colors.green.shade700, size: 20),
                   const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Saved: ${path.basename(_lastVideoFile!.path)}',
-                      style: TextStyle(fontSize: 12, color: Colors.green.shade800),
-                    ),
-                  ),
+                  Expanded(child: Text('Saved: ${path.basename(_lastVideoFile!.path)}', style: TextStyle(fontSize: 12, color: Colors.green.shade800))),
                 ],
               ),
             ),
@@ -851,12 +747,12 @@ class _RecordingPageState extends State<RecordingPage> {
     );
   }
 
-  Widget _detailsCard() {
+  Widget _detailsCard(bool isMobile) {
     final o = order;
     final status = (activeSession?['status'] ?? 'None').toString();
 
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -865,64 +761,45 @@ class _RecordingPageState extends State<RecordingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Recording Details',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329)),
-          ),
+          const Text('Recording Details', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
           const SizedBox(height: 16),
           if (o == null)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
               child: Column(
                 children: [
-                  Text('No order linked. Scan an order first.',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                      textAlign: TextAlign.center),
+                  Text('No order linked. Scan an order first.', style: TextStyle(color: Colors.grey.shade600, fontSize: 13), textAlign: TextAlign.center),
                   const SizedBox(height: 12),
-                  FilledButton(
-                    onPressed: () => context.go('/scanning'),
-                    child: const Text('Go to Scanning'),
-                  ),
+                  FilledButton(onPressed: () => context.go('/scanning'), child: const Text('Go to Scanning')),
                 ],
               ),
             )
           else ...[
-            _row('Order ID', (o['orderNumber'] ?? o['id'] ?? '—').toString()),
-            _row('Customer', (o['customerName'] ?? '—').toString()),
-            _row('Status', (o['status'] ?? '—').toString()),
-            _row('Marketplace', (o['marketplace'] ?? '—').toString()),
-            _row('AWB', (o['awbNumber'] ?? o['trackingNumber'] ?? '—').toString()),
+            _row('Order ID', (o['orderNumber'] ?? o['id'] ?? '—').toString(), isMobile),
+            _row('Customer', (o['customerName'] ?? '—').toString(), isMobile),
+            _row('Status', (o['status'] ?? '—').toString(), isMobile),
+            _row('Marketplace', (o['marketplace'] ?? '—').toString(), isMobile),
+            _row('AWB', (o['awbNumber'] ?? o['trackingNumber'] ?? '—').toString(), isMobile),
             const Divider(height: 28),
-            _row('Session', activeSession?['id'] != null
-                ? activeSession!['id'].toString().substring(0, 8)
-                : '—'),
-            _row('Session status', status),
-            _row('Duration', isRecording
-                ? _fmtDuration(elapsedSeconds)
-                : _fmtDuration((activeSession?['duration'] as num?)?.toInt() ?? 0)),
-            _row('Operator', _operatorLabel),
-            _row('Camera', _cameraReady ? 'Ready' : (_cameraError ?? 'Not ready')),
+            _row('Session', activeSession?['id'] != null ? activeSession!['id'].toString().substring(0, 8) : '—', isMobile),
+            _row('Session status', status, isMobile),
+            _row('Duration', isRecording ? _fmtDuration(elapsedSeconds) : _fmtDuration((activeSession?['duration'] as num?)?.toInt() ?? 0), isMobile),
+            _row('Operator', _operatorLabel, isMobile),
+            _row('Camera', _cameraReady ? 'Ready' : (_cameraError ?? 'Not ready'), isMobile),
           ],
         ],
       ),
     );
   }
 
-  Widget _row(String label, String value) {
+  Widget _row(String label, String value, bool isMobile) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 120,
-            child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500)),
-          ),
-          Expanded(
-            child: Text(value,
-                style: const TextStyle(
-                    fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E2329))),
-          ),
+          SizedBox(width: isMobile ? 100 : 120, child: Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade500))),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF1E2329)))),
         ],
       ),
     );
@@ -931,6 +808,7 @@ class _RecordingPageState extends State<RecordingPage> {
   Widget _allRecordingsCard() {
     return Container(
       padding: const EdgeInsets.all(18),
+      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -939,18 +817,12 @@ class _RecordingPageState extends State<RecordingPage> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'All Recordings',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329)),
-          ),
+          const Text('All Recordings', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
           const SizedBox(height: 12),
           if (recordings.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text('No recording sessions yet',
-                    style: TextStyle(color: Colors.grey.shade500, fontSize: 13)),
-              ),
+              child: Center(child: Text('No recording sessions yet', style: TextStyle(color: Colors.grey.shade500, fontSize: 13))),
             )
           else
             SingleChildScrollView(
@@ -968,24 +840,15 @@ class _RecordingPageState extends State<RecordingPage> {
                   final st = r['status'].toString();
                   final color = _statusColor(st);
                   return DataRow(cells: [
-                    DataCell(Text(r['id'].toString().length > 8
-                        ? r['id'].toString().substring(0, 8)
-                        : r['id'].toString())),
-                    DataCell(Text(r['orderId'].toString().length > 8
-                        ? r['orderId'].toString().substring(0, 8)
-                        : r['orderId'].toString())),
+                    DataCell(Text(r['id'].toString().length > 8 ? r['id'].toString().substring(0, 8) : r['id'].toString())),
+                    DataCell(Text(r['orderId'].toString().length > 8 ? r['orderId'].toString().substring(0, 8) : r['orderId'].toString())),
                     DataCell(Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.12),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(st,
-                          style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
+                      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+                      child: Text(st, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
                     )),
                     DataCell(Text(_fmtDuration((r['duration'] as num?)?.toInt() ?? 0))),
-                    DataCell(Text(_fmtDate(r['createdAt']),
-                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
+                    DataCell(Text(_fmtDate(r['createdAt']), style: TextStyle(fontSize: 12, color: Colors.grey.shade600))),
                   ]);
                 }).toList(),
               ),

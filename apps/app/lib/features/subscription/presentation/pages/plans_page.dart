@@ -24,11 +24,11 @@ class _PlansPageState extends State<PlansPage> {
               child: Icon(Icons.bolt, color: Colors.blue.shade700),
             ),
             const SizedBox(width: 12),
-            Text("Switch to $planName Plan", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Expanded(child: Text("Switch to $planName", style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
           ],
         ),
         content: SizedBox(
-          width: 420,
+          width: MediaQuery.of(context).size.width < 600 ? double.infinity : 420,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -53,7 +53,7 @@ class _PlansPageState extends State<PlansPage> {
                 children: [
                   Icon(Icons.lock_outline, size: 16, color: Colors.grey),
                   SizedBox(width: 6),
-                  Text("Secure 256-bit SSL Encrypted Transaction", style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Expanded(child: Text("Secure 256-bit SSL Encrypted Transaction", style: TextStyle(fontSize: 11, color: Colors.grey))),
                 ],
               )
             ],
@@ -109,13 +109,14 @@ class _PlansPageState extends State<PlansPage> {
             LayoutBuilder(
               builder: (context, constraints) {
                 final isWide = constraints.maxWidth > 1200;
+                final isMobile = constraints.maxWidth < 650;
                 return Wrap(
                   spacing: 24,
                   runSpacing: 24,
                   alignment: WrapAlignment.center,
                   children: [
                     SizedBox(
-                      width: isWide ? 270 : (constraints.maxWidth > 600 ? 340 : double.infinity),
+                      width: isWide ? 270 : (isMobile ? double.infinity : 340),
                       child: _buildPricingCard(
                         title: "Free",
                         subtitle: "For getting started",
@@ -128,7 +129,7 @@ class _PlansPageState extends State<PlansPage> {
                       ),
                     ),
                     SizedBox(
-                      width: isWide ? 270 : (constraints.maxWidth > 600 ? 340 : double.infinity),
+                      width: isWide ? 270 : (isMobile ? double.infinity : 340),
                       child: _buildPricingCard(
                         title: "Basic",
                         subtitle: "For small warehouses",
@@ -141,7 +142,7 @@ class _PlansPageState extends State<PlansPage> {
                       ),
                     ),
                     SizedBox(
-                      width: isWide ? 270 : (constraints.maxWidth > 600 ? 340 : double.infinity),
+                      width: isWide ? 270 : (isMobile ? double.infinity : 340),
                       child: _buildPricingCard(
                         title: "Professional",
                         subtitle: "For growing businesses",
@@ -154,7 +155,7 @@ class _PlansPageState extends State<PlansPage> {
                       ),
                     ),
                     SizedBox(
-                      width: isWide ? 270 : (constraints.maxWidth > 600 ? 340 : double.infinity),
+                      width: isWide ? 270 : (isMobile ? double.infinity : 340),
                       child: _buildPricingCard(
                         title: "Enterprise",
                         subtitle: "For large operations",
@@ -206,21 +207,23 @@ class _PlansPageState extends State<PlansPage> {
                 child: Icon(Icons.diamond_outlined, color: Colors.blue.shade700, size: 28),
               ),
               const SizedBox(width: 16),
-              const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text("Choose the perfect plan for your business", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                  SizedBox(height: 4),
-                  Text("Scale as you grow. Upgrade or downgrade anytime seamlessly.", style: TextStyle(color: Colors.grey, fontSize: 13)),
-                ],
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Choose the perfect plan", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    SizedBox(height: 4),
+                    Text("Scale as you grow. Upgrade or downgrade anytime seamlessly.", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                  ],
+                ),
               ),
             ],
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          Wrap(
+            spacing: 24,
+            runSpacing: 12,
             children: [
-              _traitsBadge(Icons.security, "Secure & Reliable", "99.9% uptime"),
-              const SizedBox(width: 24),
+              _traitsBadge(Icons.security, "Secure", "99.9% uptime"),
               _traitsBadge(Icons.support_agent, "24/7 Support", "Dedicated team"),
             ],
           )
@@ -231,6 +234,7 @@ class _PlansPageState extends State<PlansPage> {
 
   Widget _traitsBadge(IconData icon, String title, String subtitle) {
     return Row(
+      mainAxisSize: MainAxisSize.min,
       children: [
         Icon(icon, color: Colors.blue.shade700, size: 20),
         const SizedBox(width: 8),
@@ -267,7 +271,7 @@ class _PlansPageState extends State<PlansPage> {
         ),
         boxShadow: [
           if (isPopular)
-            BoxShadow(color: const Color(0xFF6366F1).withValues(alpha: 0.12), blurRadius: 20, offset: const Offset(0, 6))
+            BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.12), blurRadius: 20, offset: const Offset(0, 6))
         ],
       ),
       child: Column(
@@ -419,11 +423,12 @@ class _PlansPageState extends State<PlansPage> {
       child: Wrap(
         alignment: WrapAlignment.spaceAround,
         runSpacing: 16,
+        spacing: 16,
         children: [
-          _trustItem(Icons.verified_user, "30-Day Money Back", "Risk-free trial guarantee"),
-          _trustItem(Icons.lock, "Secure Payments", "256-bit SSL encrypted"),
-          _trustItem(Icons.autorenew, "No Lock-in Contracts", "Cancel anytime easily"),
-          _trustItem(Icons.star, "Trusted by 500+", "Global warehouse leaders"),
+          _trustItem(Icons.verified_user, "30-Day Money Back", "Risk-free trial"),
+          _trustItem(Icons.lock, "Secure Payments", "SSL encrypted"),
+          _trustItem(Icons.autorenew, "No Lock-in", "Cancel anytime"),
+          _trustItem(Icons.star, "Trusted by 500+", "Global leaders"),
         ],
       ),
     );
