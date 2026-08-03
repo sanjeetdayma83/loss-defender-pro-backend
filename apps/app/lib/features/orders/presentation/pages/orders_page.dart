@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/layout/app_layout.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
 
 class OrdersPage extends StatefulWidget {
   const OrdersPage({super.key});
@@ -13,11 +14,28 @@ class OrdersPage extends StatefulWidget {
 
 class _OrdersPageState extends State<OrdersPage> {
   final Dio _dio = ApiClient.dio;
+  final TextEditingController _searchCtrl = TextEditingController();
+
   bool isLoading = true;
-  List<Map<String, dynamic>> ordersList = [];
-  List<Map<String, dynamic>> filteredOrders = [];
-  String searchQuery = "";
-  String selectedFilter = "All";
+  String? errorMessage;
+  List<Map<String, dynamic>> orders = [];
+  List<Map<String, dynamic>> filtered = [];
+  String statusFilter = 'ALL';
+  int totalCount = 0;
+
+  static const statusFilters = [
+    'ALL',
+    'CREATED',
+    'ASSIGNED',
+    'PACKING',
+    'RECORDING',
+    'VERIFYING',
+    'SHIPPED',
+    'DELIVERED',
+    'CANCELLED',
+    'RETURNED',
+    'CLAIMED',
+  ];
 
   @override
   void initState() {
@@ -25,217 +43,377 @@ class _OrdersPageState extends State<OrdersPage> {
     fetchOrders();
   }
 
+  @override
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  Map<String, dynamic>? _unwrap(dynamic body) {
+    if (body is! Map) return null;
+    final map = Map<String, dynamic>.from(body);
+    if (map['data'] is Map) return Map<String, dynamic>.from(map['data'] as Map);
+    return map;
+  }
+
   Future<void> fetchOrders() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
     try {
-      final response = await _dio.get('/orders');
-      final data = response.data;
+      final res = await _dio.get(
+        ApiEndpoints.orders,
+        queryParameters: {'page': 1, 'limit': 50, 'sortBy': 'createdAt', 'sortOrder': 'desc'},
+      );
+
+      final data = _unwrap(res.data);
       List items = [];
-      if (data is List) {
-        items = data;
-      } else if (data is Map && data.containsKey('data')) {
-        items = data['data'];
+      if (data != null) {
+        if (data['items'] is List) {
+          items = data['items'] as List;
+          totalCount = (data['total'] as num?)?.toInt() ?? items.length;
+        } else if (data['data'] is List) {
+          items = data['data'] as List;
+          totalCount = items.length;
+        }
+      } else if (res.data is List) {
+        items = res.data as List;
+        totalCount = items.length;
       }
 
-      setState(() {
-        ordersList = List<Map<String, dynamic>>.from(items.map((e) {
-          String customerName = "Enterprise Client";
-          final rawCustomer = e["customer"] ?? e["customerName"];
-          if (rawCustomer is Map) {
-            customerName = rawCustomer["name"] ?? rawCustomer["fullName"] ?? "Enterprise Client";
-          } else if (rawCustomer is String) {
-            customerName = rawCustomer;
-          }
+      orders = items.map<Map<String, dynamic>>((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        final customer = m['customerName'] ??
+            (m['customer'] is Map
+                ? (m['customer']['name'] ?? m['customer']['fullName'])
+                : m['customer']) ??
+            '—';
 
-          return {
-            "id": e["id"] ?? e["_id"] ?? "ORD-001",
-            "orderId": e["orderId"] ?? e["id"]?.toString() ?? "ORD-001",
-            "awb": e["awb"] ?? e["trackingId"] ?? "AWB123456",
-            "customer": customerName,
-            "status": e["status"] ?? "COMPLETED",
-            "totalAmount": e["totalAmount"] ?? e["amount"] ?? 5000,
-            "date": e["createdAt"]?.toString().substring(0, 10) ?? "2026-08-01",
-          };
-        }));
-        filteredOrders = ordersList;
-        isLoading = false;
-      });
+        return {
+          'id': m['id']?.toString() ?? '',
+          'orderNumber': m['orderNumber']?.toString() ?? m['id']?.toString() ?? '—',
+          'awb': m['awbNumber'] ?? m['trackingNumber'] ?? m['marketplaceShipmentId'] ?? '—',
+          'customer': customer.toString(),
+          'phone': m['customerPhone']?.toString() ?? '—',
+          'status': (m['status'] ?? 'UNKNOWN').toString(),
+          'priority': (m['priority'] ?? 'MEDIUM').toString(),
+          'marketplace': (m['marketplace'] ?? '—').toString(),
+          'warehouseId': m['warehouseId']?.toString() ?? '',
+          'date': _formatDate(m['createdAt']),
+          'raw': m,
+        };
+      }).toList();
+
+      _applyFilters();
+      setState(() => isLoading = false);
     } catch (e) {
-      // Robust mock fallback if backend is offline
       setState(() {
-        ordersList = [
-          {"id": "1", "orderId": "ORD-2026-001", "awb": "AWB987654321", "customer": "Shri Balaji Trading Co.", "status": "VERIFIED", "totalAmount": 12400, "date": "2026-08-01"},
-          {"id": "2", "orderId": "ORD-2026-002", "awb": "AWB876543210", "customer": "Sharma Logistics", "status": "PENDING", "totalAmount": 8500, "date": "2026-08-02"},
-          {"id": "3", "orderId": "ORD-2026-003", "awb": "AWB765432109", "customer": "Vikas Enterprises", "status": "EXCEPTION", "totalAmount": 15200, "date": "2026-08-03"},
-        ];
-        filteredOrders = ordersList;
         isLoading = false;
+        errorMessage = e is DioException
+            ? (e.response?.data is Map
+                ? (e.response!.data['message']?.toString() ?? e.message)
+                : e.message)
+            : e.toString();
       });
     }
   }
 
-  void filterOrders(String query) {
-    setState(() {
-      searchQuery = query;
-      filteredOrders = ordersList.where((order) {
-        final matchesSearch = order["orderId"].toString().toLowerCase().contains(query.toLowerCase()) ||
-            order["awb"].toString().toLowerCase().contains(query.toLowerCase()) ||
-            order["customer"].toString().toLowerCase().contains(query.toLowerCase());
-        
-        final matchesTab = selectedFilter == "All" || order["status"].toString().toUpperCase() == selectedFilter.toUpperCase();
-        return matchesSearch && matchesTab;
-      }).toList();
-    });
+  void _applyFilters() {
+    final q = _searchCtrl.text.trim().toLowerCase();
+    filtered = orders.where((o) {
+      final matchStatus =
+          statusFilter == 'ALL' || o['status'].toString().toUpperCase() == statusFilter;
+      if (!matchStatus) return false;
+      if (q.isEmpty) return true;
+      return o['orderNumber'].toString().toLowerCase().contains(q) ||
+          o['awb'].toString().toLowerCase().contains(q) ||
+          o['customer'].toString().toLowerCase().contains(q);
+    }).toList();
+    setState(() {});
   }
 
-  void setTabFilter(String filter) {
-    setState(() {
-      selectedFilter = filter;
-      filterOrders(searchQuery);
-    });
+  String _formatDate(dynamic raw) {
+    if (raw == null) return '—';
+    try {
+      final dt = DateTime.parse(raw.toString()).toLocal();
+      const months = [
+        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      return '${dt.day.toString().padLeft(2, '0')} ${months[dt.month]} ${dt.year}';
+    } catch (_) {
+      return raw.toString().length >= 10 ? raw.toString().substring(0, 10) : raw.toString();
+    }
+  }
+
+  Color _statusColor(String status) {
+    final s = status.toUpperCase();
+    if (s.contains('DELIVER') || s.contains('SHIP') || s == 'VERIFIED') return Colors.green;
+    if (s.contains('CANCEL') || s.contains('RETURN') || s.contains('CLAIM')) return Colors.red;
+    if (s.contains('CREATED') || s.contains('ASSIGN') || s.contains('PACK') ||
+        s.contains('RECORD') || s.contains('VERIF') || s.contains('PEND')) {
+      return Colors.orange;
+    }
+    return Colors.blueGrey;
   }
 
   @override
   Widget build(BuildContext context) {
     return AppLayout(
-      title: "Order Management",
+      title: 'Orders',
       child: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Top Header & Search / Sync Bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          : errorMessage != null
+              ? _errorState()
+              : Padding(
+                  padding: const EdgeInsets.all(28),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                      // Header
+                      Row(
                         children: [
-                          Text("All Warehouse Orders", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                          SizedBox(height: 4),
-                          Text("Monitor tracking, scanning status and dispatch audits", style: TextStyle(color: Colors.grey, fontSize: 13)),
-                        ],
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: fetchOrders,
-                        icon: const Icon(Icons.refresh, size: 16),
-                        label: const Text("Sync Orders API"),
-                        style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Filter Tabs & Search Field Card
-                  Card(
-                    elevation: 0,
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            alignment: WrapAlignment.spaceBetween,
-                            children: [
-                              Wrap(
-                                spacing: 8,
-                                children: [
-                                  _filterChip("All"),
-                                  _filterChip("VERIFIED"),
-                                  _filterChip("PENDING"),
-                                  _filterChip("EXCEPTION"),
-                                ],
-                              ),
-                              SizedBox(
-                                width: 300,
-                                child: TextField(
-                                  onChanged: filterOrders,
-                                  decoration: InputDecoration(
-                                    hintText: "Search Order ID, AWB, Customer...",
-                                    prefixIcon: const Icon(Icons.search, size: 18),
-                                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: Colors.grey.shade300)),
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Orders Management',
+                                  style: TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                    color: Color(0xFF1E2329),
                                   ),
                                 ),
-                              ),
-                            ],
+                                const SizedBox(height: 4),
+                                Text(
+                                  '$totalCount total orders · showing ${filtered.length}',
+                                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                ),
+                              ],
+                            ),
                           ),
-                          const SizedBox(height: 20),
-
-                          // Full Width Orders Table
-                          SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: SizedBox(
-                              width: 1000,
-                              child: DataTable(
-                                headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                                columns: const [
-                                  DataColumn(label: Text("Order ID", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("AWB Tracking", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Customer Name", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Amount", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Date", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Action", style: TextStyle(fontWeight: FontWeight.bold))),
-                                ],
-                                rows: filteredOrders.map((order) {
-                                  final status = order["status"].toString().toUpperCase();
-                                  Color statusColor = Colors.blue;
-                                  if (status.contains("VERIFY") || status.contains("COMPLETED")) statusColor = Colors.green;
-                                  if (status.contains("PENDING")) statusColor = Colors.orange;
-                                  if (status.contains("EXCEPTION") || status.contains("CANCEL")) statusColor = Colors.red;
-
-                                  return DataRow(
-                                    cells: [
-                                      DataCell(Text(order["orderId"].toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      DataCell(Text(order["awb"].toString(), style: const TextStyle(color: Colors.grey))),
-                                      DataCell(Text(order["customer"].toString())),
-                                      DataCell(Text("₹${order["totalAmount"]}")),
-                                      DataCell(
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                                          child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ),
-                                      DataCell(Text(order["date"].toString(), style: const TextStyle(color: Colors.grey))),
-                                      DataCell(
-                                        TextButton.icon(
-                                          onPressed: () => context.go('/recording?orderId=${order["orderId"]}'),
-                                          icon: const Icon(Icons.videocam, size: 16),
-                                          label: const Text("Audit Video"),
-                                        ),
-                                      ),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
+                          OutlinedButton.icon(
+                            onPressed: fetchOrders,
+                            icon: const Icon(Icons.refresh, size: 16),
+                            label: const Text('Refresh'),
+                          ),
+                          const SizedBox(width: 10),
+                          FilledButton.icon(
+                            onPressed: () => context.go('/scanning'),
+                            icon: const Icon(Icons.qr_code_scanner, size: 16),
+                            label: const Text('Scan Order'),
+                            style: FilledButton.styleFrom(
+                              backgroundColor: const Color(0xFF1E40AF),
+                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                             ),
                           ),
                         ],
                       ),
-                    ),
+                      const SizedBox(height: 20),
+
+                      // Search + filters
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: SizedBox(
+                                height: 42,
+                                child: TextField(
+                                  controller: _searchCtrl,
+                                  onChanged: (_) => _applyFilters(),
+                                  decoration: InputDecoration(
+                                    hintText: 'Search order #, AWB, customer…',
+                                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                                    prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                                    filled: true,
+                                    fillColor: Colors.grey.shade50,
+                                    contentPadding: EdgeInsets.zero,
+                                    border: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: Colors.grey.shade200),
+                                    ),
+                                    enabledBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: Colors.grey.shade200),
+                                    ),
+                                    focusedBorder: OutlineInputBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                      borderSide: BorderSide(color: Colors.blue.shade300),
+                                    ),
+                                  ),
+                                  style: const TextStyle(fontSize: 13),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Container(
+                              height: 42,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  value: statusFilter,
+                                  items: statusFilters
+                                      .map((s) => DropdownMenuItem(
+                                            value: s,
+                                            child: Text(s, style: const TextStyle(fontSize: 13)),
+                                          ))
+                                      .toList(),
+                                  onChanged: (v) {
+                                    if (v == null) return;
+                                    statusFilter = v;
+                                    _applyFilters();
+                                  },
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Table
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: filtered.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade300),
+                                      const SizedBox(height: 12),
+                                      Text(
+                                        orders.isEmpty
+                                            ? 'No orders in database yet'
+                                            : 'No orders match your filters',
+                                        style: TextStyle(color: Colors.grey.shade600),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : SingleChildScrollView(
+                                  child: SingleChildScrollView(
+                                    scrollDirection: Axis.horizontal,
+                                    child: DataTable(
+                                      headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                                      dataRowMinHeight: 52,
+                                      dataRowMaxHeight: 56,
+                                      columns: const [
+                                        DataColumn(label: Text('Order ID', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        DataColumn(label: Text('AWB / Tracking', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        DataColumn(label: Text('Customer', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        DataColumn(label: Text('Marketplace', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        DataColumn(label: Text('Priority', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold))),
+                                        DataColumn(label: Text('Action', style: TextStyle(fontWeight: FontWeight.bold))),
+                                      ],
+                                      rows: filtered.map((order) {
+                                        final status = order['status'].toString();
+                                        final color = _statusColor(status);
+                                        return DataRow(cells: [
+                                          DataCell(Text(
+                                            order['orderNumber'].toString(),
+                                            style: const TextStyle(fontWeight: FontWeight.w600),
+                                          )),
+                                          DataCell(Text(
+                                            order['awb'].toString(),
+                                            style: TextStyle(color: Colors.grey.shade600),
+                                          )),
+                                          DataCell(Text(order['customer'].toString())),
+                                          DataCell(Text(order['marketplace'].toString())),
+                                          DataCell(Text(order['priority'].toString())),
+                                          DataCell(
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: color.withValues(alpha: 0.12),
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                status,
+                                                style: TextStyle(
+                                                  color: color,
+                                                  fontSize: 11,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                          DataCell(Text(
+                                            order['date'].toString(),
+                                            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                          )),
+                                          DataCell(
+                                            TextButton(
+                                              onPressed: () {
+                                                // Future: order detail page
+                                                ScaffoldMessenger.of(context).showSnackBar(
+                                                  SnackBar(
+                                                    content: Text('Order ${order['orderNumber']}'),
+                                                    behavior: SnackBarBehavior.floating,
+                                                  ),
+                                                );
+                                              },
+                                              child: const Text('View'),
+                                            ),
+                                          ),
+                                        ]);
+                                      }).toList(),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
+                ),
     );
   }
 
-  Widget _filterChip(String label) {
-    final isSelected = selectedFilter == label;
-    return ChoiceChip(
-      label: Text(label),
-      selected: isSelected,
-      onSelected: (_) => setTabFilter(label),
-      selectedColor: Colors.blue.shade100,
-      labelStyle: TextStyle(color: isSelected ? Colors.blue.shade800 : Colors.black87, fontWeight: FontWeight.bold),
+  Widget _errorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.cloud_off, size: 56, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            const Text('Could not load orders', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 8),
+            Text(
+              errorMessage ?? '',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+            ),
+            const SizedBox(height: 20),
+            FilledButton.icon(
+              onPressed: fetchOrders,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Retry'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

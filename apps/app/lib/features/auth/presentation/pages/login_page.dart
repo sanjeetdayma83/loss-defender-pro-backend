@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../data/repositories/auth_repository.dart';
+import 'package:dio/dio.dart';
+import '../../data/auth_repository.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -11,24 +12,31 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool _obscurePassword = true;
-  bool _rememberMe = false;
+  bool _rememberMe = true;
   bool _isLoading = false;
   String _errorMessage = '';
 
-  final TextEditingController _emailController = TextEditingController();
-  final TextEditingController _passwordController = TextEditingController();
-  final AuthRepository _authRepository = AuthRepository();
+  final _emailCtrl = TextEditingController();
+  final _passwordCtrl = TextEditingController();
+  final _auth = AuthRepository();
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _emailCtrl.dispose();
+    _passwordCtrl.dispose();
     super.dispose();
   }
 
   Future<void> _handleLogin() async {
-    // Prevent multiple clicks while loading
     if (_isLoading) return;
+
+    final email = _emailCtrl.text.trim();
+    final password = _passwordCtrl.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() => _errorMessage = 'Please enter both email and password');
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -36,26 +44,27 @@ class _LoginPageState extends State<LoginPage> {
     });
 
     try {
-      if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
-        throw Exception("Please enter both email and password");
-      }
-
-      // Real Backend API Call
-      await _authRepository.login(_emailController.text, _passwordController.text);
-
+      await _auth.login(email, password);
       if (!mounted) return;
       context.go('/dashboard');
     } catch (e) {
-      if (!mounted) return;
-      setState(() {
-        _errorMessage = e.toString().replaceAll("Exception: ", "");
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      String msg = 'Login failed';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map) {
+          msg = (data['message'] ?? data['error'] ?? e.message ?? msg).toString();
+        } else {
+          msg = e.message ?? msg;
+        }
+        if (e.response?.statusCode == 401) {
+          msg = 'Invalid email or password';
+        }
+      } else {
+        msg = e.toString().replaceFirst('Exception: ', '');
       }
+      if (mounted) setState(() => _errorMessage = msg);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -64,45 +73,43 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isWideScreen = constraints.maxWidth > 900;
-
+          final wide = constraints.maxWidth > 960;
           return Container(
             width: double.infinity,
             height: double.infinity,
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF0A1128), Color(0xFF001F54)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
+            color: const Color(0xFFF0F4F8),
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(24.0),
+                padding: const EdgeInsets.all(20),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1100),
-                  child: Card(
-                    elevation: 12,
-                    shadowColor: Colors.black45,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(24),
+                  constraints: const BoxConstraints(maxWidth: 1080),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(20),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.08),
+                          blurRadius: 40,
+                          offset: const Offset(0, 12),
+                        ),
+                      ],
                     ),
                     clipBehavior: Clip.antiAlias,
-                    child: isWideScreen
+                    child: wide
                         ? IntrinsicHeight(
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Expanded(flex: 5, child: _buildBrandingPanel()),
-                                Expanded(flex: 6, child: _buildLoginForm(context)),
+                                Expanded(flex: 5, child: _branding()),
+                                Expanded(flex: 5, child: _form()),
                               ],
                             ),
                           )
                         : Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              _buildBrandingPanel(),
-                              _buildLoginForm(context),
+                              _branding(),
+                              _form(),
                             ],
                           ),
                   ),
@@ -115,14 +122,14 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildBrandingPanel() {
+  Widget _branding() {
     return Container(
-      padding: const EdgeInsets.all(40.0),
+      padding: const EdgeInsets.all(40),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF071330), Color(0xFF0C2356)],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+          colors: [Color(0xFF0B1B3D), Color(0xFF155EEF)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
       ),
       child: Column(
@@ -131,95 +138,151 @@ class _LoginPageState extends State<LoginPage> {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade700,
-                  borderRadius: BorderRadius.circular(12),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: Image.asset(
+                  'assets/logos/logo.png',
+                  width: 42,
+                  height: 42,
+                  fit: BoxFit.contain,
+                  errorBuilder: (_, __, ___) => Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(Icons.shield, color: Colors.white, size: 24),
+                  ),
                 ),
-                child: const Icon(Icons.shield, color: Colors.white, size: 28),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
               const Text(
-                "Loss Defender Pro",
+                'Loss Defender ',
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 22,
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              const Text(
+                'Pro',
+                style: TextStyle(
+                  color: Color(0xFF60A5FA),
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
-          const SizedBox(height: 20),
-          const Text(
-            "AI-powered Warehouse Security &\nOrder Verification Platform",
+          const SizedBox(height: 12),
+          Text(
+            'AI-powered Warehouse Security & Order Verification Platform',
             style: TextStyle(
-              color: Colors.white70,
-              fontSize: 15,
+              color: Colors.white.withValues(alpha: 0.8),
+              fontSize: 13,
               height: 1.4,
             ),
           ),
           const SizedBox(height: 32),
-          _buildFeatureItem(
-            icon: Icons.verified_user_outlined,
-            title: "Verify Every Order",
-            subtitle: "AI-driven verification to ensure packing accuracy and reduce errors.",
-          ),
+          _feature(Icons.verified_outlined, 'Verify Every Order',
+              'AI-driven verification to ensure packing accuracy and reduce errors.'),
+          const SizedBox(height: 14),
+          _feature(Icons.videocam_outlined, 'AI Video Evidence',
+              'Auto recording with searchable evidence timeline for disputes.'),
+          const SizedBox(height: 14),
+          _feature(Icons.shield_outlined, 'Reduce Warehouse Loss',
+              'Prevent shrinkage, fraud and unauthorized activities with smart monitoring.'),
+          const SizedBox(height: 14),
+          _feature(Icons.bar_chart_outlined, 'Live Analytics',
+              'Real-time insights and performance tracking for better decision making.'),
+          const SizedBox(height: 36),
+          Divider(color: Colors.white.withValues(alpha: 0.15)),
           const SizedBox(height: 16),
-          _buildFeatureItem(
-            icon: Icons.videocam_outlined,
-            title: "AI Video Evidence",
-            subtitle: "Auto recording with searchable evidence timeline for disputes.",
-          ),
-          const SizedBox(height: 16),
-          _buildFeatureItem(
-            icon: Icons.security_outlined,
-            title: "Reduce Warehouse Loss",
-            subtitle: "Prevent shrinkage, fraud and unauthorized activities with smart monitoring.",
-          ),
-          const SizedBox(height: 16),
-          _buildFeatureItem(
-            icon: Icons.analytics_outlined,
-            title: "Live Analytics",
-            subtitle: "Real-time insights and performance tracking for better decision making.",
-          ),
-          const SizedBox(height: 32),
-          const Row(
+          Row(
             children: [
-              Icon(Icons.check_circle_outline, color: Colors.blueAccent, size: 18),
-              SizedBox(width: 8),
+              Icon(Icons.verified_user,
+                  color: Colors.white.withValues(alpha: 0.7), size: 16),
+              const SizedBox(width: 8),
               Text(
-                "Trusted by businesses to secure warehouse operations worldwide.",
-                style: TextStyle(color: Colors.white60, fontSize: 12),
+                'Trusted by businesses to secure warehouse operations worldwide.',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  fontSize: 11,
+                ),
               ),
             ],
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildLoginForm(BuildContext context) {
+  Widget _feature(IconData icon, String title, String subtitle) {
     return Container(
-      color: Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 40),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF155EEF).withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.white, size: 18),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13)),
+                const SizedBox(height: 3),
+                Text(subtitle,
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.7),
+                        fontSize: 11,
+                        height: 1.35)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _form() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 36),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Center(
             child: Container(
-              padding: const EdgeInsets.all(16),
+              width: 64,
+              height: 64,
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
                 shape: BoxShape.circle,
               ),
-              child: Icon(Icons.person_outline, size: 36, color: Colors.blue.shade700),
+              child: Icon(Icons.person_outline,
+                  size: 32, color: Colors.blue.shade700),
             ),
           ),
           const SizedBox(height: 16),
           const Text(
-            "Welcome Back",
+            'Welcome Back',
             textAlign: TextAlign.center,
             style: TextStyle(
               fontSize: 26,
@@ -229,20 +292,19 @@ class _LoginPageState extends State<LoginPage> {
           ),
           const SizedBox(height: 6),
           const Text(
-            "Sign in to continue to your account",
+            'Sign in to continue to your account',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 28),
 
           if (_errorMessage.isNotEmpty)
             Container(
-              key: const ValueKey('error_banner'),
               padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 20),
+              margin: const EdgeInsets.only(bottom: 16),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.red.shade200),
               ),
               child: Row(
@@ -251,87 +313,104 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      _errorMessage, 
-                      style: const TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w500),
+                      _errorMessage,
+                      style: const TextStyle(
+                          color: Colors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500),
                     ),
                   ),
                 ],
               ),
             ),
-          
-          // Email Field
-          const Text("Email", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+
+          const Text('Email',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 6),
           TextField(
-            key: const ValueKey('email_field'),
-            controller: _emailController,
+            controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
-            decoration: InputDecoration(
-              hintText: "Enter your email address",
-              prefixIcon: const Icon(Icons.mail_outline, color: Colors.grey),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+            textInputAction: TextInputAction.next,
+            decoration: _inputDeco(
+              hint: 'Enter your email address',
+              icon: Icons.mail_outline,
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 18),
 
-          // Password Field
-          const Text("Password", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+          const Text('Password',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 6),
           TextField(
-            key: const ValueKey('password_field'),
-            controller: _passwordController,
+            controller: _passwordCtrl,
             obscureText: _obscurePassword,
-            decoration: InputDecoration(
-              hintText: "Enter your password",
-              prefixIcon: const Icon(Icons.lock_outline, color: Colors.grey),
-              suffixIcon: IconButton(
-                icon: Icon(_obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined, color: Colors.grey),
-                onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+            textInputAction: TextInputAction.done,
+            onSubmitted: (_) => _handleLogin(),
+            decoration: _inputDeco(
+              hint: 'Enter your password',
+              icon: Icons.lock_outline,
+              suffix: IconButton(
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  size: 20,
+                  color: Colors.grey,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
               ),
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              contentPadding: const EdgeInsets.symmetric(vertical: 14),
             ),
           ),
           const SizedBox(height: 12),
 
-          // Remember Me & Forgot Password
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Checkbox(
-                    value: _rememberMe,
-                    activeColor: Colors.blue,
-                    onChanged: (val) => setState(() => _rememberMe = val ?? false),
-                  ),
-                  const Text("Remember me", style: TextStyle(fontSize: 13, color: Colors.black87)),
-                ],
+              SizedBox(
+                height: 24,
+                width: 24,
+                child: Checkbox(
+                  value: _rememberMe,
+                  onChanged: (v) =>
+                      setState(() => _rememberMe = v ?? false),
+                  activeColor: const Color(0xFF155EEF),
+                ),
               ),
+              const SizedBox(width: 8),
+              const Text('Remember me', style: TextStyle(fontSize: 13)),
+              const Spacer(),
               TextButton(
                 onPressed: () {},
-                child: const Text("Forgot Password?", style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                child: const Text('Forgot Password?',
+                    style: TextStyle(fontSize: 13)),
               ),
             ],
           ),
           const SizedBox(height: 20),
 
-          // Sign In Button
           SizedBox(
             height: 48,
             child: FilledButton(
               onPressed: _isLoading ? null : _handleLogin,
               style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1E56F1),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                backgroundColor: const Color(0xFF155EEF),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               child: _isLoading
-                  ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
                   : const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text("Sign in", style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+                        Text('Sign in',
+                            style: TextStyle(
+                                fontSize: 15, fontWeight: FontWeight.w600)),
                         SizedBox(width: 8),
                         Icon(Icons.arrow_forward, size: 18),
                       ],
@@ -339,32 +418,30 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Divider
           Row(
             children: [
-              const Expanded(child: Divider(color: Colors.black12)),
+              Expanded(child: Divider(color: Colors.grey.shade300)),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text("or continue with", style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text('or continue with',
+                    style:
+                        TextStyle(color: Colors.grey.shade500, fontSize: 12)),
               ),
-              const Expanded(child: Divider(color: Colors.black12)),
+              Expanded(child: Divider(color: Colors.grey.shade300)),
             ],
           ),
-          const SizedBox(height: 20),
-
-          // Social Logins
+          const SizedBox(height: 16),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {},
-                  icon: const Icon(Icons.g_mobiledata, size: 28, color: Colors.red),
-                  label: const Text("Google", style: TextStyle(color: Colors.black87, fontSize: 12)),
+                  icon: const Icon(Icons.g_mobiledata, size: 22),
+                  label: const Text('Google', style: TextStyle(fontSize: 13)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
@@ -372,27 +449,27 @@ class _LoginPageState extends State<LoginPage> {
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {},
-                  icon: const Icon(Icons.window, size: 18, color: Colors.blue),
-                  label: const Text("Microsoft", style: TextStyle(color: Colors.black87, fontSize: 12)),
+                  icon: const Icon(Icons.business, size: 18),
+                  label: const Text('Microsoft', style: TextStyle(fontSize: 13)),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: BorderSide(color: Colors.grey.shade300),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
-
-          // Bottom sign up link
+          const SizedBox(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text("Don't have an account? ", style: TextStyle(color: Colors.grey, fontSize: 13)),
-              GestureDetector(
-                onTap: () {},
-                child: const Text("Create Account", style: TextStyle(color: Color(0xFF1E56F1), fontWeight: FontWeight.bold, fontSize: 13)),
+              Text("Don't have an account? ",
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+              TextButton(
+                onPressed: () {},
+                child: const Text('Create Account',
+                    style: TextStyle(fontWeight: FontWeight.w600)),
               ),
             ],
           ),
@@ -401,36 +478,30 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildFeatureItem({required IconData icon, required String title, required String subtitle}) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+  InputDecoration _inputDeco({
+    required String hint,
+    required IconData icon,
+    Widget? suffix,
+  }) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+      prefixIcon: Icon(icon, color: Colors.grey.shade500, size: 20),
+      suffixIcon: suffix,
+      filled: true,
+      fillColor: Colors.grey.shade50,
+      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade200),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(icon, color: Colors.blueAccent, size: 22),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
-                const SizedBox(height: 2),
-                Text(subtitle, style: const TextStyle(color: Colors.white60, fontSize: 11)),
-              ],
-            ),
-          ),
-        ],
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF155EEF)),
       ),
     );
   }

@@ -12,6 +12,7 @@ import '../features/alerts/presentation/pages/alerts_page.dart';
 import '../features/users/presentation/pages/users_page.dart';
 import '../features/returns/presentation/pages/returns_page.dart';
 import '../features/profile/presentation/pages/profile_page.dart';
+import '../features/analytics/presentation/pages/analytics_page.dart';
 
 class PlaceholderPage extends StatelessWidget {
   final String title;
@@ -49,8 +50,9 @@ class AppRouter {
       GoRoute(
         path: '/recording',
         builder: (context, state) {
-          final orderId = state.uri.queryParameters['orderId'] ?? 'ORD-202600516-001';
-          return RecordingPage(orderId: orderId);
+          final orderId = state.uri.queryParameters['orderId'];
+          final autostart = state.uri.queryParameters['autostart'] == '1';
+          return RecordingPage(orderId: orderId, autostart: autostart);
         },
       ),
       GoRoute(
@@ -59,7 +61,7 @@ class AppRouter {
       ),
       GoRoute(
         path: '/analytics',
-        builder: (context, state) => const PlaceholderPage(title: "Analytics"),
+        builder: (context, state) => const AnalyticsPage(),
       ),
       GoRoute(
         path: '/alerts',
@@ -84,3 +86,4 @@ class AppRouter {
     ],
   );
 }
+

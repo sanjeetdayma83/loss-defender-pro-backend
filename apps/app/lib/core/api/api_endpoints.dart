@@ -1,4 +1,4 @@
-class ApiEndpoints {
+﻿class ApiEndpoints {
   ApiEndpoints._();
 
   /// ============================================
@@ -46,6 +46,13 @@ class ApiEndpoints {
   /// ============================================
 
   static const String orders = '/orders';
+  static const String ordersDashboard = '/orders/dashboard';
+  static const String ordersStatistics = '/orders/statistics';
+  static const String analyticsMarketplace = '/orders/analytics/marketplace';
+  static const String analyticsWarehouse = '/orders/analytics/warehouse';
+  static const String analyticsPriority = '/orders/analytics/priority';
+  static const String analyticsStatus = '/orders/analytics/status';
+  static const String analyticsDailyTrend = '/orders/analytics/daily-trend';
 
   /// ============================================
   /// Recording
@@ -55,9 +62,10 @@ class ApiEndpoints {
 
   /// ============================================
   /// Scanner
+  /// (backend controller is @Controller('scanner'), not 'scans')
   /// ============================================
 
-  static const String scans = '/scans';
+  static const String scans = '/scanner';
 
   /// ============================================
   /// Evidence

@@ -9,73 +9,151 @@ class Sidebar extends StatelessWidget {
     final activeRoute = GoRouterState.of(context).uri.path;
 
     return Container(
-      width: 260,
-      color: Colors.white,
+      width: 250,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border(right: BorderSide(color: Colors.grey.shade200)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Logo + brand
           Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.fromLTRB(16, 18, 16, 12),
             child: Row(
               children: [
-                const Icon(Icons.shield, color: Colors.blue, size: 32),
-                const SizedBox(width: 12),
-                Flexible(
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.asset(
+                    'assets/logos/logo.png',
+                    width: 36,
+                    height: 36,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade600,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.shield, color: Colors.white, size: 20),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                const Flexible(
                   child: Text(
-                    "Loss Defender Pro",
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                    'Loss Defender Pro',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Color(0xFF1E2329),
+                    ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: Colors.grey.shade200),
+
+          // Nav — takes all remaining space
           Expanded(
             child: ListView(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               children: [
-                _SidebarItem(icon: Icons.dashboard_outlined, activeIcon: Icons.dashboard, label: "Dashboard", route: "/dashboard", currentPath: activeRoute),
-                _SidebarItem(icon: Icons.shopping_bag_outlined, activeIcon: Icons.shopping_bag, label: "Orders", route: "/orders", currentPath: activeRoute),
-                _SidebarItem(icon: Icons.qr_code_scanner_outlined, activeIcon: Icons.qr_code_scanner, label: "Scanning", route: "/scanning", currentPath: activeRoute),
-                _SidebarItem(icon: Icons.videocam_outlined, activeIcon: Icons.videocam, label: "Recordings", route: "/recording", currentPath: activeRoute),
-                _SidebarItem(icon: Icons.analytics_outlined, activeIcon: Icons.analytics, label: "Analytics", route: "/analytics", currentPath: activeRoute),
-                _SidebarItem(icon: Icons.notifications_outlined, activeIcon: Icons.notifications, label: "Alerts", route: "/alerts", currentPath: activeRoute, badge: "6"),
-                _SidebarItem(icon: Icons.assignment_return_outlined, activeIcon: Icons.assignment_return, label: "Returns", route: "/returns", currentPath: activeRoute),
-                _SidebarItem(icon: Icons.people_outline, activeIcon: Icons.people, label: "Users", route: "/users", currentPath: activeRoute),
-                _SidebarItem(icon: Icons.settings_outlined, activeIcon: Icons.settings, label: "Settings", route: "/settings", currentPath: activeRoute),
+                _item(context, Icons.home_outlined, Icons.home, 'Dashboard', '/dashboard', activeRoute),
+                _item(context, Icons.inventory_2_outlined, Icons.inventory_2, 'Orders', '/orders', activeRoute),
+                _item(context, Icons.qr_code_scanner_outlined, Icons.qr_code_scanner, 'Scanning', '/scanning', activeRoute),
+                _item(context, Icons.videocam_outlined, Icons.videocam, 'Recordings', '/recording', activeRoute),
+                _item(context, Icons.bar_chart_outlined, Icons.bar_chart, 'Analytics', '/analytics', activeRoute),
+                _item(context, Icons.notifications_outlined, Icons.notifications, 'Alerts', '/alerts', activeRoute, badge: '6'),
+                _item(context, Icons.assignment_return_outlined, Icons.assignment_return, 'Returns', '/returns', activeRoute),
+                _item(context, Icons.people_outline, Icons.people, 'Users', '/users', activeRoute),
+                _item(context, Icons.settings_outlined, Icons.settings, 'Settings', '/settings', activeRoute),
               ],
             ),
           ),
-          const Divider(height: 1),
-          SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Card(
-                color: Colors.blue.shade50,
-                elevation: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+
+          // Bottom section — tight
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Divider(height: 1, color: Colors.grey.shade200),
+          ),
+          const SizedBox(height: 4),
+          _item(
+            context,
+            Icons.logout_rounded,
+            Icons.logout_rounded,
+            'Logout',
+            '/login',
+            activeRoute,
+            isDestructive: true,
+          ),
+          const SizedBox(height: 6),
+
+          // Compact Upgrade card
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 14),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF1E40AF), Color(0xFF3B82F6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
                     children: [
-                      const Icon(Icons.star, color: Colors.blue),
-                      const SizedBox(height: 8),
-                      const Text("Upgrade to Pro", style: TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      const Text("Unlock advanced analytics & AI insights.", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      const SizedBox(height: 12),
-                      FilledButton(
-                        onPressed: () => context.go('/plans'),
-                        style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(36)),
-                        child: const Text("Upgrade Now"),
+                      const Icon(Icons.workspace_premium, color: Colors.amber, size: 16),
+                      const SizedBox(width: 6),
+                      const Text(
+                        'Upgrade to Pro',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                        ),
                       ),
                     ],
                   ),
-                ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Unlock AI insights',
+                    style: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.8),
+                      fontSize: 10,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 30,
+                    child: FilledButton(
+                      onPressed: () => context.go('/plans'),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        foregroundColor: const Color(0xFF1E40AF),
+                        padding: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(7),
+                        ),
+                        textStyle: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                      child: const Text('Upgrade Now'),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -83,61 +161,64 @@ class Sidebar extends StatelessWidget {
       ),
     );
   }
-}
 
-class _SidebarItem extends StatelessWidget {
-  final IconData icon;
-  final IconData activeIcon;
-  final String label;
-  final String route;
-  final String currentPath;
-  final String? badge;
+  Widget _item(
+    BuildContext context,
+    IconData icon,
+    IconData activeIcon,
+    String label,
+    String route,
+    String currentPath, {
+    String? badge,
+    bool isDestructive = false,
+  }) {
+    final isActive = !isDestructive &&
+        (currentPath == route ||
+            (route != '/dashboard' && currentPath.startsWith(route)));
 
-  const _SidebarItem({
-    required this.icon,
-    required this.activeIcon,
-    required this.label,
-    required this.route,
-    required this.currentPath,
-    this.badge,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = currentPath == route;
+    final Color fg = isDestructive
+        ? Colors.red.shade500
+        : (isActive ? Colors.blue.shade700 : Colors.grey.shade700);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 1),
       child: Material(
         color: isActive ? Colors.blue.shade50 : Colors.transparent,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(9),
         child: InkWell(
           onTap: () => context.go(route),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(9),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
             child: Row(
               children: [
-                Icon(
-                  isActive ? activeIcon : icon,
-                  color: isActive ? Colors.blue : Colors.grey.shade700,
-                  size: 22,
-                ),
-                const SizedBox(width: 12),
+                Icon(isActive ? activeIcon : icon, color: fg, size: 19),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     label,
                     style: TextStyle(
-                      color: isActive ? Colors.blue.shade700 : Colors.grey.shade800,
-                      fontWeight: FontWeight.bold,
+                      color: fg,
+                      fontWeight: isActive ? FontWeight.w600 : FontWeight.w500,
+                      fontSize: 13,
                     ),
                   ),
                 ),
                 if (badge != null)
                   Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                    child: Text(badge!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      badge,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                   ),
               ],
             ),
