@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'sidebar.dart';
 
 class AppLayout extends StatelessWidget {
@@ -36,19 +37,32 @@ class AppLayout extends StatelessWidget {
                         children: [
                           IconButton(
                             icon: const Icon(Icons.notifications_outlined, color: Colors.grey),
-                            onPressed: () {},
+                            onPressed: () => context.go('/alerts'),
                           ),
                           const SizedBox(width: 12),
-                          Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.blue.shade50,
-                              shape: BoxShape.circle,
+                          InkWell(
+                            onTap: () => context.go('/profile'),
+                            borderRadius: BorderRadius.circular(20),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue.shade50,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: Icon(Icons.person, color: Colors.blue.shade700, size: 20),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text("Admin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                                  const SizedBox(width: 4),
+                                  const Icon(Icons.arrow_drop_down, size: 18, color: Colors.grey),
+                                ],
+                              ),
                             ),
-                            child: Icon(Icons.person, color: Colors.blue.shade700, size: 20),
                           ),
-                          const SizedBox(width: 8),
-                          const Text("Admin", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                         ],
                       ),
                     ],
