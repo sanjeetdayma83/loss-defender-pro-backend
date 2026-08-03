@@ -13,6 +13,7 @@ import '../features/users/presentation/pages/users_page.dart';
 import '../features/returns/presentation/pages/returns_page.dart';
 import '../features/profile/presentation/pages/profile_page.dart';
 import '../features/analytics/presentation/pages/analytics_page.dart';
+import '../core/storage/token_storage.dart';
 
 class PlaceholderPage extends StatelessWidget {
   final String title;
@@ -30,6 +31,21 @@ class PlaceholderPage extends StatelessWidget {
 class AppRouter {
   static final router = GoRouter(
     initialLocation: '/login',
+    // Using correct TokenStorage methods (isLoggedIn)
+    redirect: (context, state) async {
+      final isLoggedIn = await TokenStorage.isLoggedIn();
+      final isLoggingIn = state.uri.path == '/login';
+
+      if (!isLoggedIn && !isLoggingIn) {
+        return '/login';
+      }
+
+      if (isLoggedIn && isLoggingIn) {
+        return '/dashboard';
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/login',
@@ -86,4 +102,3 @@ class AppRouter {
     ],
   );
 }
-

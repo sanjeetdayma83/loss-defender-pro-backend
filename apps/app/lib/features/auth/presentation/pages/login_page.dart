@@ -71,22 +71,31 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: LayoutBuilder(
+      backgroundColor: const Color(0xFFF0F4F8),
+      body: SafeArea(
+        child: LayoutBuilder(
         builder: (context, constraints) {
-          final wide = constraints.maxWidth > 960;
+          final wide = constraints.maxWidth > 900;
+          final isMobile = constraints.maxWidth < 600;
+
           return Container(
             width: double.infinity,
             height: double.infinity,
             color: const Color(0xFFF0F4F8),
             child: Center(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isMobile ? 16 : 20,
+                  vertical: isMobile ? 16 : 20,
+                ),
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1080),
+                  constraints: BoxConstraints(
+                    maxWidth: wide ? 1080 : 480,
+                  ),
                   child: Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(isMobile ? 16 : 20),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withValues(alpha: 0.08),
@@ -101,15 +110,16 @@ class _LoginPageState extends State<LoginPage> {
                             child: Row(
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
-                                Expanded(flex: 5, child: _branding()),
-                                Expanded(flex: 5, child: _form()),
+                                Expanded(flex: 5, child: _branding(isMobile: false)),
+                                Expanded(flex: 5, child: _form(isMobile: false)),
                               ],
                             ),
                           )
                         : Column(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              _branding(),
-                              _form(),
+                              _branding(isMobile: true),
+                              _form(isMobile: true),
                             ],
                           ),
                   ),
@@ -118,13 +128,18 @@ class _LoginPageState extends State<LoginPage> {
             ),
           );
         },
+        ),
       ),
     );
   }
 
-  Widget _branding() {
+  Widget _branding({required bool isMobile}) {
     return Container(
-      padding: const EdgeInsets.all(40),
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 24 : 40,
+        vertical: isMobile ? 28 : 40,
+      ),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF0B1B3D), Color(0xFF155EEF)],
@@ -134,85 +149,91 @@ class _LoginPageState extends State<LoginPage> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // Logo + Title
           Row(
             children: [
               ClipRRect(
                 borderRadius: BorderRadius.circular(10),
                 child: Image.asset(
                   'assets/logos/logo.png',
-                  width: 42,
-                  height: 42,
+                  width: isMobile ? 36 : 42,
+                  height: isMobile ? 36 : 42,
                   fit: BoxFit.contain,
                   errorBuilder: (_, __, ___) => Container(
-                    width: 42,
-                    height: 42,
+                    width: isMobile ? 36 : 42,
+                    height: isMobile ? 36 : 42,
                     decoration: BoxDecoration(
                       color: Colors.white.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.shield, color: Colors.white, size: 24),
+                    child: Icon(Icons.shield, color: Colors.white, size: isMobile ? 20 : 24),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              const Text(
-                'Loss Defender ',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const Text(
-                'Pro',
-                style: TextStyle(
-                  color: Color(0xFF60A5FA),
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+              Flexible(
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'Loss Defender ',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isMobile ? 18 : 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      TextSpan(
+                        text: 'Pro',
+                        style: TextStyle(
+                          color: const Color(0xFF60A5FA),
+                          fontSize: isMobile ? 18 : 22,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Text(
-            'AI-powered Warehouse Security & Order Verification Platform',
+            'AI-powered Warehouse Security & Order Verification',
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.8),
-              fontSize: 13,
+              fontSize: isMobile ? 12 : 13,
               height: 1.4,
             ),
           ),
-          const SizedBox(height: 32),
-          _feature(Icons.verified_outlined, 'Verify Every Order',
-              'AI-driven verification to ensure packing accuracy and reduce errors.'),
-          const SizedBox(height: 14),
-          _feature(Icons.videocam_outlined, 'AI Video Evidence',
-              'Auto recording with searchable evidence timeline for disputes.'),
-          const SizedBox(height: 14),
-          _feature(Icons.shield_outlined, 'Reduce Warehouse Loss',
-              'Prevent shrinkage, fraud and unauthorized activities with smart monitoring.'),
-          const SizedBox(height: 14),
-          _feature(Icons.bar_chart_outlined, 'Live Analytics',
-              'Real-time insights and performance tracking for better decision making.'),
-          const SizedBox(height: 36),
-          Divider(color: Colors.white.withValues(alpha: 0.15)),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Icon(Icons.verified_user,
-                  color: Colors.white.withValues(alpha: 0.7), size: 16),
-              const SizedBox(width: 8),
-              Text(
-                'Trusted by businesses to secure warehouse operations worldwide.',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.65),
-                  fontSize: 11,
-                ),
+
+          // Features - only show on desktop / large screens
+          if (!isMobile) ...[
+            const SizedBox(height: 28),
+            _feature(Icons.verified_outlined, 'Verify Every Order',
+                'AI-driven verification to ensure packing accuracy.'),
+            const SizedBox(height: 12),
+            _feature(Icons.videocam_outlined, 'AI Video Evidence',
+                'Auto recording with searchable evidence timeline.'),
+            const SizedBox(height: 12),
+            _feature(Icons.shield_outlined, 'Reduce Warehouse Loss',
+                'Prevent shrinkage and unauthorized activities.'),
+            const SizedBox(height: 12),
+            _feature(Icons.bar_chart_outlined, 'Live Analytics',
+                'Real-time insights for better decisions.'),
+            const SizedBox(height: 24),
+            Divider(color: Colors.white.withValues(alpha: 0.15)),
+            const SizedBox(height: 12),
+            Text(
+              'Trusted by businesses worldwide.',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.65),
+                fontSize: 11,
               ),
-            ],
-          ),
+            ),
+          ],
         ],
       ),
     );
@@ -220,24 +241,24 @@ class _LoginPageState extends State<LoginPage> {
 
   Widget _feature(IconData icon, String title, String subtitle) {
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: const Color(0xFF155EEF).withValues(alpha: 0.9),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Colors.white, size: 18),
+            child: Icon(icon, color: Colors.white, size: 16),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -246,13 +267,13 @@ class _LoginPageState extends State<LoginPage> {
                     style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
-                        fontSize: 13)),
-                const SizedBox(height: 3),
+                        fontSize: 12.5)),
+                const SizedBox(height: 2),
                 Text(subtitle,
                     style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.7),
                         fontSize: 11,
-                        height: 1.35)),
+                        height: 1.3)),
               ],
             ),
           ),
@@ -261,47 +282,52 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _form() {
+  Widget _form({required bool isMobile}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 36),
+      padding: EdgeInsets.symmetric(
+        horizontal: isMobile ? 22 : 36,
+        vertical: isMobile ? 28 : 36,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: [
+          // Avatar
           Center(
             child: Container(
-              width: 64,
-              height: 64,
+              width: isMobile ? 56 : 64,
+              height: isMobile ? 56 : 64,
               decoration: BoxDecoration(
                 color: Colors.blue.shade50,
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.person_outline,
-                  size: 32, color: Colors.blue.shade700),
+                  size: isMobile ? 28 : 32, color: Colors.blue.shade700),
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
+          SizedBox(height: isMobile ? 12 : 16),
+          Text(
             'Welcome Back',
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 26,
+              fontSize: isMobile ? 22 : 26,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2329),
+              color: const Color(0xFF1E2329),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           const Text(
             'Sign in to continue to your account',
             textAlign: TextAlign.center,
             style: TextStyle(color: Colors.grey, fontSize: 13),
           ),
-          const SizedBox(height: 28),
+          SizedBox(height: isMobile ? 20 : 28),
 
+          // Error
           if (_errorMessage.isNotEmpty)
             Container(
               padding: const EdgeInsets.all(12),
-              margin: const EdgeInsets.only(bottom: 16),
+              margin: const EdgeInsets.only(bottom: 14),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
                 borderRadius: BorderRadius.circular(10),
@@ -324,6 +350,7 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ),
 
+          // Email
           const Text('Email',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 6),
@@ -332,12 +359,13 @@ class _LoginPageState extends State<LoginPage> {
             keyboardType: TextInputType.emailAddress,
             textInputAction: TextInputAction.next,
             decoration: _inputDeco(
-              hint: 'Enter your email address',
+              hint: 'Enter your email',
               icon: Icons.mail_outline,
             ),
           ),
-          const SizedBox(height: 18),
+          SizedBox(height: isMobile ? 14 : 18),
 
+          // Password
           const Text('Password',
               style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
           const SizedBox(height: 6),
@@ -364,6 +392,7 @@ class _LoginPageState extends State<LoginPage> {
           ),
           const SizedBox(height: 12),
 
+          // Remember + Forgot
           Row(
             children: [
               SizedBox(
@@ -371,23 +400,24 @@ class _LoginPageState extends State<LoginPage> {
                 width: 24,
                 child: Checkbox(
                   value: _rememberMe,
-                  onChanged: (v) =>
-                      setState(() => _rememberMe = v ?? false),
+                  onChanged: (v) => setState(() => _rememberMe = v ?? false),
                   activeColor: const Color(0xFF155EEF),
                 ),
               ),
-              const SizedBox(width: 8),
-              const Text('Remember me', style: TextStyle(fontSize: 13)),
-              const Spacer(),
+              const SizedBox(width: 6),
+              const Flexible(
+                child: Text('Remember me', style: TextStyle(fontSize: 13)),
+              ),
               TextButton(
                 onPressed: () {},
                 child: const Text('Forgot Password?',
-                    style: TextStyle(fontSize: 13)),
+                    style: TextStyle(fontSize: 12.5)),
               ),
             ],
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: isMobile ? 16 : 20),
 
+          // Sign In button
           SizedBox(
             height: 48,
             child: FilledButton(
@@ -417,20 +447,23 @@ class _LoginPageState extends State<LoginPage> {
                     ),
             ),
           ),
-          const SizedBox(height: 24),
+          SizedBox(height: isMobile ? 18 : 24),
+
+          // Divider
           Row(
             children: [
               Expanded(child: Divider(color: Colors.grey.shade300)),
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
                 child: Text('or continue with',
-                    style:
-                        TextStyle(color: Colors.grey.shade500, fontSize: 12)),
+                    style: TextStyle(color: Colors.grey.shade500, fontSize: 12)),
               ),
               Expanded(child: Divider(color: Colors.grey.shade300)),
             ],
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: isMobile ? 12 : 16),
+
+          // Social buttons
           Row(
             children: [
               Expanded(
@@ -445,7 +478,7 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
                 child: OutlinedButton.icon(
                   onPressed: () {},
@@ -460,9 +493,12 @@ class _LoginPageState extends State<LoginPage> {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+          SizedBox(height: isMobile ? 14 : 20),
+
+          // Create account
+          Wrap(
+            alignment: WrapAlignment.center,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
               Text("Don't have an account? ",
                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
@@ -506,3 +542,4 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 }
+

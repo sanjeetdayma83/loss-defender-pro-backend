@@ -39,15 +39,18 @@ class _SettingsPageState extends State<SettingsPage> {
   Widget build(BuildContext context) {
     return AppLayout(
       title: "Settings",
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(32.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 1200;
-                return Wrap(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isMobile = constraints.maxWidth < 768;
+          final isWide = constraints.maxWidth > 1200;
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Top Cards Grid / Wrap
+                Wrap(
                   spacing: 16,
                   runSpacing: 16,
                   children: [
@@ -57,68 +60,95 @@ class _SettingsPageState extends State<SettingsPage> {
                     SizedBox(width: isWide ? (constraints.maxWidth - 64) / 5 : (constraints.maxWidth > 700 ? (constraints.maxWidth - 16) / 2 : double.infinity), child: _buildActionCard("System Logs", "12,548", "View all logs", Icons.description_outlined, Colors.orange)),
                     SizedBox(width: isWide ? (constraints.maxWidth - 64) / 5 : (constraints.maxWidth > 700 ? (constraints.maxWidth - 16) / 2 : double.infinity), child: _buildActionCard("Active Integrations", "6", "Manage integrations", Icons.hub_outlined, Colors.red)),
                   ],
-                );
-              },
-            ),
-            const SizedBox(height: 32),
-            LayoutBuilder(
-              builder: (context, constraints) {
-                final isWide = constraints.maxWidth > 1000;
-                return Flex(
-                  direction: isWide ? Axis.horizontal : Axis.vertical,
+                ),
+                const SizedBox(height: 32),
+
+                // Main Content Layout (Tabs + Form)
+                if (isMobile) ...[
+                  // Mobile Dropdown / Horizontal Selector for tabs
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<int>(
+                        value: selectedTabIndex,
+                        isExpanded: true,
+                        items: List.generate(settingTabs.length, (index) {
+                          return DropdownMenuItem(
+                            value: index,
+                            child: Text(settingTabs[index]["label"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                          );
+                        }),
+                        onChanged: (val) {
+                          if (val != null) setState(() => selectedTabIndex = val);
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
+                Flex(
+                  direction: isMobile ? Axis.vertical : Axis.horizontal,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    SizedBox(
-                      width: isWide ? 280 : double.infinity,
-                      child: Card(
-                        elevation: 0,
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 12.0),
-                          child: Column(
-                            children: List.generate(settingTabs.length, (index) {
-                              final tab = settingTabs[index];
-                              final isSelected = selectedTabIndex == index;
-                              return InkWell(
-                                onTap: () => setState(() => selectedTabIndex = index),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? Colors.blue.shade50 : Colors.transparent,
-                                    border: Border(left: BorderSide(color: isSelected ? Colors.blue.shade700 : Colors.transparent, width: 4)),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(tab["icon"], size: 18, color: isSelected ? Colors.blue.shade700 : Colors.grey.shade600),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Text(
-                                          tab["label"],
-                                          style: TextStyle(
-                                            color: isSelected ? Colors.blue.shade700 : Colors.black87,
-                                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                                            fontSize: 13,
+                    if (!isMobile) ...[
+                      SizedBox(
+                        width: 280,
+                        child: Card(
+                          elevation: 0,
+                          color: Colors.white,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 12.0),
+                            child: Column(
+                              children: List.generate(settingTabs.length, (index) {
+                                final tab = settingTabs[index];
+                                final isSelected = selectedTabIndex == index;
+                                return InkWell(
+                                  onTap: () => setState(() => selectedTabIndex = index),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? Colors.blue.shade50 : Colors.transparent,
+                                      border: Border(left: BorderSide(color: isSelected ? Colors.blue.shade700 : Colors.transparent, width: 4)),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(tab["icon"], size: 18, color: isSelected ? Colors.blue.shade700 : Colors.grey.shade600),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: Text(
+                                            tab["label"],
+                                            style: TextStyle(
+                                              color: isSelected ? Colors.blue.shade700 : Colors.black87,
+                                              fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                              fontSize: 13,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              );
-                            }),
+                                );
+                              }),
+                            ),
                           ),
                         ),
                       ),
-                    ),
-                    if (isWide) const SizedBox(width: 24) else const SizedBox(height: 24),
+                      const SizedBox(width: 24),
+                    ],
                     Expanded(
                       child: Card(
                         elevation: 0,
                         color: Colors.white,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
                         child: Padding(
-                          padding: const EdgeInsets.all(32.0),
+                          padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
@@ -127,45 +157,26 @@ class _SettingsPageState extends State<SettingsPage> {
                               const Text("Company Name", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                               const SizedBox(height: 8),
                               TextField(
-                                controller: TextEditingController(text: "Rahul Enterprises Pvt. Ltd."),
+                                controller: TextEditingController(text: "Shri Balaji Trading Company"),
                                 decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
                               ),
                               const SizedBox(height: 20),
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                              isMobile
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
                                       children: [
-                                        const Text("Timezone", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                        const SizedBox(height: 8),
-                                        DropdownButtonFormField<String>(
-                                          value: "(GMT +05:30) Asia/Kolkata",
-                                          items: const [DropdownMenuItem(value: "(GMT +05:30) Asia/Kolkata", child: Text("(GMT +05:30) Asia/Kolkata"))],
-                                          onChanged: (val) {},
-                                          decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
-                                        ),
+                                        _buildTimezoneField(),
+                                        const SizedBox(height: 16),
+                                        _buildCurrencyField(),
+                                      ],
+                                    )
+                                  : Row(
+                                      children: [
+                                        Expanded(child: _buildTimezoneField()),
+                                        const SizedBox(width: 20),
+                                        Expanded(child: _buildCurrencyField()),
                                       ],
                                     ),
-                                  ),
-                                  const SizedBox(width: 20),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        const Text("Currency", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
-                                        const SizedBox(height: 8),
-                                        DropdownButtonFormField<String>(
-                                          value: "INR (₹) - Indian Rupee",
-                                          items: const [DropdownMenuItem(value: "INR (₹) - Indian Rupee", child: Text("INR (₹) - Indian Rupee"))],
-                                          onChanged: (val) {},
-                                          decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
                               const SizedBox(height: 24),
                               const Text("Company Logo", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
                               const SizedBox(height: 8),
@@ -181,6 +192,7 @@ class _SettingsPageState extends State<SettingsPage> {
                                     Icon(Icons.shield_outlined, size: 48, color: Colors.blue.shade700),
                                     const SizedBox(height: 12),
                                     RichText(
+                                      textAlign: TextAlign.center,
                                       text: TextSpan(
                                         text: "Click to upload ",
                                         style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold),
@@ -209,57 +221,114 @@ class _SettingsPageState extends State<SettingsPage> {
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    const Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text("System Maintenance Mode", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-                                        SizedBox(height: 2),
-                                        Text("Enable maintenance mode to prevent access for non-admin users.", style: TextStyle(color: Colors.grey, fontSize: 12)),
-                                      ],
+                                    const Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text("System Maintenance Mode", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+                                          SizedBox(height: 2),
+                                          Text("Enable maintenance mode to prevent access for non-admin users.", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                        ],
+                                      ),
                                     ),
                                     Switch(value: maintenanceMode, onChanged: (val) => setState(() => maintenanceMode = val)),
                                   ],
                                 ),
                               ),
                               const SizedBox(height: 32),
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.end,
-                                children: [
-                                  OutlinedButton.icon(
-                                    onPressed: () {},
-                                    icon: const Icon(Icons.refresh, size: 16),
-                                    label: const Text("Reset to Defaults"),
-                                    style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  FilledButton.icon(
-                                    onPressed: () {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text("Settings saved successfully!"), backgroundColor: Colors.green),
-                                      );
-                                    },
-                                    icon: const Icon(Icons.save, size: 16),
-                                    label: const Text("Save Changes"),
-                                    style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14)),
-                                  ),
-                                ],
-                              ),
+                              isMobile
+                                  ? Column(
+                                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          onPressed: () {},
+                                          icon: const Icon(Icons.refresh, size: 16),
+                                          label: const Text("Reset to Defaults"),
+                                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
+                                        ),
+                                        const SizedBox(height: 12),
+                                        FilledButton.icon(
+                                          onPressed: () {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Settings saved successfully!"), backgroundColor: Colors.green),
+                                            );
+                                          },
+                                          icon: const Icon(Icons.save, size: 16),
+                                          label: const Text("Save Changes"),
+                                          style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700, padding: const EdgeInsets.symmetric(vertical: 14)),
+                                        ),
+                                      ],
+                                    )
+                                  : Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        OutlinedButton.icon(
+                                          onPressed: () {},
+                                          icon: const Icon(Icons.refresh, size: 16),
+                                          label: const Text("Reset to Defaults"),
+                                          style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14)),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        FilledButton.icon(
+                                          onPressed: () {
+                                            ScaffoldMessenger.of(context).showSnackBar(
+                                              const SnackBar(content: Text("Settings saved successfully!"), backgroundColor: Colors.green),
+                                            );
+                                          },
+                                          icon: const Icon(Icons.save, size: 16),
+                                          label: const Text("Save Changes"),
+                                          style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700, padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14)),
+                                        ),
+                                      ],
+                                    ),
                             ],
                           ),
                         ),
                       ),
                     ),
                   ],
-                );
-              },
+                ),
+                const SizedBox(height: 32),
+                const Center(
+                  child: Text("© 2026 Loss Defender Pro. All rights reserved.     Version 1.0.0", style: TextStyle(color: Colors.grey, fontSize: 12), textAlign: TextAlign.center),
+                ),
+              ],
             ),
-            const SizedBox(height: 32),
-            const Center(
-              child: Text("© 2026 Loss Defender Pro. All rights reserved.          Version 1.0.0", style: TextStyle(color: Colors.grey, fontSize: 12)),
-            ),
-          ],
-        ),
+          );
+        },
       ),
+    );
+  }
+
+  Widget _buildTimezoneField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Timezone", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: "(GMT +05:30) Asia/Kolkata",
+          items: const [DropdownMenuItem(value: "(GMT +05:30) Asia/Kolkata", child: Text("(GMT +05:30) Asia/Kolkata"))],
+          onChanged: (val) {},
+          decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCurrencyField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text("Currency", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          value: "INR (₹) - Indian Rupee",
+          items: const [DropdownMenuItem(value: "INR (₹) - Indian Rupee", child: Text("INR (₹) - Indian Rupee"))],
+          onChanged: (val) {},
+          decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
+        ),
+      ],
     );
   }
 
@@ -279,7 +348,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                   child: Icon(icon, color: color, size: 20),
                 ),
               ],
@@ -346,7 +415,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                   child: Icon(icon, color: color, size: 20),
                 ),
               ],

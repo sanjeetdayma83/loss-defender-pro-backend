@@ -26,15 +26,13 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
   List<Map<String, dynamic>> scans = [];
   Map<String, dynamic>? scanResult;
   String? lookupError;
-  String? lastRawInput; // debug: what scanner actually sent
+  String? lastRawInput;
 
   int totalScans = 0;
   int verifiedScans = 0;
   int pendingScans = 0;
   int exceptionScans = 0;
 
-  // Hardware scanner often types very fast then Enter.
-  // Buffer keystrokes if focus is elsewhere.
   String _wedgeBuffer = '';
   DateTime? _lastKeyAt;
 
@@ -48,7 +46,6 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       duration: const Duration(milliseconds: 1800),
     )..repeat(reverse: true);
 
-    // Auto-focus barcode field so USB/BT scanners work immediately
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _barcodeFocus.requestFocus();
     });
@@ -64,7 +61,6 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
     super.dispose();
   }
 
-  /// Clean scanner input: trim, remove CR/LF, zero-width chars
   String _sanitize(String raw) {
     return raw
         .replaceAll('\r', '')
@@ -154,7 +150,6 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
     }
   }
 
-  /// Match order by exact / contains on orderNumber, awb, tracking, id
   bool _matchesOrder(Map<String, dynamic> m, String code) {
     final c = code.toUpperCase();
     final fields = [
@@ -185,7 +180,6 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       return;
     }
 
-    // Put cleaned value back in field
     _barcodeCtrl.value = TextEditingValue(
       text: barcode,
       selection: TextSelection.collapsed(offset: barcode.length),
@@ -200,7 +194,6 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
     try {
       Map<String, dynamic>? found;
 
-      // 1) Scanner API by barcode
       try {
         final res = await _dio.get(
           '${ApiEndpoints.scans}/barcode/${Uri.encodeComponent(barcode)}',
@@ -209,11 +202,15 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
             (res.data is Map ? Map<String, dynamic>.from(res.data as Map) : null);
       } catch (_) {}
 
-      // 2) Orders list — match locally (most reliable for your seed data)
       if (found == null) {
         final ordersRes = await _safeGet(
           ApiEndpoints.orders,
-          query: {'page': 1, 'limit': 100, 'sortBy': 'createdAt', 'sortOrder': 'desc'},
+          query: {
+            'page': 1,
+            'limit': 100,
+            'sortBy': 'createdAt',
+            'sortOrder': 'desc'
+          },
         );
         final od = _unwrap(ordersRes?.data);
         List list = [];
@@ -240,17 +237,21 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
           }
         }
       } else {
-        found = {...found, 'valid': true, 'source': 'scanner', 'matchedCode': barcode};
+        found = {
+          ...found,
+          'valid': true,
+          'source': 'scanner',
+          'matchedCode': barcode
+        };
       }
 
       if (found == null) {
         setState(() {
           isLookingUp = false;
           lookupError =
-              'No order for "$barcode". Check barcode encodes exact Order ID (e.g. ORD-20260801-000001).';
+              'No order for "$barcode". Check barcode encodes exact Order ID.';
           scanResult = {'valid': false, 'barcode': barcode};
         });
-        // Keep focus for next scan
         _barcodeFocus.requestFocus();
         _barcodeCtrl.selection = TextSelection(
           baseOffset: 0,
@@ -264,17 +265,14 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
         scanResult = found;
       });
 
-      // Auto-open Recording with autostart
       final oid = found['orderId']?.toString();
       if (oid != null && oid.isNotEmpty) {
-        // slight delay so UI can paint result
         Future.delayed(const Duration(milliseconds: 400), () {
           if (!mounted) return;
           context.go('/recording?orderId=$oid&autostart=1');
         });
       }
 
-      // Select all so next scan replaces text
       _barcodeFocus.requestFocus();
       _barcodeCtrl.selection = TextSelection(
         baseOffset: 0,
@@ -293,12 +291,10 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
     }
   }
 
-  /// Global key handler for scanners when field somehow loses focus
   KeyEventResult _onKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     final now = DateTime.now();
-    // Reset buffer if gap > 80ms (human typing is slower; scanners are bursty)
     if (_lastKeyAt != null &&
         now.difference(_lastKeyAt!).inMilliseconds > 80) {
       _wedgeBuffer = '';
@@ -315,13 +311,11 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
           return KeyEventResult.handled;
         }
       }
-      // Enter while focused on field → onSubmitted handles it
       return KeyEventResult.ignored;
     }
 
     final ch = event.character;
     if (ch != null && ch.isNotEmpty && ch != '\n' && ch != '\r') {
-      // Only buffer if barcode field is NOT focused (scanner still types)
       if (!_barcodeFocus.hasFocus) {
         _wedgeBuffer += ch;
         return KeyEventResult.handled;
@@ -386,91 +380,145 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                       ],
                     ),
                   )
-                : SingleChildScrollView(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Row(
+                : LayoutBuilder(
+                    builder: (context, constraints) {
+                      final isMobile = constraints.maxWidth < 700;
+                      final wide = constraints.maxWidth > 1000;
+
+                      return SingleChildScrollView(
+                        padding: EdgeInsets.all(isMobile ? 12 : 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            Text('Dashboard',
-                                style: TextStyle(
-                                    color: Colors.grey.shade500, fontSize: 13)),
-                            Icon(Icons.chevron_right,
-                                size: 16, color: Colors.grey.shade400),
-                            const Text('Scanning',
-                                style: TextStyle(
-                                    fontWeight: FontWeight.w600, fontSize: 13)),
-                            const Spacer(),
-                            // Re-focus helper
-                            TextButton.icon(
-                              onPressed: () {
-                                _barcodeFocus.requestFocus();
-                                _barcodeCtrl.selection = TextSelection(
-                                  baseOffset: 0,
-                                  extentOffset: _barcodeCtrl.text.length,
-                                );
-                              },
-                              icon: const Icon(Icons.center_focus_strong,
-                                  size: 16),
-                              label: const Text('Focus scanner input'),
-                            ),
-                            const SizedBox(width: 8),
-                            OutlinedButton.icon(
-                              onPressed: fetchData,
-                              icon: const Icon(Icons.refresh, size: 16),
-                              label: const Text('Refresh'),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        LayoutBuilder(
-                          builder: (context, c) {
-                            final wide = c.maxWidth > 1000;
-                            return Flex(
+                            // Header
+                            if (isMobile)
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Scanning',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1E2329),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    children: [
+                                      OutlinedButton.icon(
+                                        onPressed: () {
+                                          _barcodeFocus.requestFocus();
+                                          _barcodeCtrl.selection =
+                                              TextSelection(
+                                            baseOffset: 0,
+                                            extentOffset:
+                                                _barcodeCtrl.text.length,
+                                          );
+                                        },
+                                        icon: const Icon(
+                                            Icons.center_focus_strong,
+                                            size: 16),
+                                        label: const Text('Focus'),
+                                      ),
+                                      OutlinedButton.icon(
+                                        onPressed: fetchData,
+                                        icon: const Icon(Icons.refresh,
+                                            size: 16),
+                                        label: const Text('Refresh'),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              )
+                            else
+                              Row(
+                                children: [
+                                  Text('Dashboard',
+                                      style: TextStyle(
+                                          color: Colors.grey.shade500,
+                                          fontSize: 13)),
+                                  Icon(Icons.chevron_right,
+                                      size: 16,
+                                      color: Colors.grey.shade400),
+                                  const Text('Scanning',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13)),
+                                  const Spacer(),
+                                  TextButton.icon(
+                                    onPressed: () {
+                                      _barcodeFocus.requestFocus();
+                                      _barcodeCtrl.selection = TextSelection(
+                                        baseOffset: 0,
+                                        extentOffset:
+                                            _barcodeCtrl.text.length,
+                                      );
+                                    },
+                                    icon: const Icon(
+                                        Icons.center_focus_strong,
+                                        size: 16),
+                                    label:
+                                        const Text('Focus scanner input'),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  OutlinedButton.icon(
+                                    onPressed: fetchData,
+                                    icon: const Icon(Icons.refresh,
+                                        size: 16),
+                                    label: const Text('Refresh'),
+                                  ),
+                                ],
+                              ),
+                            SizedBox(height: isMobile ? 12 : 16),
+
+                            // Main content
+                            Flex(
                               direction:
                                   wide ? Axis.horizontal : Axis.vertical,
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Expanded(
-                                  flex: 6,
+                                  flex: wide ? 6 : 0,
                                   child: Column(
                                     children: [
-                                      _scanFrame(),
-                                      const SizedBox(height: 16),
-                                      _recentScansCard(),
+                                      _scanFrame(isMobile: isMobile),
+                                      SizedBox(height: isMobile ? 12 : 16),
+                                      _recentScansCard(isMobile: isMobile),
                                     ],
                                   ),
                                 ),
                                 SizedBox(
                                     width: wide ? 16 : 0,
-                                    height: wide ? 0 : 16),
+                                    height: wide ? 0 : 12),
                                 Expanded(
-                                  flex: 4,
+                                  flex: wide ? 4 : 0,
                                   child: Column(
                                     children: [
                                       _statusRow(),
                                       const SizedBox(height: 12),
-                                      _scanResultCard(),
+                                      _scanResultCard(isMobile: isMobile),
                                       const SizedBox(height: 12),
                                       _summaryCard(),
                                     ],
                                   ),
                                 ),
                               ],
-                            );
-                          },
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
       ),
     );
   }
 
-  Widget _scanFrame() {
+  Widget _scanFrame({required bool isMobile}) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: EdgeInsets.all(isMobile ? 14 : 20),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -479,17 +527,17 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Scan Barcode / QR Code',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: isMobile ? 15 : 16,
               fontWeight: FontWeight.bold,
-              color: Color(0xFF1E2329),
+              color: const Color(0xFF1E2329),
             ),
           ),
-          const SizedBox(height: 14),
+          SizedBox(height: isMobile ? 10 : 14),
           AspectRatio(
-            aspectRatio: 16 / 9,
+            aspectRatio: isMobile ? 4 / 3 : 16 / 9,
             child: Container(
               decoration: BoxDecoration(
                 color: const Color(0xFF0B1220),
@@ -502,8 +550,9 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                     child: CustomPaint(painter: _FramePainter()),
                   ),
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 28, vertical: 18),
+                    padding: EdgeInsets.symmetric(
+                        horizontal: isMobile ? 16 : 28,
+                        vertical: isMobile ? 12 : 18),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(6),
@@ -512,17 +561,20 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(Icons.qr_code_scanner,
-                            size: 48, color: Colors.grey.shade800),
+                            size: isMobile ? 36 : 48,
+                            color: Colors.grey.shade800),
                         const SizedBox(height: 6),
                         Text(
                           _barcodeCtrl.text.isEmpty
                               ? 'Ready to scan'
                               : _barcodeCtrl.text,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.w600,
-                            fontSize: 13,
-                            letterSpacing: 1.2,
+                            fontSize: isMobile ? 12 : 13,
+                            letterSpacing: 1.1,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
@@ -531,9 +583,9 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                     animation: _laserCtrl,
                     builder: (_, __) {
                       return Positioned(
-                        top: 20 + (_laserCtrl.value * 160),
-                        left: 40,
-                        right: 40,
+                        top: 20 + (_laserCtrl.value * (isMobile ? 120 : 160)),
+                        left: 30,
+                        right: 30,
                         child: Container(
                           height: 2,
                           decoration: BoxDecoration(
@@ -561,11 +613,14 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
               ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
           Center(
             child: Text(
-              'Click the input below, then scan with your hardware scanner',
+              isMobile
+                  ? 'Focus input & scan barcode'
+                  : 'Click the input below, then scan with your hardware scanner',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
+              textAlign: TextAlign.center,
             ),
           ),
           const SizedBox(height: 8),
@@ -582,81 +637,95 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
             ],
           ),
           const SizedBox(height: 10),
-          Row(
-            children: [
-              Expanded(
-                child: SizedBox(
+          // Input + Lookup (stacks on very small screens)
+          if (isMobile)
+            Column(
+              children: [
+                SizedBox(
                   height: 48,
                   child: TextField(
                     controller: _barcodeCtrl,
                     focusNode: _barcodeFocus,
                     autofocus: true,
                     textInputAction: TextInputAction.done,
-                    // Scanners send Enter → triggers lookup
                     onSubmitted: (v) => lookupBarcode(v),
-                    // Also handle if scanner doesn't send Enter (rare)
                     onChanged: (v) {
-                      // Some scanners end with tab; ignore intermediate
-                      if (v.endsWith('\t')) {
-                        lookupBarcode(v);
-                      }
+                      if (v.endsWith('\t')) lookupBarcode(v);
                     },
-                    decoration: InputDecoration(
-                      hintText: 'Focus here & scan barcode…',
-                      hintStyle: TextStyle(
-                          color: Colors.grey.shade400, fontSize: 13),
-                      prefixIcon: Icon(Icons.qr_code_2,
-                          color: Colors.grey.shade500, size: 20),
-                      filled: true,
-                      fillColor: _barcodeFocus.hasFocus
-                          ? Colors.blue.shade50
-                          : Colors.grey.shade50,
-                      contentPadding: EdgeInsets.zero,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade200),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            BorderSide(color: Colors.grey.shade200),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: const BorderSide(
-                            color: Color(0xFF155EEF), width: 2),
-                      ),
-                    ),
+                    decoration: _barcodeDecoration(),
                     style: const TextStyle(
                         fontSize: 15, fontWeight: FontWeight.w600),
                   ),
                 ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                height: 48,
-                child: FilledButton(
-                  onPressed: isLookingUp ? null : () => lookupBarcode(),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF155EEF),
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                const SizedBox(height: 10),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: isLookingUp ? null : () => lookupBarcode(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF155EEF),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: isLookingUp
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Lookup'),
+                  ),
+                ),
+              ],
+            )
+          else
+            Row(
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 48,
+                    child: TextField(
+                      controller: _barcodeCtrl,
+                      focusNode: _barcodeFocus,
+                      autofocus: true,
+                      textInputAction: TextInputAction.done,
+                      onSubmitted: (v) => lookupBarcode(v),
+                      onChanged: (v) {
+                        if (v.endsWith('\t')) lookupBarcode(v);
+                      },
+                      decoration: _barcodeDecoration(),
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w600),
                     ),
                   ),
-                  child: isLookingUp
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Lookup'),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  height: 48,
+                  child: FilledButton(
+                    onPressed: isLookingUp ? null : () => lookupBarcode(),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF155EEF),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: isLookingUp
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Colors.white),
+                          )
+                        : const Text('Lookup'),
+                  ),
+                ),
+              ],
+            ),
           if (lookupError != null) ...[
             const SizedBox(height: 8),
             Text(lookupError!,
@@ -665,7 +734,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
           if (lastRawInput != null) ...[
             const SizedBox(height: 4),
             Text(
-              'Last input received: "$lastRawInput"',
+              'Last input: "$lastRawInput"',
               style: TextStyle(color: Colors.grey.shade500, fontSize: 11),
             ),
           ],
@@ -674,15 +743,42 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
     );
   }
 
+  InputDecoration _barcodeDecoration() {
+    return InputDecoration(
+      hintText: 'Focus here & scan barcode…',
+      hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+      prefixIcon:
+          Icon(Icons.qr_code_2, color: Colors.grey.shade500, size: 20),
+      filled: true,
+      fillColor:
+          _barcodeFocus.hasFocus ? Colors.blue.shade50 : Colors.grey.shade50,
+      contentPadding: EdgeInsets.zero,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: BorderSide(color: Colors.grey.shade200),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: Color(0xFF155EEF), width: 2),
+      ),
+    );
+  }
+
   Widget _statusRow() {
     return Row(
       children: [
         Expanded(
-          child: _statusChip(Icons.wifi, 'Scanner Status', 'Connected', Colors.green),
+          child: _statusChip(
+              Icons.wifi, 'Scanner Status', 'Connected', Colors.green),
         ),
         const SizedBox(width: 10),
         Expanded(
-          child: _statusChip(Icons.videocam, 'Camera', 'Active', Colors.green),
+          child: _statusChip(
+              Icons.videocam, 'Camera', 'Active', Colors.green),
         ),
       ],
     );
@@ -691,7 +787,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
   Widget _statusChip(
       IconData icon, String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -699,44 +795,49 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
       ),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: color),
-          const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style:
-                      TextStyle(fontSize: 11, color: Colors.grey.shade500)),
-              Row(
-                children: [
-                  Container(
-                    width: 7,
-                    height: 7,
-                    decoration:
-                        BoxDecoration(color: color, shape: BoxShape.circle),
-                  ),
-                  const SizedBox(width: 5),
-                  Text(value,
-                      style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: color)),
-                ],
-              ),
-            ],
+          Icon(icon, size: 16, color: color),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontSize: 10, color: Colors.grey.shade500)),
+                Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                          color: color, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 4),
+                    Flexible(
+                      child: Text(value,
+                          style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: color),
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _scanResultCard() {
+  Widget _scanResultCard({required bool isMobile}) {
     final r = scanResult;
     final valid = r != null && r['valid'] == true;
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -753,14 +854,16 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
               color: Color(0xFF1E2329),
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
           if (r == null)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
+              padding: const EdgeInsets.symmetric(vertical: 20),
               child: Center(
                 child: Text(
                   'Scan or enter a barcode to see results',
-                  style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                  style:
+                      TextStyle(color: Colors.grey.shade500, fontSize: 13),
+                  textAlign: TextAlign.center,
                 ),
               ),
             )
@@ -772,7 +875,8 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                 color: valid ? Colors.green.shade50 : Colors.red.shade50,
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: valid ? Colors.green.shade200 : Colors.red.shade200,
+                  color:
+                      valid ? Colors.green.shade200 : Colors.red.shade200,
                 ),
               ),
               child: Row(
@@ -814,7 +918,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
               ),
             ),
             if (valid) ...[
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               _detailRow('Order ID',
                   (r['orderNumber'] ?? r['orderId'] ?? '—').toString()),
               _detailRow('AWB / Tracking',
@@ -823,17 +927,14 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
               _detailRow('Status', (r['status'] ?? '—').toString()),
               _detailRow(
                   'Marketplace', (r['marketplace'] ?? '—').toString()),
-              _detailRow('Priority', (r['priority'] ?? '—').toString()),
-              if (r['matchedCode'] != null)
-                _detailRow('Scanned code', r['matchedCode'].toString()),
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 height: 44,
                 child: FilledButton(
                   onPressed: () {
                     final id = r['orderId']?.toString() ?? '';
-                    context.go('/recording?orderId=$id');
+                    context.go('/recording?orderId=$id&autostart=1');
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF155EEF),
@@ -841,14 +942,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                       borderRadius: BorderRadius.circular(10),
                     ),
                   ),
-                  child: const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('Start Recording / View Order'),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, size: 18),
-                    ],
-                  ),
+                  child: const Text('Start Recording'),
                 ),
               ),
             ],
@@ -860,12 +954,12 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
 
   Widget _detailRow(String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 110,
+            width: 100,
             child: Text(label,
                 style:
                     TextStyle(fontSize: 12, color: Colors.grey.shade500)),
@@ -885,7 +979,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
   Widget _summaryCard() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -902,18 +996,18 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
               color: Color(0xFF1E2329),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           Row(
             children: [
               Expanded(
                 child: Column(
                   children: [
                     Icon(Icons.qr_code_scanner,
-                        color: Colors.blue.shade600, size: 28),
-                    const SizedBox(height: 6),
+                        color: Colors.blue.shade600, size: 26),
+                    const SizedBox(height: 4),
                     Text('$totalScans',
                         style: const TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold)),
+                            fontSize: 22, fontWeight: FontWeight.bold)),
                     Text('Total Scans',
                         style: TextStyle(
                             fontSize: 11, color: Colors.grey.shade500)),
@@ -924,14 +1018,14 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                 child: Column(
                   children: [
                     SizedBox(
-                      width: 64,
-                      height: 64,
+                      width: 56,
+                      height: 56,
                       child: Stack(
                         alignment: Alignment.center,
                         children: [
                           CircularProgressIndicator(
                             value: totalScans == 0 ? 0 : successRate / 100,
-                            strokeWidth: 6,
+                            strokeWidth: 5,
                             backgroundColor: Colors.grey.shade100,
                             color: Colors.green,
                           ),
@@ -940,7 +1034,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                                 ? '—'
                                 : '${successRate.toStringAsFixed(0)}%',
                             style: const TextStyle(
-                                fontWeight: FontWeight.bold, fontSize: 13),
+                                fontWeight: FontWeight.bold, fontSize: 12),
                           ),
                         ],
                       ),
@@ -954,7 +1048,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           Row(
             children: [
               _miniStat('Verified', '$verifiedScans', Colors.green),
@@ -973,18 +1067,19 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
         children: [
           Text(value,
               style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.bold, color: color)),
+                  fontSize: 16, fontWeight: FontWeight.bold, color: color)),
           Text(label,
-              style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+              style:
+                  TextStyle(fontSize: 11, color: Colors.grey.shade500)),
         ],
       ),
     );
   }
 
-  Widget _recentScansCard() {
+  Widget _recentScansCard({required bool isMobile}) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(isMobile ? 14 : 18),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
@@ -1004,16 +1099,17 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                 ),
               ),
               const Spacer(),
-              TextButton(onPressed: fetchData, child: const Text('View All')),
+              TextButton(
+                  onPressed: fetchData, child: const Text('View All')),
             ],
           ),
           const SizedBox(height: 8),
           if (scans.isEmpty)
             Padding(
-              padding: const EdgeInsets.symmetric(vertical: 28),
+              padding: const EdgeInsets.symmetric(vertical: 24),
               child: Center(
                 child: Text(
-                  'No scans yet — lookup an order barcode to begin',
+                  'No scans yet',
                   style:
                       TextStyle(color: Colors.grey.shade500, fontSize: 13),
                 ),
@@ -1025,12 +1121,13 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
               child: DataTable(
                 headingRowColor:
                     WidgetStateProperty.all(Colors.grey.shade50),
+                columnSpacing: isMobile ? 16 : 24,
                 columns: const [
                   DataColumn(
                       label: Text('Barcode',
                           style: TextStyle(fontWeight: FontWeight.bold))),
                   DataColumn(
-                      label: Text('Order ID',
+                      label: Text('Order',
                           style: TextStyle(fontWeight: FontWeight.bold))),
                   DataColumn(
                       label: Text('Status',
@@ -1100,4 +1197,3 @@ class _FramePainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
-

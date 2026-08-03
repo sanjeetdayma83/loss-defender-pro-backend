@@ -167,22 +167,24 @@ class _OrdersPageState extends State<OrdersPage> {
           ? const Center(child: CircularProgressIndicator())
           : errorMessage != null
               ? _errorState()
-              : Padding(
-                  padding: const EdgeInsets.all(28),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Header
-                      Row(
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final isMobile = constraints.maxWidth < 650;
+                    
+                    return Padding(
+                      padding: EdgeInsets.all(isMobile ? 16 : 28),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+                          // Header
+                          if (isMobile)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 const Text(
                                   'Orders Management',
                                   style: TextStyle(
-                                    fontSize: 22,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF1E2329),
                                   ),
@@ -192,199 +194,300 @@ class _OrdersPageState extends State<OrdersPage> {
                                   '$totalCount total orders · showing ${filtered.length}',
                                   style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
                                 ),
+                                const SizedBox(height: 16),
+                                OutlinedButton.icon(
+                                  onPressed: fetchOrders,
+                                  icon: const Icon(Icons.refresh, size: 16),
+                                  label: const Text('Refresh'),
+                                ),
+                                const SizedBox(height: 8),
+                                FilledButton.icon(
+                                  onPressed: () => context.go('/scanning'),
+                                  icon: const Icon(Icons.qr_code_scanner, size: 16),
+                                  label: const Text('Scan Order'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1E40AF),
+                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const Text(
+                                        'Orders Management',
+                                        style: TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1E2329),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        '$totalCount total orders · showing ${filtered.length}',
+                                        style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: fetchOrders,
+                                  icon: const Icon(Icons.refresh, size: 16),
+                                  label: const Text('Refresh'),
+                                ),
+                                const SizedBox(width: 10),
+                                FilledButton.icon(
+                                  onPressed: () => context.go('/scanning'),
+                                  icon: const Icon(Icons.qr_code_scanner, size: 16),
+                                  label: const Text('Scan Order'),
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: const Color(0xFF1E40AF),
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                  ),
+                                ),
                               ],
                             ),
+                          const SizedBox(height: 20),
+
+                          // Search + filters
+                          Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade200),
+                            ),
+                            child: isMobile 
+                              ? Column(
+                                  children: [
+                                    SizedBox(
+                                      height: 42,
+                                      child: TextField(
+                                        controller: _searchCtrl,
+                                        onChanged: (_) => _applyFilters(),
+                                        decoration: InputDecoration(
+                                          hintText: 'Search order #, AWB, customer…',
+                                          hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                                          prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                                          filled: true,
+                                          fillColor: Colors.grey.shade50,
+                                          contentPadding: EdgeInsets.zero,
+                                          border: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: BorderSide(color: Colors.grey.shade200),
+                                          ),
+                                          enabledBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: BorderSide(color: Colors.grey.shade200),
+                                          ),
+                                          focusedBorder: OutlineInputBorder(
+                                            borderRadius: BorderRadius.circular(10),
+                                            borderSide: BorderSide(color: Colors.blue.shade300),
+                                          ),
+                                        ),
+                                        style: const TextStyle(fontSize: 13),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Container(
+                                      height: 42,
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: statusFilter,
+                                          isExpanded: true,
+                                          items: statusFilters
+                                              .map((s) => DropdownMenuItem(
+                                                    value: s,
+                                                    child: Text(s, style: const TextStyle(fontSize: 13)),
+                                                  ))
+                                              .toList(),
+                                          onChanged: (v) {
+                                            if (v == null) return;
+                                            statusFilter = v;
+                                            _applyFilters();
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                              : Row(
+                                  children: [
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 42,
+                                        child: TextField(
+                                          controller: _searchCtrl,
+                                          onChanged: (_) => _applyFilters(),
+                                          decoration: InputDecoration(
+                                            hintText: 'Search order #, AWB, customer…',
+                                            hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
+                                            prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
+                                            filled: true,
+                                            fillColor: Colors.grey.shade50,
+                                            contentPadding: EdgeInsets.zero,
+                                            border: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                              borderSide: BorderSide(color: Colors.grey.shade200),
+                                            ),
+                                            enabledBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                              borderSide: BorderSide(color: Colors.grey.shade200),
+                                            ),
+                                            focusedBorder: OutlineInputBorder(
+                                              borderRadius: BorderRadius.circular(10),
+                                              borderSide: BorderSide(color: Colors.blue.shade300),
+                                            ),
+                                          ),
+                                          style: const TextStyle(fontSize: 13),
+                                        ),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Container(
+                                      height: 42,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey.shade50,
+                                        borderRadius: BorderRadius.circular(10),
+                                        border: Border.all(color: Colors.grey.shade200),
+                                      ),
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<String>(
+                                          value: statusFilter,
+                                          items: statusFilters
+                                              .map((s) => DropdownMenuItem(
+                                                    value: s,
+                                                    child: Text(s, style: const TextStyle(fontSize: 13)),
+                                                  ))
+                                              .toList(),
+                                          onChanged: (v) {
+                                            if (v == null) return;
+                                            statusFilter = v;
+                                            _applyFilters();
+                                          },
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                           ),
-                          OutlinedButton.icon(
-                            onPressed: fetchOrders,
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Refresh'),
-                          ),
-                          const SizedBox(width: 10),
-                          FilledButton.icon(
-                            onPressed: () => context.go('/scanning'),
-                            icon: const Icon(Icons.qr_code_scanner, size: 16),
-                            label: const Text('Scan Order'),
-                            style: FilledButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E40AF),
-                              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                          const SizedBox(height: 16),
+
+                          // Table
+                          Expanded(
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade200),
+                              ),
+                              child: filtered.isEmpty
+                                  ? Center(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade300),
+                                          const SizedBox(height: 12),
+                                          Text(
+                                            orders.isEmpty
+                                                ? 'No orders in database yet'
+                                                : 'No orders match your filters',
+                                            style: TextStyle(color: Colors.grey.shade600),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : SingleChildScrollView(
+                                      child: SingleChildScrollView(
+                                        scrollDirection: Axis.horizontal,
+                                        child: DataTable(
+                                          headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                                          dataRowMinHeight: 52,
+                                          dataRowMaxHeight: 56,
+                                          columns: const [
+                                            DataColumn(label: Text('Order ID', style: TextStyle(fontWeight: FontWeight.bold))),
+                                            DataColumn(label: Text('AWB / Tracking', style: TextStyle(fontWeight: FontWeight.bold))),
+                                            DataColumn(label: Text('Customer', style: TextStyle(fontWeight: FontWeight.bold))),
+                                            DataColumn(label: Text('Marketplace', style: TextStyle(fontWeight: FontWeight.bold))),
+                                            DataColumn(label: Text('Priority', style: TextStyle(fontWeight: FontWeight.bold))),
+                                            DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
+                                            DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold))),
+                                            DataColumn(label: Text('Action', style: TextStyle(fontWeight: FontWeight.bold))),
+                                          ],
+                                          rows: filtered.map((order) {
+                                            final status = order['status'].toString();
+                                            final color = _statusColor(status);
+                                            return DataRow(cells: [
+                                              DataCell(Text(
+                                                order['orderNumber'].toString(),
+                                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                              )),
+                                              DataCell(Text(
+                                                order['awb'].toString(),
+                                                style: TextStyle(color: Colors.grey.shade600),
+                                              )),
+                                              DataCell(Text(order['customer'].toString())),
+                                              DataCell(Text(order['marketplace'].toString())),
+                                              DataCell(Text(order['priority'].toString())),
+                                              DataCell(
+                                                Container(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  decoration: BoxDecoration(
+                                                    color: color.withOpacity(0.12),
+                                                    borderRadius: BorderRadius.circular(6),
+                                                  ),
+                                                  child: Text(
+                                                    status,
+                                                    style: TextStyle(
+                                                      color: color,
+                                                      fontSize: 11,
+                                                      fontWeight: FontWeight.bold,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              DataCell(Text(
+                                                order['date'].toString(),
+                                                style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
+                                              )),
+                                              DataCell(
+                                                TextButton(
+                                                  onPressed: () {
+                                                    // Future: order detail page
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      SnackBar(
+                                                        content: Text('Order ${order['orderNumber']}'),
+                                                        behavior: SnackBarBehavior.floating,
+                                                      ),
+                                                    );
+                                                  },
+                                                  child: const Text('View'),
+                                                ),
+                                              ),
+                                            ]);
+                                          }).toList(),
+                                        ),
+                                      ),
+                                    ),
                             ),
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-
-                      // Search + filters
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.grey.shade200),
-                        ),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              child: SizedBox(
-                                height: 42,
-                                child: TextField(
-                                  controller: _searchCtrl,
-                                  onChanged: (_) => _applyFilters(),
-                                  decoration: InputDecoration(
-                                    hintText: 'Search order #, AWB, customer…',
-                                    hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: 13),
-                                    prefixIcon: Icon(Icons.search, size: 20, color: Colors.grey.shade400),
-                                    filled: true,
-                                    fillColor: Colors.grey.shade50,
-                                    contentPadding: EdgeInsets.zero,
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(color: Colors.grey.shade200),
-                                    ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(color: Colors.grey.shade200),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(10),
-                                      borderSide: BorderSide(color: Colors.blue.shade300),
-                                    ),
-                                  ),
-                                  style: const TextStyle(fontSize: 13),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              height: 42,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: statusFilter,
-                                  items: statusFilters
-                                      .map((s) => DropdownMenuItem(
-                                            value: s,
-                                            child: Text(s, style: const TextStyle(fontSize: 13)),
-                                          ))
-                                      .toList(),
-                                  onChanged: (v) {
-                                    if (v == null) return;
-                                    statusFilter = v;
-                                    _applyFilters();
-                                  },
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Table
-                      Expanded(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade200),
-                          ),
-                          child: filtered.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      Icon(Icons.inbox_outlined, size: 48, color: Colors.grey.shade300),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        orders.isEmpty
-                                            ? 'No orders in database yet'
-                                            : 'No orders match your filters',
-                                        style: TextStyle(color: Colors.grey.shade600),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : SingleChildScrollView(
-                                  child: SingleChildScrollView(
-                                    scrollDirection: Axis.horizontal,
-                                    child: DataTable(
-                                      headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                                      dataRowMinHeight: 52,
-                                      dataRowMaxHeight: 56,
-                                      columns: const [
-                                        DataColumn(label: Text('Order ID', style: TextStyle(fontWeight: FontWeight.bold))),
-                                        DataColumn(label: Text('AWB / Tracking', style: TextStyle(fontWeight: FontWeight.bold))),
-                                        DataColumn(label: Text('Customer', style: TextStyle(fontWeight: FontWeight.bold))),
-                                        DataColumn(label: Text('Marketplace', style: TextStyle(fontWeight: FontWeight.bold))),
-                                        DataColumn(label: Text('Priority', style: TextStyle(fontWeight: FontWeight.bold))),
-                                        DataColumn(label: Text('Status', style: TextStyle(fontWeight: FontWeight.bold))),
-                                        DataColumn(label: Text('Date', style: TextStyle(fontWeight: FontWeight.bold))),
-                                        DataColumn(label: Text('Action', style: TextStyle(fontWeight: FontWeight.bold))),
-                                      ],
-                                      rows: filtered.map((order) {
-                                        final status = order['status'].toString();
-                                        final color = _statusColor(status);
-                                        return DataRow(cells: [
-                                          DataCell(Text(
-                                            order['orderNumber'].toString(),
-                                            style: const TextStyle(fontWeight: FontWeight.w600),
-                                          )),
-                                          DataCell(Text(
-                                            order['awb'].toString(),
-                                            style: TextStyle(color: Colors.grey.shade600),
-                                          )),
-                                          DataCell(Text(order['customer'].toString())),
-                                          DataCell(Text(order['marketplace'].toString())),
-                                          DataCell(Text(order['priority'].toString())),
-                                          DataCell(
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: color.withValues(alpha: 0.12),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Text(
-                                                status,
-                                                style: TextStyle(
-                                                  color: color,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          DataCell(Text(
-                                            order['date'].toString(),
-                                            style: TextStyle(color: Colors.grey.shade600, fontSize: 13),
-                                          )),
-                                          DataCell(
-                                            TextButton(
-                                              onPressed: () {
-                                                // Future: order detail page
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('Order ${order['orderNumber']}'),
-                                                    behavior: SnackBarBehavior.floating,
-                                                  ),
-                                                );
-                                              },
-                                              child: const Text('View'),
-                                            ),
-                                          ),
-                                        ]);
-                                      }).toList(),
-                                    ),
-                                  ),
-                                ),
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  }
                 ),
     );
   }

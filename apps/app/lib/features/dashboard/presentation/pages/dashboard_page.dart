@@ -135,7 +135,6 @@ class _DashboardPageState extends State<DashboardPage> {
       } else if (recentBody is Map) {
         final unwrapped = _unwrap(recentBody);
         if (unwrapped != null) {
-          // could be { items: [...] } or the list itself was in data
           if (unwrapped.containsKey('items')) {
             items = unwrapped['items'] as List? ?? [];
           } else if (unwrapped.containsKey('data') &&
@@ -143,7 +142,6 @@ class _DashboardPageState extends State<DashboardPage> {
             items = unwrapped['data'] as List;
           }
         }
-        // envelope data might itself be the list
         if (items.isEmpty && recentBody['data'] is List) {
           items = recentBody['data'] as List;
         }
@@ -223,22 +221,26 @@ class _DashboardPageState extends State<DashboardPage> {
           ? const Center(child: CircularProgressIndicator())
           : errorMessage != null
               ? _buildErrorState()
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(32.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    // Mobile constraints logic
+                    final isMobile = constraints.maxWidth < 650;
+                    final isWide = constraints.maxWidth > 900;
+                    
+                    return SingleChildScrollView(
+                      padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: Column(
+                          // ── HEADER SECTION ──
+                          if (isMobile)
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   'Welcome back, $currentUserName',
                                   style: const TextStyle(
-                                    fontSize: 22,
+                                    fontSize: 20,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF1E2329),
                                   ),
@@ -246,33 +248,66 @@ class _DashboardPageState extends State<DashboardPage> {
                                 const SizedBox(height: 4),
                                 const Text(
                                   'Live data from /orders/dashboard',
-                                  style: TextStyle(
-                                      color: Colors.grey, fontSize: 13),
+                                  style: TextStyle(color: Colors.grey, fontSize: 13),
+                                ),
+                                const SizedBox(height: 16),
+                                SizedBox(
+                                  width: double.infinity,
+                                  child: OutlinedButton.icon(
+                                    onPressed: fetchDashboardData,
+                                    icon: const Icon(Icons.refresh, size: 16),
+                                    label: const Text('Sync Live API'),
+                                    style: OutlinedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(vertical: 12),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            )
+                          else
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Welcome back, $currentUserName',
+                                        style: const TextStyle(
+                                          fontSize: 22,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1E2329),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      const Text(
+                                        'Live data from /orders/dashboard',
+                                        style: TextStyle(color: Colors.grey, fontSize: 13),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                OutlinedButton.icon(
+                                  onPressed: fetchDashboardData,
+                                  icon: const Icon(Icons.refresh, size: 16),
+                                  label: const Text('Sync Live API'),
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white,
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                  ),
                                 ),
                               ],
                             ),
-                          ),
-                          OutlinedButton.icon(
-                            onPressed: fetchDashboardData,
-                            icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Sync Live API'),
-                            style: OutlinedButton.styleFrom(
-                              backgroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8)),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final isWide = constraints.maxWidth > 900;
-                          return Wrap(
-                            spacing: 20,
-                            runSpacing: 20,
+                            
+                          const SizedBox(height: 24),
+                          
+                          // ── STATS SECTION ──
+                          Wrap(
+                            spacing: isMobile ? 12 : 20,
+                            runSpacing: isMobile ? 12 : 20,
                             children: [
                               _statCard(
                                 'Total Orders',
@@ -280,6 +315,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 Icons.shopping_cart,
                                 Colors.blue,
                                 'Today: $todayOrders',
+                                isMobile,
                                 isWide,
                               ),
                               _statCard(
@@ -290,6 +326,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 totalOrders > 0
                                     ? '${((verifiedOrders / totalOrders) * 100).toStringAsFixed(1)}% of total'
                                     : '0%',
+                                isMobile,
                                 isWide,
                               ),
                               _statCard(
@@ -298,6 +335,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                 Icons.hourglass_top,
                                 Colors.orange,
                                 'Packing: $packingCount · Verifying: $verificationCount',
+                                isMobile,
                                 isWide,
                               ),
                               _statCard(
@@ -306,132 +344,149 @@ class _DashboardPageState extends State<DashboardPage> {
                                 Icons.warning,
                                 Colors.red,
                                 'Ready to ship: $readyToShipCount',
+                                isMobile,
                                 isWide,
                               ),
                             ],
-                          );
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      Card(
-                        elevation: 0,
-                        color: Colors.blue.shade50,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.blue.shade100),
-                        ),
-                        child: const Padding(
-                          padding: EdgeInsets.all(20),
-                          child: Row(
-                            children: [
-                              Icon(Icons.info_outline, color: Colors.blue),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  'Numbers above are live from the Orders service. Loss Prevented will appear once Evidence / Claims modules write data.',
-                                  style: TextStyle(
-                                      fontSize: 13, color: Color(0xFF1E3A5F)),
-                                ),
-                              ),
-                            ],
                           ),
-                        ),
-                      ),
-                      const SizedBox(height: 24),
-                      Card(
-                        elevation: 0,
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: BorderSide(color: Colors.grey.shade200),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(20),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
+                          
+                          const SizedBox(height: 24),
+                          
+                          // ── INFO BANNER ──
+                          Card(
+                            elevation: 0,
+                            color: Colors.blue.shade50,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.blue.shade100),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(isMobile ? 16 : 20),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text(
-                                    'Recent Orders',
-                                    style: TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold),
-                                  ),
-                                  TextButton(
-                                    onPressed: () => context.go('/orders'),
-                                    child: const Text('View All Orders'),
+                                  const Icon(Icons.info_outline, color: Colors.blue),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Numbers above are live from the Orders service. Loss Prevented will appear once Evidence / Claims modules write data.',
+                                      style: const TextStyle(fontSize: 13, color: Color(0xFF1E3A5F)),
+                                    ),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 12),
-                              if (recentOrders.isEmpty)
-                                const Padding(
-                                  padding: EdgeInsets.symmetric(vertical: 24),
-                                  child: Center(
-                                    child: Text(
-                                      'No orders yet — create some from the Orders page.',
-                                      style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
+                          
+                          const SizedBox(height: 24),
+                          
+                          // ── RECENT ORDERS ──
+                          Card(
+                            elevation: 0,
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              side: BorderSide(color: Colors.grey.shade200),
+                            ),
+                            child: Padding(
+                              padding: EdgeInsets.all(isMobile ? 16 : 20),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (isMobile)
+                                    Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        const Text(
+                                          'Recent Orders',
+                                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => context.go('/orders'),
+                                          style: TextButton.styleFrom(
+                                            padding: EdgeInsets.zero,
+                                            alignment: Alignment.centerLeft,
+                                          ),
+                                          child: const Text('View All Orders'),
+                                        ),
+                                      ],
+                                    )
+                                  else
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: [
+                                        const Text(
+                                          'Recent Orders',
+                                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                        ),
+                                        TextButton(
+                                          onPressed: () => context.go('/orders'),
+                                          child: const Text('View All Orders'),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                )
-                              else
-                                SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: DataTable(
-                                    columns: const [
-                                      DataColumn(label: Text('Order ID')),
-                                      DataColumn(label: Text('AWB / Tracking')),
-                                      DataColumn(label: Text('Customer')),
-                                      DataColumn(label: Text('Status')),
-                                      DataColumn(label: Text('Date')),
-                                    ],
-                                    rows: recentOrders.map((order) {
-                                      final status =
-                                          order['status'].toString();
-                                      final color = _statusColor(status);
-                                      return DataRow(cells: [
-                                        DataCell(Text(order['id'].toString())),
-                                        DataCell(Text(order['awb'].toString())),
-                                        DataCell(
-                                            Text(order['customer'].toString())),
-                                        DataCell(
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 8, vertical: 4),
-                                            decoration: BoxDecoration(
-                                              color: color.withValues(
-                                                  alpha: 0.1),
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              status,
-                                              style: TextStyle(
-                                                color: color,
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.bold,
+                                  const SizedBox(height: 12),
+                                  if (recentOrders.isEmpty)
+                                    const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 24),
+                                      child: Center(
+                                        child: Text(
+                                          'No orders yet — create some from the Orders page.',
+                                          style: TextStyle(color: Colors.grey),
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    SingleChildScrollView(
+                                      scrollDirection: Axis.horizontal,
+                                      child: DataTable(
+                                        columns: const [
+                                          DataColumn(label: Text('Order ID')),
+                                          DataColumn(label: Text('AWB / Tracking')),
+                                          DataColumn(label: Text('Customer')),
+                                          DataColumn(label: Text('Status')),
+                                          DataColumn(label: Text('Date')),
+                                        ],
+                                        rows: recentOrders.map((order) {
+                                          final status = order['status'].toString();
+                                          final color = _statusColor(status);
+                                          return DataRow(cells: [
+                                            DataCell(Text(order['id'].toString())),
+                                            DataCell(Text(order['awb'].toString())),
+                                            DataCell(Text(order['customer'].toString())),
+                                            DataCell(
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: color.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                ),
+                                                child: Text(
+                                                  status,
+                                                  style: TextStyle(
+                                                    color: color,
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ),
-                                        DataCell(Text(
-                                          order['date'].toString(),
-                                          style: const TextStyle(
-                                              color: Colors.grey),
-                                        )),
-                                      ]);
-                                    }).toList(),
-                                  ),
-                                ),
-                            ],
+                                            DataCell(Text(
+                                              order['date'].toString(),
+                                              style: const TextStyle(color: Colors.grey),
+                                            )),
+                                          ]);
+                                        }).toList(),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
     );
   }
@@ -473,10 +528,12 @@ class _DashboardPageState extends State<DashboardPage> {
     IconData icon,
     Color color,
     String subtitle,
+    bool isMobile,
     bool isWide,
   ) {
     return SizedBox(
-      width: isWide ? 260 : double.infinity,
+      // Ensure the card takes full width on mobile, and a fixed compact size on wide screens
+      width: isMobile ? double.infinity : (isWide ? 260 : 300),
       child: Card(
         elevation: 0,
         color: Colors.white,
@@ -485,7 +542,7 @@ class _DashboardPageState extends State<DashboardPage> {
           side: BorderSide(color: Colors.grey.shade200),
         ),
         child: Padding(
-          padding: const EdgeInsets.all(20.0),
+          padding: EdgeInsets.all(isMobile ? 16.0 : 20.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -504,7 +561,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: color.withValues(alpha: 0.1),
+                      color: color.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Icon(icon, color: color, size: 20),

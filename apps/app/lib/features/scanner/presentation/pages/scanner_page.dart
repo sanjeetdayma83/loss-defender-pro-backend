@@ -1,5 +1,6 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -32,13 +33,25 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
   bool torch = false;
   bool loaded = false;
   bool processing = false;
-  bool useHardwareScanner = true; 
+  
+  // Isko hum initState mein device ke hisaab se set karenge
+  late bool useHardwareScanner; 
+
+  // Platform check karne ka smart tareeka (Web browser on mobile ko bhi pakad lega)
+  bool get isMobileDevice =>
+      defaultTargetPlatform == TargetPlatform.iOS ||
+      defaultTargetPlatform == TargetPlatform.android;
 
   @override
   void initState() {
     super.initState();
+    
+    // Agar mobile hai toh hardware scanner FALSE rahega (Camera ON)
+    // Agar desktop hai toh hardware scanner TRUE rahega
+    useHardwareScanner = !isMobileDevice;
+
     Future.delayed(const Duration(milliseconds: 100), () {
-      if (mounted) _hiddenFocusNode.requestFocus();
+      if (mounted && useHardwareScanner) _hiddenFocusNode.requestFocus();
     });
   }
 
@@ -107,23 +120,27 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text("Scanner • ${widget.orderId}"),
+          title: Text("Scanner • ${widget.orderId}", style: const TextStyle(fontSize: 16)),
           actions: [
-            Row(
-              children: [
-                const Text("Hardware Scanner", style: TextStyle(fontSize: 12)),
-                Switch(
-                  value: useHardwareScanner,
-                  activeColor: Colors.green,
-                  onChanged: (val) {
-                    setState(() {
-                      useHardwareScanner = val;
-                      if (val) _hiddenFocusNode.requestFocus();
-                    });
-                  },
-                ),
-              ],
-            ),
+            // Sirf desktop par Hardware Scanner ka toggle dikhayenge
+            if (!isMobileDevice)
+              Row(
+                children: [
+                  const Text("Hardware Scanner", style: TextStyle(fontSize: 12)),
+                  Switch(
+                    value: useHardwareScanner,
+                    activeColor: Colors.green,
+                    onChanged: (val) {
+                      setState(() {
+                        useHardwareScanner = val;
+                        if (val) _hiddenFocusNode.requestFocus();
+                      });
+                    },
+                  ),
+                ],
+              ),
+              
+            // Agar camera on hai toh torch aur switch camera ke buttons dikhayenge
             if (!useHardwareScanner) ...[
               IconButton(
                 icon: Icon(torch ? Icons.flash_on : Icons.flash_off),
@@ -141,6 +158,7 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
         ),
         body: Stack(
           children: [
+            // Hidden input field for hardware scanner
             Opacity(
               opacity: 0,
               child: TextField(
@@ -158,10 +176,12 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
             if (state.loading && state.expectedItems.isEmpty)
               const Center(child: CircularProgressIndicator())
             else
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  children: [
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final isWide = constraints.maxWidth > 800;
+                  
+                  // Common header widgets
+                  final headerWidgets = [
                     OrderSummaryCard(
                       orderId: state.orderId,
                       expected: state.totalExpected,
@@ -169,9 +189,14 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
                     ),
                     const SizedBox(height: 12),
                     
+                    // CAMERA VIEW (badi height mobile ke liye)
                     if (!useHardwareScanner)
-                      SizedBox(
-                        height: 200,
+                      Container(
+                        height: isWide ? 250 : 350, // Phone par camera viewport bada rakha hai
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(18),
+                        ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(18),
                           child: Stack(
@@ -191,13 +216,14 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
                           ),
                         ),
                       )
+                    // HARDWARE SCANNER VIEW (Sirf desktop par)
                     else
                       GestureDetector(
                         onTap: () => _hiddenFocusNode.requestFocus(),
                         child: Container(
-                          height: 100, // Reduced height for better fit
+                          height: 100,
                           decoration: BoxDecoration(
-                            color: Colors.blue.withValues(alpha: 0.1),
+                            color: Colors.blue.withOpacity(0.1),
                             border: Border.all(color: Colors.blue, width: 2),
                             borderRadius: BorderRadius.circular(18),
                           ),
@@ -221,20 +247,48 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
                     const SizedBox(height: 12),
                     VerificationProgressCard(progress: state.progress),
                     const SizedBox(height: 12),
-                    
-                    // The Expanded widget here ensures the lists take EXACTLY the remaining space. Zero overflow.
-                    Expanded(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  ];
+
+                  // Render logic based on screen width
+                  if (isWide) {
+                    // DESKTOP/TABLET VIEW (Side-by-side lists)
+                    return Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
                         children: [
-                          Expanded(child: VerificationItemsCard(items: state.expectedItems)),
-                          const SizedBox(width: 16),
-                          Expanded(child: ScannedItemsList(items: state.scannedHistory)),
+                          ...headerWidgets,
+                          Expanded(
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(child: VerificationItemsCard(items: state.expectedItems)),
+                                const SizedBox(width: 16),
+                                Expanded(child: ScannedItemsList(items: state.scannedHistory)),
+                              ],
+                            ),
+                          ),
                         ],
                       ),
-                    ),
-                  ],
-                ),
+                    );
+                  } else {
+                    // MOBILE VIEW (Vertical stacked lists inside a scrollView to prevent RenderFlex overflow)
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          ...headerWidgets,
+                          VerificationItemsCard(items: state.expectedItems),
+                          const SizedBox(height: 16),
+                          ConstrainedBox(
+                             constraints: const BoxConstraints(minHeight: 300, maxHeight: 500),
+                             child: ScannedItemsList(items: state.scannedHistory)
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                },
               ),
           ],
         ),

@@ -62,85 +62,117 @@ class _ReturnsPageState extends State<ReturnsPage> {
       title: "Returns & Exception Management",
       child: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: const EdgeInsets.all(32.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Top Header & Sync Bar
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 650;
+
+                return SingleChildScrollView(
+                  padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Returned & Discrepant Orders", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                          SizedBox(height: 4),
-                          Text("Audit return claims and verify video proof against packaging discrepancies", style: TextStyle(color: Colors.grey, fontSize: 13)),
-                        ],
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: fetchReturns,
-                        icon: const Icon(Icons.refresh, size: 16),
-                        label: const Text("Sync Returns API"),
-                        style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+                      // Top Header & Sync Bar
+                      if (isMobile)
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Returned & Discrepant Orders",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            const Text(
+                              "Audit return claims and verify video proof against packaging discrepancies",
+                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                            ),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                onPressed: fetchReturns,
+                                icon: const Icon(Icons.refresh, size: 16),
+                                label: const Text("Sync Returns API"),
+                                style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
+                              ),
+                            ),
+                          ],
+                        )
+                      else
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Returned & Discrepant Orders", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                                SizedBox(height: 4),
+                                Text("Audit return claims and verify video proof against packaging discrepancies", style: TextStyle(color: Colors.grey, fontSize: 13)),
+                              ],
+                            ),
+                            OutlinedButton.icon(
+                              onPressed: fetchReturns,
+                              icon: const Icon(Icons.refresh, size: 16),
+                              label: const Text("Sync Returns API"),
+                              style: OutlinedButton.styleFrom(backgroundColor: Colors.white),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 24),
 
-                  // Returns Table Card
-                  Card(
-                    elevation: 0,
-                    color: Colors.white,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-                    child: Padding(
-                      padding: const EdgeInsets.all(20.0),
-                      child: SingleChildScrollView(
-                        scrollDirection: Axis.horizontal,
-                        child: SizedBox(
-                          width: 1000,
-                          child: DataTable(
-                            headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                            columnSpacing: 24,
-                            columns: const [
-                              DataColumn(label: Text("Return ID", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("Order ID", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("Customer Name", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("Return Reason / Issue", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
-                              DataColumn(label: Text("Date", style: TextStyle(fontWeight: FontWeight.bold))),
-                            ],
-                            rows: returnsList.map((ret) {
-                              final status = ret["status"].toString();
-                              Color statusColor = Colors.orange;
-                              if (status.contains("Approved") || status.contains("Resolved")) statusColor = Colors.green;
-                              if (status.contains("Under") || status.contains("Pending")) statusColor = Colors.blue;
-
-                              return DataRow(
-                                cells: [
-                                  DataCell(Text(ret["id"].toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                  DataCell(Text(ret["orderId"].toString(), style: const TextStyle(color: Colors.grey))),
-                                  DataCell(Text(ret["customer"].toString())),
-                                  DataCell(Text(ret["reason"].toString())),
-                                  DataCell(
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                      decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                                      child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
-                                    ),
-                                  ),
-                                  DataCell(Text(ret["date"].toString(), style: const TextStyle(color: Colors.grey))),
+                      // Returns Table Card
+                      Card(
+                        elevation: 0,
+                        color: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+                        child: Padding(
+                          padding: EdgeInsets.all(isMobile ? 12.0 : 20.0),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            child: SizedBox(
+                              width: 900,
+                              child: DataTable(
+                                headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                                columnSpacing: 20,
+                                columns: const [
+                                  DataColumn(label: Text("Return ID", style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text("Order ID", style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text("Customer Name", style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text("Return Reason / Issue", style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
+                                  DataColumn(label: Text("Date", style: TextStyle(fontWeight: FontWeight.bold))),
                                 ],
-                              );
-                            }).toList(),
+                                rows: returnsList.map((ret) {
+                                  final status = ret["status"].toString();
+                                  Color statusColor = Colors.orange;
+                                  if (status.contains("Approved") || status.contains("Resolved")) statusColor = Colors.green;
+                                  if (status.contains("Under") || status.contains("Pending")) statusColor = Colors.blue;
+
+                                  return DataRow(
+                                    cells: [
+                                      DataCell(Text(ret["id"].toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
+                                      DataCell(Text(ret["orderId"].toString(), style: const TextStyle(color: Colors.grey))),
+                                      DataCell(Text(ret["customer"].toString())),
+                                      DataCell(Text(ret["reason"].toString())),
+                                      DataCell(
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                          child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                                        ),
+                                      ),
+                                      DataCell(Text(ret["date"].toString(), style: const TextStyle(color: Colors.grey))),
+                                    ],
+                                  );
+                                }).toList(),
+                              ),
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             ),
     );
   }

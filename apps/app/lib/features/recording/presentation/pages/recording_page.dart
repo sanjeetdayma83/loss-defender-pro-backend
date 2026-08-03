@@ -577,24 +577,39 @@ class _RecordingPageState extends State<RecordingPage> {
                       LayoutBuilder(
                         builder: (context, c) {
                           final wide = c.maxWidth > 1000;
-                          return Flex(
-                            direction: wide ? Axis.horizontal : Axis.vertical,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                flex: 6,
-                                child: Column(
-                                  children: [
-                                    _playerCard(),
-                                    const SizedBox(height: 16),
-                                    _allRecordingsCard(),
-                                  ],
+                          
+                          // FIX: Removed Expanded inside SingleChildScrollView when stacked vertically (mobile view)
+                          if (wide) {
+                             return Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  flex: 6,
+                                  child: Column(
+                                    children: [
+                                      _playerCard(),
+                                      const SizedBox(height: 16),
+                                      _allRecordingsCard(),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                              SizedBox(width: wide ? 16 : 0, height: wide ? 0 : 16),
-                              Expanded(flex: 4, child: _detailsCard()),
-                            ],
-                          );
+                                const SizedBox(width: 16),
+                                Expanded(flex: 4, child: _detailsCard()),
+                              ],
+                            );
+                          } else {
+                            // Mobile layout: Stack items vertically without Expanded
+                            return Column(
+                               crossAxisAlignment: CrossAxisAlignment.stretch,
+                               children: [
+                                 _playerCard(),
+                                 const SizedBox(height: 16),
+                                 _detailsCard(),
+                                 const SizedBox(height: 16),
+                                 _allRecordingsCard(),
+                               ],
+                            );
+                          }
                         },
                       ),
                     ],
@@ -962,7 +977,7 @@ class _RecordingPageState extends State<RecordingPage> {
                     DataCell(Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.12),
+                        color: color.withOpacity(0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(st,
