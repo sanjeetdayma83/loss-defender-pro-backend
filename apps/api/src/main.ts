@@ -1,4 +1,5 @@
-﻿import {
+﻿import { TenantInterceptor } from './core/interceptors/tenant.interceptor';
+import {
   ClassSerializerInterceptor,
   ValidationPipe,
 } from '@nestjs/common';
@@ -80,6 +81,7 @@ async function bootstrap(): Promise<void> {
 
   const port = config.get<number>('app.port') ?? 3000;
 
+  app.useGlobalInterceptors(new TenantInterceptor());
   await app.listen(port, '0.0.0.0');
 
   console.log(
@@ -88,5 +90,6 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+
 
 
