@@ -1,87 +1,18 @@
 ﻿class ApiEndpoints {
-  ApiEndpoints._();
+  // Toggle this to TRUE jab app ka release build banana ho (Play Store / Excloud)
+  static const bool isProduction = false;
+  
+  // Production URL vs Localhost (10.0.2.2 is for Android Emulator)
+  static const String baseUrl = isProduction 
+      ? 'http://api.lossdefender.in' // Server live hone ke baad isko https karenge
+      : 'http://10.0.2.2:3000'; 
 
-  /// ============================================
-  /// Base URL
-  /// ============================================
-
-  /// Chrome (Web)
-  // static const String baseUrl = 'http://localhost:3000/api';
-
-  /// Android Emulator
-  // static const String baseUrl = 'http://10.0.2.2:3000/api';
-
-  /// Real Device (RMX3990)
-  static const String baseUrl = 'http://192.168.1.109:3000/api';
-
-  /// ============================================
-  /// Authentication
-  /// ============================================
-
+  // Core Endpoints
   static const String login = '/auth/login';
-  static const String refresh = '/auth/refresh';
-  static const String logout = '/auth/logout';
-  static const String profile = '/auth/profile';
-
-  /// ============================================
-  /// Companies
-  /// ============================================
-
-  static const String companies = '/companies';
-
-  /// ============================================
-  /// Users
-  /// ============================================
-
+  static const String dashboard = '/dashboard';
   static const String users = '/users';
-
-  /// ============================================
-  /// Warehouses
-  /// ============================================
-
+  static const String upload = '/upload';
+  static const String companies = '/companies';
   static const String warehouses = '/warehouses';
-
-  /// ============================================
-  /// Orders
-  /// ============================================
-
   static const String orders = '/orders';
-  static const String ordersDashboard = '/orders/dashboard';
-  static const String ordersStatistics = '/orders/statistics';
-  static const String analyticsMarketplace = '/orders/analytics/marketplace';
-  static const String analyticsWarehouse = '/orders/analytics/warehouse';
-  static const String analyticsPriority = '/orders/analytics/priority';
-  static const String analyticsStatus = '/orders/analytics/status';
-  static const String analyticsDailyTrend = '/orders/analytics/daily-trend';
-
-  /// ============================================
-  /// Recording
-  /// ============================================
-
-  static const String recordings = '/recordings';
-
-  /// ============================================
-  /// Scanner
-  /// (backend controller is @Controller('scanner'), not 'scans')
-  /// ============================================
-
-  static const String scans = '/scanner';
-
-  /// ============================================
-  /// Evidence
-  /// ============================================
-
-  static const String evidence = '/evidence';
-
-  /// ============================================
-  /// Claims
-  /// ============================================
-
-  static const String claims = '/claims';
-
-  /// ============================================
-  /// Returns
-  /// ============================================
-
-  static const String returns = '/returns';
 }

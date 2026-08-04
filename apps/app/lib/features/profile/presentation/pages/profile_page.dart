@@ -211,7 +211,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           OutlinedButton.icon(
                             onPressed: fetchUserProfile,
                             icon: const Icon(Icons.refresh, size: 16),
-                            label: const Text('Sync'),
+                            label: const Text('Refresh'),
                           ),
                           const Spacer(),
                           if (isEditing)
@@ -445,3 +445,4 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 }
+

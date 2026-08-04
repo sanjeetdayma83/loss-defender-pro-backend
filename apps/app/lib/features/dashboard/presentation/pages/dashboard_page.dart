@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/layout/app_layout.dart';
@@ -29,11 +30,25 @@ class _DashboardPageState extends State<DashboardPage> {
   int todayOrders = 0;
 
   List<Map<String, dynamic>> recentOrders = [];
+  Timer? _refreshTimer;
+  bool _silentRefresh = false;
 
   @override
   void initState() {
     super.initState();
     fetchDashboardData();
+    // Quiet auto-refresh every 60s while dashboard is open
+    _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
+      if (!mounted || isLoading) return;
+      _silentRefresh = true;
+      fetchDashboardData();
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer?.cancel();
+    super.dispose();
   }
 
   Map<String, dynamic>? _unwrap(dynamic body) {
@@ -55,7 +70,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> fetchDashboardData() async {
     setState(() {
-      isLoading = true;
+      if (!_silentRefresh) isLoading = true;
       errorMessage = null;
     });
 
@@ -113,10 +128,11 @@ class _DashboardPageState extends State<DashboardPage> {
         };
       }).toList();
 
-      setState(() => isLoading = false);
+      setState(() { isLoading = false; _silentRefresh = false; });
     } catch (e) {
       setState(() {
         isLoading = false;
+        _silentRefresh = false;
         errorMessage = e is DioException ? (e.response?.data is Map ? (e.response!.data['message']?.toString() ?? e.message) : e.message) : e.toString();
       });
     }
@@ -169,15 +185,14 @@ class _DashboardPageState extends State<DashboardPage> {
                               children: [
                                 Text('Welcome back, $currentUserName', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
                                 const SizedBox(height: 4),
-                                const Text('Live data from /orders/dashboard', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                const Text('Overview updates automatically', style: TextStyle(color: Colors.grey, fontSize: 13)),
                                 const SizedBox(height: 16),
-                                SizedBox(
-                                  width: double.infinity,
-                                  child: OutlinedButton.icon(
-                                    onPressed: fetchDashboardData,
-                                    icon: const Icon(Icons.refresh, size: 16),
-                                    label: const Text('Sync Live API'),
-                                    style: OutlinedButton.styleFrom(backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: IconButton(
+                                    tooltip: 'Refresh',
+                                    onPressed: isLoading ? null : fetchDashboardData,
+                                    icon: const Icon(Icons.refresh),
                                   ),
                                 ),
                               ],
@@ -192,15 +207,14 @@ class _DashboardPageState extends State<DashboardPage> {
                                     children: [
                                       Text('Welcome back, $currentUserName', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Color(0xFF1E2329))),
                                       const SizedBox(height: 4),
-                                      const Text('Live data from /orders/dashboard', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                                      const Text('Overview updates automatically', style: TextStyle(color: Colors.grey, fontSize: 13)),
                                     ],
                                   ),
                                 ),
-                                OutlinedButton.icon(
-                                  onPressed: fetchDashboardData,
-                                  icon: const Icon(Icons.refresh, size: 16),
-                                  label: const Text('Sync Live API'),
-                                  style: OutlinedButton.styleFrom(backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                IconButton(
+                                  tooltip: 'Refresh',
+                                  onPressed: isLoading ? null : fetchDashboardData,
+                                  icon: const Icon(Icons.refresh),
                                 ),
                               ],
                             ),
@@ -382,3 +396,5 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 }
+
+
