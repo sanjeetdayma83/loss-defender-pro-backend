@@ -1,4 +1,5 @@
-﻿import { DashboardModule } from './modules/dashboard/dashboard.module';
+﻿import { MailModule } from './modules/mail/mail.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
@@ -27,6 +28,7 @@ import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
+    MailModule,
     ConfigModule.forRoot({
       isGlobal: true,
       cache: true,
@@ -72,6 +74,7 @@ export class AppModule implements NestModule {
     consumer.apply(RequestIdMiddleware).forRoutes('*');
   }
 }
+
 
 
 
