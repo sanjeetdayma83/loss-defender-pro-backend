@@ -28,7 +28,6 @@ async function bootstrap(): Promise<void> {
     // ==========================================================
 // CORS
 // ==========================================================
-
 const allowedOrigins = (
   process.env.ALLOWED_ORIGINS ??
   [
@@ -39,10 +38,8 @@ const allowedOrigins = (
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
     'http://127.0.0.1:51352',
-
     'https://lossdefender.in',
     'https://www.lossdefender.in',
-
     'https://app.lossdefender.in',
     'https://admin.lossdefender.in',
     'https://api.lossdefender.in'
@@ -57,33 +54,34 @@ app.enableCors({
     origin: string | undefined,
     callback: (err: Error | null, allow?: boolean) => void,
   ) => {
-
+    // Allow requests with no origin (mobile apps, curl, Postman)
     if (!origin) {
       callback(null, true);
       return;
     }
 
+    // Allow any localhost / 127.0.0.1 port (Flutter debug uses random ports)
+    if (
+      origin.startsWith('http://localhost:') ||
+      origin.startsWith('http://127.0.0.1:') ||
+      origin.startsWith('https://localhost:') ||
+      origin.startsWith('https://127.0.0.1:')
+    ) {
+      callback(null, true);
+      return;
+    }
+
+    // Production allow-list
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
       return;
     }
 
     console.log('❌ CORS Blocked:', origin);
-
     callback(new Error(`CORS blocked for origin: ${origin}`), false);
   },
-
   credentials: true,
-
-  methods: [
-    'GET',
-    'POST',
-    'PUT',
-    'PATCH',
-    'DELETE',
-    'OPTIONS',
-  ],
-
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: [
     'Origin',
     'Content-Type',
@@ -130,6 +128,7 @@ app.enableCors({
 }
 
 void bootstrap();
+
 
 
 

@@ -25,6 +25,8 @@ import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { UsersModule } from './modules/users/users.module';
 import { ScannerModule } from './modules/scanner/scanner.module';
 import { UploadModule } from './modules/upload/upload.module';
+import { ReturnsModule } from './modules/returns/returns.module';
+import { AlertsModule } from './modules/alerts/alerts.module';
 
 @Module({
   imports: [
@@ -63,10 +65,13 @@ import { UploadModule } from './modules/upload/upload.module';
     RecordingModule,
 
     OrdersModule,
+    DashboardModule,
 
     UsersModule,
     ScannerModule,
     UploadModule,
+    ReturnsModule,
+    AlertsModule,
   ],
 })
 export class AppModule implements NestModule {
@@ -74,6 +79,8 @@ export class AppModule implements NestModule {
     consumer.apply(RequestIdMiddleware).forRoutes('*');
   }
 }
+
+
 
 
 

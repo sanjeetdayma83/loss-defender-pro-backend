@@ -63,9 +63,9 @@ class ApiEndpoints {
   // ANALYTICS
   // ==========================================================
 
-  static const String analyticsMarketplace = '/analytics/marketplace';
+  static const String analyticsMarketplace = '/orders/analytics/marketplace';
 
-  static const String analyticsStatus = '/analytics/status';
+  static const String analyticsStatus = '/orders/analytics/status';
 
   // ==========================================================
   // MASTER DATA
@@ -93,4 +93,12 @@ class ApiEndpoints {
   // ==========================================================
 
   static const String scans = '/scans';
+
+  // ==========================================================
+  // RETURNS & ALERTS
+  // ==========================================================
+
+  static const String returns = '/returns';
+  static const String alerts = '/alerts';
 }
+
