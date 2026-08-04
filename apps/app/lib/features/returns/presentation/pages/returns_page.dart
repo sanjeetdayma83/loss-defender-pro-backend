@@ -1,7 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../../../shared/layout/app_layout.dart';
 import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
 
 class ReturnsPage extends StatefulWidget {
   const ReturnsPage({super.key});
@@ -13,6 +14,7 @@ class ReturnsPage extends StatefulWidget {
 class _ReturnsPageState extends State<ReturnsPage> {
   final Dio _dio = ApiClient.dio;
   bool isLoading = true;
+  String? errorMessage;
   List<Map<String, dynamic>> returnsList = [];
 
   @override
@@ -21,38 +23,66 @@ class _ReturnsPageState extends State<ReturnsPage> {
     fetchReturns();
   }
 
+  List<dynamic> _extractItems(dynamic body) {
+    if (body is List) return body;
+    if (body is! Map) return [];
+    final map = Map<String, dynamic>.from(body);
+    // ResponseInterceptor wraps: { success, data: { items: [...] } }
+    final data = map['data'];
+    if (data is List) return data;
+    if (data is Map) {
+      final inner = Map<String, dynamic>.from(data);
+      if (inner['items'] is List) return inner['items'] as List;
+      if (inner['data'] is List) return inner['data'] as List;
+    }
+    if (map['items'] is List) return map['items'] as List;
+    return [];
+  }
+
   Future<void> fetchReturns() async {
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
     try {
-      final response = await _dio.get('/returns').catchError((_) => _dio.get('/orders'));
-      final data = response.data;
-      List items = [];
-      if (data is List) {
-        items = data;
-      } else if (data is Map && data.containsKey('data')) {
-        items = data['data'];
-      }
+      final response = await _dio.get(ApiEndpoints.returns);
+      final items = _extractItems(response.data);
 
       setState(() {
-        returnsList = List<Map<String, dynamic>>.from(items.map((e) => {
-          "id": e["id"] ?? e["returnId"] ?? "RET-001",
-          "orderId": e["orderId"] ?? "ORD-2026-001",
-          "customer": e["customerName"] ?? e["customer"] ?? "Enterprise Client",
-          "reason": e["reason"] ?? e["issue"] ?? "Damaged Packaging / Wrong Weight",
-          "status": e["status"] ?? "Pending Inspection",
-          "date": e["createdAt"]?.toString().substring(0, 10) ?? "2026-08-03",
-        }));
+        returnsList = items.map<Map<String, dynamic>>((e) {
+          final m = Map<String, dynamic>.from(e as Map);
+          return {
+            "id": (m["id"] ?? m["returnId"] ?? "—").toString(),
+            "orderId": (m["orderNumber"] ?? m["orderId"] ?? m["id"] ?? "—").toString(),
+            "customer": (m["customerName"] ?? m["customer"]?["name"] ?? m["customer"] ?? "—").toString(),
+            "reason": (m["reason"] ?? m["notes"] ?? m["exceptionReason"] ?? m["issue"] ?? "Return requested").toString(),
+            "status": (m["status"] ?? "RETURNED").toString(),
+            "date": _formatDate(m["createdAt"] ?? m["updatedAt"] ?? m["date"]),
+          };
+        }).toList();
         isLoading = false;
       });
     } catch (e) {
       setState(() {
-        returnsList = [
-          {"id": "RET-001", "orderId": "ORD-2026-012", "customer": "Shri Balaji Trading Co.", "reason": "Torn Tarpaulin Sheet", "status": "Under Audit", "date": "2026-08-01"},
-          {"id": "RET-002", "orderId": "ORD-2026-018", "customer": "Sharma Logistics", "reason": "Shortage in Cargo Net Count", "status": "Approved Refund", "date": "2026-08-02"},
-          {"id": "RET-003", "orderId": "ORD-2026-025", "customer": "Vikas Enterprises", "reason": "Wrong Item Dispatched", "status": "Pending Inspection", "date": "2026-08-03"},
-        ];
         isLoading = false;
+        errorMessage = e is DioException
+            ? (e.response?.data is Map
+                ? (e.response!.data['message']?.toString() ?? e.message)
+                : e.message)
+            : e.toString();
+        returnsList = []; // No fake data
       });
+    }
+  }
+
+  String _formatDate(dynamic raw) {
+    if (raw == null) return "—";
+    try {
+      final dt = DateTime.parse(raw.toString()).toLocal();
+      return "${dt.year}-${dt.month.toString().padLeft(2, '0')}-${dt.day.toString().padLeft(2, '0')}";
+    } catch (_) {
+      return raw.toString().length >= 10 ? raw.toString().substring(0, 10) : raw.toString();
     }
   }
 
@@ -64,118 +94,131 @@ class _ReturnsPageState extends State<ReturnsPage> {
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
               builder: (context, constraints) {
-                final isMobile = constraints.maxWidth < 650;
+                final isMobile = constraints.maxWidth < 800;
 
                 return SingleChildScrollView(
                   padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Top Header & Sync Bar
-                      if (isMobile)
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Text(
-                              "Returned & Discrepant Orders",
-                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            const Text(
-                              "Audit return claims and verify video proof against packaging discrepancies",
-                              style: TextStyle(color: Colors.grey, fontSize: 12),
-                            ),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton.icon(
-                                onPressed: fetchReturns,
-                                icon: const Icon(Icons.refresh, size: 16),
-                                label: const Text("Sync Returns API"),
-                                style: OutlinedButton.styleFrom(backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 12)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Returned & Discrepant Orders",
+                                style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                               ),
-                            ),
-                          ],
-                        )
-                      else
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text("Returned & Discrepant Orders", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-                                  SizedBox(height: 4),
-                                  Text("Audit return claims and verify video proof against packaging discrepancies", style: TextStyle(color: Colors.grey, fontSize: 13)),
-                                ],
+                              const SizedBox(height: 4),
+                              Text(
+                                "Live data from /returns API",
+                                style: TextStyle(color: Colors.grey[600], fontSize: 13),
                               ),
-                            ),
-                            OutlinedButton.icon(
-                              onPressed: fetchReturns,
-                              icon: const Icon(Icons.refresh, size: 16),
-                              label: const Text("Sync Returns API"),
-                              style: OutlinedButton.styleFrom(backgroundColor: Colors.white, padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
+                          FilledButton.icon(
+                            onPressed: fetchReturns,
+                            icon: const Icon(Icons.sync, size: 18),
+                            label: const Text("Sync Returns API"),
+                          ),
+                        ],
+                      ),
                       const SizedBox(height: 24),
 
-                      // Returns Table Card
-                      Card(
-                        elevation: 0,
-                        color: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-                        child: Padding(
-                          padding: EdgeInsets.all(isMobile ? 12.0 : 20.0),
+                      if (errorMessage != null)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red.shade700),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(errorMessage!, style: TextStyle(color: Colors.red.shade800))),
+                              TextButton(onPressed: fetchReturns, child: const Text("Retry")),
+                            ],
+                          ),
+                        ),
+
+                      if (returnsList.isEmpty && errorMessage == null)
+                        Container(
+                          padding: const EdgeInsets.all(48),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.assignment_return_outlined, size: 48, color: Colors.grey.shade400),
+                              const SizedBox(height: 16),
+                              Text("No returns found", style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                              const SizedBox(height: 8),
+                              Text("When orders are marked RETURNED they will appear here.", style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        )
+                      else if (returnsList.isNotEmpty)
+                        Container(
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
                           child: SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
-                            child: SizedBox(
-                              width: isMobile ? null : 900,
-                              child: DataTable(
-                                headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                                columnSpacing: isMobile ? 16 : 20,
-                                columns: const [
-                                  DataColumn(label: Text("Return ID", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Order ID", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Customer Name", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Return Reason / Issue", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
-                                  DataColumn(label: Text("Date", style: TextStyle(fontWeight: FontWeight.bold))),
-                                ],
-                                rows: returnsList.map((ret) {
-                                  final status = ret["status"].toString();
-                                  Color statusColor = Colors.orange;
-                                  if (status.contains("Approved") || status.contains("Resolved")) statusColor = Colors.green;
-                                  if (status.contains("Under") || status.contains("Pending")) statusColor = Colors.blue;
-
-                                  return DataRow(
-                                    cells: [
-                                      DataCell(Text(ret["id"].toString(), style: const TextStyle(fontWeight: FontWeight.bold))),
-                                      DataCell(Text(ret["orderId"].toString(), style: const TextStyle(color: Colors.grey))),
-                                      DataCell(Text(ret["customer"].toString())),
-                                      DataCell(Text(ret["reason"].toString())),
-                                      DataCell(
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-                                          child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
-                                        ),
-                                      ),
-                                      DataCell(Text(ret["date"].toString(), style: const TextStyle(color: Colors.grey))),
-                                    ],
-                                  );
-                                }).toList(),
-                              ),
+                            child: DataTable(
+                              headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
+                              columns: const [
+                                DataColumn(label: Text("Return ID")),
+                                DataColumn(label: Text("Order ID")),
+                                DataColumn(label: Text("Customer Name")),
+                                DataColumn(label: Text("Return Reason / Issue")),
+                                DataColumn(label: Text("Status")),
+                                DataColumn(label: Text("Date")),
+                              ],
+                              rows: returnsList.map((r) {
+                                return DataRow(cells: [
+                                  DataCell(Text(r["id"] ?? "—", style: const TextStyle(fontWeight: FontWeight.w600))),
+                                  DataCell(Text(r["orderId"] ?? "—")),
+                                  DataCell(Text(r["customer"] ?? "—")),
+                                  DataCell(Text(r["reason"] ?? "—")),
+                                  DataCell(_statusChip(r["status"] ?? "")),
+                                  DataCell(Text(r["date"] ?? "—")),
+                                ]);
+                              }).toList(),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 );
               },
             ),
+    );
+  }
+
+  Widget _statusChip(String status) {
+    Color bg;
+    Color fg;
+    final s = status.toUpperCase();
+    if (s.contains("APPROVED") || s.contains("COMPLETED") || s.contains("REFUND")) {
+      bg = Colors.green.shade50; fg = Colors.green.shade700;
+    } else if (s.contains("PENDING") || s.contains("INSPECTION") || s.contains("AUDIT")) {
+      bg = Colors.blue.shade50; fg = Colors.blue.shade700;
+    } else {
+      bg = Colors.orange.shade50; fg = Colors.orange.shade800;
+    }
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
+      child: Text(status, style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 }

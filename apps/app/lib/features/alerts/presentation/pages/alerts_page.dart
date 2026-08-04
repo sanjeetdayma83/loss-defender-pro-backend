@@ -1,5 +1,8 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import '../../../../shared/layout/app_layout.dart';
+import '../../../../core/api/api_client.dart';
+import '../../../../core/api/api_endpoints.dart';
 
 class AlertsPage extends StatefulWidget {
   const AlertsPage({super.key});
@@ -9,313 +12,399 @@ class AlertsPage extends StatefulWidget {
 }
 
 class _AlertsPageState extends State<AlertsPage> {
+  final Dio _dio = ApiClient.dio;
+
+  bool isLoading = true;
+  String? errorMessage;
   int selectedTab = 0;
   int selectedAlertIndex = 0;
 
-  final List<Map<String, dynamic>> alertsList = [
-    {"alert": "Duplicate Scan Detected", "desc": "Same barcode scanned multiple times", "orderId": "ORD-202600516-001", "type": "Scanning", "priority": "High", "time": "16 May 2026, 10:32 AM", "status": "Open", "user": "Rahul Sharma", "warehouse": "Main Warehouse", "device": "LD-Scanner-01"},
-    {"alert": "Unusual Activity Detected", "desc": "Unusual scanning pattern identified", "orderId": "ORD-202600516-002", "type": "AI Detection", "priority": "High", "time": "16 May 2026, 10:28 AM", "status": "Open", "user": "Vikram Singh", "warehouse": "Main Warehouse", "device": "LD-Scanner-02"},
-    {"alert": "Order Verification Pending", "desc": "Order pending for manual verification", "orderId": "ORD-202600516-003", "type": "Verification", "priority": "Medium", "time": "16 May 2026, 10:24 AM", "status": "In Progress", "user": "Neha Verma", "warehouse": "Main Warehouse", "device": "LD-Scanner-03"},
-    {"alert": "Recording Not Available", "desc": "Recording missing for this scan", "orderId": "ORD-202600516-004", "type": "Recording", "priority": "High", "time": "16 May 2026, 10:20 AM", "status": "Open", "user": "Amit Kumar", "warehouse": "Main Warehouse", "device": "LD-Cam-01"},
-    {"alert": "Item Quantity Mismatch", "desc": "Scanned quantity does not match order", "orderId": "ORD-202600516-005", "type": "Verification", "priority": "Medium", "time": "16 May 2026, 10:15 AM", "status": "Open", "user": "Pooja Sharma", "warehouse": "Main Warehouse", "device": "LD-Scanner-04"},
-  ];
+  List<Map<String, dynamic>> alertsList = [];
+  int totalAlerts = 0;
+  int highPriority = 0;
+  int mediumPriority = 0;
+  int resolvedAlerts = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchAlerts();
+  }
+
+  List<dynamic> _extractItems(dynamic body) {
+    if (body is List) return body;
+    if (body is! Map) return [];
+    final map = Map<String, dynamic>.from(body);
+    final data = map['data'];
+    if (data is List) return data;
+    if (data is Map) {
+      final inner = Map<String, dynamic>.from(data);
+      if (inner['items'] is List) return inner['items'] as List;
+      if (inner['data'] is List) return inner['data'] as List;
+    }
+    if (map['items'] is List) return map['items'] as List;
+    return [];
+  }
+
+  Future<void> fetchAlerts() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    try {
+      final response = await _dio.get(ApiEndpoints.alerts);
+      final items = _extractItems(response.data);
+
+      final mapped = items.map<Map<String, dynamic>>((e) {
+        final m = Map<String, dynamic>.from(e as Map);
+        return {
+          "alert": (m["alert"] ?? m["type"] ?? "Alert").toString(),
+          "desc": (m["desc"] ?? m["description"] ?? "").toString(),
+          "orderId": (m["orderId"] ?? m["orderNumber"] ?? "—").toString(),
+          "type": (m["type"] ?? "System").toString(),
+          "priority": (m["priority"] ?? "Medium").toString(),
+          "time": _formatTime(m["time"] ?? m["createdAt"] ?? m["updatedAt"]),
+          "status": (m["status"] ?? "Open").toString(),
+          "user": (m["user"] ?? "System").toString(),
+          "warehouse": (m["warehouse"] ?? "—").toString(),
+          "device": (m["device"] ?? "—").toString(),
+        };
+      }).toList();
+
+      setState(() {
+        alertsList = mapped;
+        totalAlerts = mapped.length;
+        highPriority = mapped.where((a) => (a["priority"] as String).toLowerCase() == "high").length;
+        mediumPriority = mapped.where((a) => (a["priority"] as String).toLowerCase() == "medium").length;
+        resolvedAlerts = mapped.where((a) => (a["status"] as String).toLowerCase() == "closed" || (a["status"] as String).toLowerCase() == "resolved").length;
+        selectedAlertIndex = 0;
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = e is DioException
+            ? (e.response?.data is Map
+                ? (e.response!.data['message']?.toString() ?? e.message)
+                : e.message)
+            : e.toString();
+        alertsList = [];
+        totalAlerts = 0;
+        highPriority = 0;
+        mediumPriority = 0;
+        resolvedAlerts = 0;
+      });
+    }
+  }
+
+  String _formatTime(dynamic raw) {
+    if (raw == null) return "—";
+    try {
+      final dt = DateTime.parse(raw.toString()).toLocal();
+      return "${dt.day.toString().padLeft(2, '0')} ${_month(dt.month)} ${dt.year}, ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}";
+    } catch (_) {
+      return raw.toString();
+    }
+  }
+
+  String _month(int m) {
+    const months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return months[m];
+  }
+
+  List<Map<String, dynamic>> get filteredAlerts {
+    if (selectedTab == 1) return alertsList.where((a) => (a["priority"] as String).toLowerCase() == "high").toList();
+    if (selectedTab == 2) return alertsList.where((a) => (a["priority"] as String).toLowerCase() == "medium").toList();
+    if (selectedTab == 3) return alertsList.where((a) => (a["status"] as String).toLowerCase() == "closed" || (a["status"] as String).toLowerCase() == "resolved").toList();
+    return alertsList;
+  }
 
   @override
   Widget build(BuildContext context) {
-    final currentAlert = alertsList[selectedAlertIndex];
+    final list = filteredAlerts;
+    final currentAlert = list.isNotEmpty && selectedAlertIndex < list.length ? list[selectedAlertIndex] : null;
 
     return AppLayout(
       title: "Alerts",
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isMobile = constraints.maxWidth < 800;
-          final isWide = constraints.maxWidth > 1100;
-          
-          return SingleChildScrollView(
-            padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
+      child: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final isMobile = constraints.maxWidth < 900;
+
+                return SingleChildScrollView(
+                  padding: EdgeInsets.all(isMobile ? 16.0 : 32.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Metric cards
+                      Wrap(
+                        spacing: 16,
+                        runSpacing: 16,
+                        children: [
+                          _metricCard("Total Alerts", totalAlerts.toString(), Icons.warning_amber_rounded, Colors.red),
+                          _metricCard("High Priority", highPriority.toString(), Icons.notifications_active, Colors.orange),
+                          _metricCard("Medium Priority", mediumPriority.toString(), Icons.info_outline, Colors.amber),
+                          _metricCard("Resolved Alerts", resolvedAlerts.toString(), Icons.check_circle_outline, Colors.green),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+
+                      if (errorMessage != null)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          margin: const EdgeInsets.only(bottom: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.shade200),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.error_outline, color: Colors.red.shade700),
+                              const SizedBox(width: 12),
+                              Expanded(child: Text(errorMessage!, style: TextStyle(color: Colors.red.shade800))),
+                              TextButton(onPressed: fetchAlerts, child: const Text("Retry")),
+                            ],
+                          ),
+                        ),
+
+                      if (alertsList.isEmpty && errorMessage == null)
+                        Container(
+                          padding: const EdgeInsets.all(48),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            children: [
+                              Icon(Icons.notifications_none, size: 48, color: Colors.grey.shade400),
+                              const SizedBox(height: 16),
+                              Text("No alerts right now", style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+                              const SizedBox(height: 8),
+                              Text("High-priority, returns and claims will appear here automatically.", style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
+                            ],
+                          ),
+                        )
+                      else if (alertsList.isNotEmpty)
+                        isMobile
+                            ? _buildMobileList(list, currentAlert)
+                            : _buildDesktopLayout(list, currentAlert),
+                    ],
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _metricCard(String title, String value, IconData icon, Color color) {
+    return SizedBox(
+      width: 220,
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(title, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+                  Icon(icon, color: color, size: 22),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(value, style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout(List<Map<String, dynamic>> list, Map<String, dynamic>? current) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 3,
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Top 4 Metric Cards
-                Wrap(
-                  spacing: 16,
-                  runSpacing: 16,
-                  children: [
-                    SizedBox(width: isWide ? (constraints.maxWidth - 48) / 4 : (isMobile ? double.infinity : (constraints.maxWidth - 16) / 2), child: _buildStatCard("Total Alerts", "164", "+18.7% vs last week", Icons.warning_amber_rounded, Colors.red)),
-                    SizedBox(width: isWide ? (constraints.maxWidth - 48) / 4 : (isMobile ? double.infinity : (constraints.maxWidth - 16) / 2), child: _buildStatCard("High Priority", "38", "+22.4% vs last week", Icons.notifications_active, Colors.orange)),
-                    SizedBox(width: isWide ? (constraints.maxWidth - 48) / 4 : (isMobile ? double.infinity : (constraints.maxWidth - 16) / 2), child: _buildStatCard("Medium Priority", "86", "-5.3% vs last week", Icons.info_outline, Colors.amber.shade800)),
-                    SizedBox(width: isWide ? (constraints.maxWidth - 48) / 4 : (isMobile ? double.infinity : (constraints.maxWidth - 16) / 2), child: _buildStatCard("Resolved Alerts", "124", "+16.1% vs last week", Icons.check_circle_outline, Colors.green)),
-                  ],
-                ),
-                const SizedBox(height: 24),
-
-                // Main Content Layout (Table + Right Details Panel)
-                if (isWide)
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      Expanded(flex: 7, child: _buildTableCard(isMobile)),
-                      const SizedBox(width: 24),
-                      Expanded(flex: 5, child: _buildDetailsCard(currentAlert, isMobile)),
-                    ],
-                  )
-                else
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _buildTableCard(isMobile),
-                      const SizedBox(height: 24),
-                      _buildDetailsCard(currentAlert, isMobile),
+                      _tab("All Alerts ($totalAlerts)", 0),
+                      _tab("High ($highPriority)", 1),
+                      _tab("Medium ($mediumPriority)", 2),
+                      _tab("Resolved ($resolvedAlerts)", 3),
+                      const Spacer(),
+                      IconButton(onPressed: fetchAlerts, icon: const Icon(Icons.refresh), tooltip: "Refresh"),
                     ],
                   ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTableCard(bool isMobile) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: EdgeInsets.all(isMobile ? 16.0 : 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Tabs
-            Wrap(
-              spacing: 16,
-              runSpacing: 12,
-              children: [
-                _buildTab("All Alerts (164)", 0),
-                _buildTab("High (38)", 1),
-                _buildTab("Medium (86)", 2),
-                _buildTab("Resolved (124)", 3),
-              ],
-            ),
-            const Divider(height: 24),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                headingRowColor: WidgetStateProperty.all(Colors.grey.shade50),
-                columnSpacing: isMobile ? 16 : 24,
-                columns: const [
-                  DataColumn(label: Text("Alert", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Order ID", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Type", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Priority", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Time", style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text("Status", style: TextStyle(fontWeight: FontWeight.bold))),
-                ],
-                rows: List.generate(alertsList.length, (index) {
-                  final alert = alertsList[index];
-                  final isSelected = selectedAlertIndex == index;
-                  final priority = alert["priority"].toString();
-                  final status = alert["status"].toString();
-
-                  return DataRow(
-                    selected: isSelected,
-                    onSelectChanged: (val) => setState(() => selectedAlertIndex = index),
-                    cells: [
-                      DataCell(Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                ),
+                const Divider(height: 1),
+                ...List.generate(list.length, (i) {
+                  final a = list[i];
+                  final selected = i == selectedAlertIndex;
+                  return InkWell(
+                    onTap: () => setState(() => selectedAlertIndex = i),
+                    child: Container(
+                      color: selected ? Colors.blue.shade50 : null,
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      child: Row(
                         children: [
-                          Text(alert["alert"].toString(), style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                          Text(alert["desc"].toString(), style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                          Icon(
+                            selected ? Icons.check_box : Icons.check_box_outline_blank,
+                            size: 20,
+                            color: selected ? Colors.blue : Colors.grey,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(a["alert"] ?? "", style: const TextStyle(fontWeight: FontWeight.w600)),
+                                Text(a["desc"] ?? "", style: TextStyle(fontSize: 12, color: Colors.grey.shade600), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ],
+                            ),
+                          ),
+                          Text(a["orderId"] ?? "", style: const TextStyle(fontSize: 12)),
+                          const SizedBox(width: 12),
+                          _priorityChip(a["priority"] ?? ""),
                         ],
-                      )),
-                      DataCell(Text(alert["orderId"].toString())),
-                      DataCell(Text(alert["type"].toString())),
-                      DataCell(_badge(priority, priority == "High" ? Colors.red : Colors.orange)),
-                      DataCell(Text(alert["time"].toString(), style: const TextStyle(fontSize: 12, color: Colors.grey))),
-                      DataCell(_badge(status, status == "Open" ? Colors.red : Colors.blue)),
-                    ],
+                      ),
+                    ),
                   );
                 }),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailsCard(Map<String, dynamic> currentAlert, bool isMobile) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: EdgeInsets.all(isMobile ? 16.0 : 20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text("Alert Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                _badge(currentAlert["priority"].toString(), Colors.red),
               ],
             ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.red.shade100)),
-              child: Row(
-                children: [
-                  const Icon(Icons.warning_amber_rounded, color: Colors.red),
-                  const SizedBox(width: 12),
-                  Expanded(
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          flex: 2,
+          child: current == null
+              ? const SizedBox()
+              : Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(currentAlert["alert"].toString(), style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.red, fontSize: 14)),
-                        Text(currentAlert["desc"].toString(), style: const TextStyle(color: Colors.redAccent, fontSize: 12)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text("Alert Details", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                            _priorityChip(current["priority"] ?? ""),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(current["alert"] ?? "", style: TextStyle(color: Colors.red.shade800, fontWeight: FontWeight.bold)),
+                              Text(current["desc"] ?? "", style: TextStyle(color: Colors.red.shade700, fontSize: 13)),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        _detailRow("Order ID", current["orderId"]),
+                        _detailRow("Type", current["type"]),
+                        _detailRow("Scanned By", current["user"]),
+                        _detailRow("Warehouse", current["warehouse"]),
+                        _detailRow("Time", current["time"]),
+                        _detailRow("Device", current["device"]),
+                        _detailRow("Status", current["status"]),
                       ],
                     ),
-                  )
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            _detailRow("Order ID", currentAlert["orderId"].toString()),
-            const Divider(height: 16),
-            _detailRow("Barcode / QR Code", "8901234567890"),
-            const Divider(height: 16),
-            _detailRow("Scanned By", currentAlert["user"].toString()),
-            const Divider(height: 16),
-            _detailRow("Warehouse", currentAlert["warehouse"].toString()),
-            const Divider(height: 16),
-            _detailRow("Scan Time", currentAlert["time"].toString()),
-            const Divider(height: 16),
-            _detailRow("Device", currentAlert["device"].toString()),
-            const SizedBox(height: 16),
-            const Text("Evidence", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
-            const SizedBox(height: 8),
-            Container(
-              height: 160,
-              decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Icon(Icons.videocam, color: Colors.white.withValues(alpha: 0.3), size: 48),
-                  const Icon(Icons.play_circle_fill, color: Colors.white, size: 48),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            if (isMobile)
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  OutlinedButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.check, size: 16, color: Colors.green),
-                    label: const Text("Mark as Resolved"),
-                    style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.green), padding: const EdgeInsets.symmetric(vertical: 14)),
                   ),
-                  const SizedBox(height: 12),
-                  FilledButton.icon(
-                    onPressed: () {},
-                    icon: const Icon(Icons.person_add, size: 16),
-                    label: const Text("Assign"),
-                    style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700, padding: const EdgeInsets.symmetric(vertical: 14)),
-                  ),
-                ],
-              )
-            else
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.check, size: 16, color: Colors.green),
-                      label: const Text("Mark as Resolved"),
-                      style: OutlinedButton.styleFrom(side: const BorderSide(color: Colors.green)),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () {},
-                      icon: const Icon(Icons.person_add, size: 16),
-                      label: const Text("Assign"),
-                      style: FilledButton.styleFrom(backgroundColor: Colors.blue.shade700),
-                    ),
-                  ),
-                ],
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard(String title, String value, String sub, IconData icon, Color color) {
-    return Card(
-      elevation: 0,
-      color: Colors.white,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
-                  child: Icon(icon, color: color, size: 20),
                 ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 4),
-            Text(sub, style: TextStyle(color: sub.contains("+") ? Colors.green : Colors.grey, fontSize: 11, fontWeight: FontWeight.w500)),
-          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileList(List<Map<String, dynamic>> list, Map<String, dynamic>? current) {
+    return Column(
+      children: list.map((a) {
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            title: Text(a["alert"] ?? "", style: const TextStyle(fontWeight: FontWeight.w600)),
+            subtitle: Text("${a["orderId"]} • ${a["desc"]}"),
+            trailing: _priorityChip(a["priority"] ?? ""),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _tab(String label, int index) {
+    final selected = selectedTab == index;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: TextButton(
+        onPressed: () => setState(() {
+          selectedTab = index;
+          selectedAlertIndex = 0;
+        }),
+        style: TextButton.styleFrom(
+          foregroundColor: selected ? Colors.blue : Colors.grey.shade700,
+          backgroundColor: selected ? Colors.blue.shade50 : null,
+        ),
+        child: Text(label, style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+      ),
+    );
+  }
+
+  Widget _priorityChip(String priority) {
+    final isHigh = priority.toLowerCase() == "high";
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: isHigh ? Colors.red.shade50 : Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Text(
+        priority,
+        style: TextStyle(
+          color: isHigh ? Colors.red.shade700 : Colors.orange.shade800,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
         ),
       ),
     );
   }
 
-  Widget _buildTab(String label, int index) {
-    final isActive = selectedTab == index;
-    return GestureDetector(
-      onTap: () => setState(() => selectedTab = index),
-      child: Column(
+  Widget _detailRow(String label, dynamic value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontWeight: isActive ? FontWeight.bold : FontWeight.w500, color: isActive ? Colors.blue.shade700 : Colors.grey)),
-          const SizedBox(height: 4),
-          if (isActive) Container(height: 2, width: 40, color: Colors.blue.shade700),
+          Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
+          Text((value ?? "—").toString(), style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13)),
         ],
       ),
-    );
-  }
-
-  Widget _badge(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
-      child: Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
-    );
-  }
-
-  Widget _detailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12, color: Colors.black87)),
-      ],
     );
   }
 }
