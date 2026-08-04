@@ -1,4 +1,5 @@
-﻿import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+﻿import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -21,12 +22,7 @@ import { CompanyModule } from './modules/company/company.module';
 
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { UsersModule } from './modules/users/users.module';
-import { ReturnsModule } from './modules/returns/returns.module';
-import { ClaimsModule } from './modules/claims/claims.module';
-import { EvidenceModule } from './modules/evidence/evidence.module';
 import { ScannerModule } from './modules/scanner/scanner.module';
-import { NotificationsModule } from './modules/notifications/notifications.module';
-import { ReportsModule } from './modules/reports/reports.module';
 import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
@@ -67,13 +63,7 @@ import { UploadModule } from './modules/upload/upload.module';
     OrdersModule,
 
     UsersModule,
-
-    ReturnsModule,
-    ClaimsModule,
-    EvidenceModule,
     ScannerModule,
-    NotificationsModule,
-    ReportsModule,
     UploadModule,
   ],
 })
@@ -82,6 +72,9 @@ export class AppModule implements NestModule {
     consumer.apply(RequestIdMiddleware).forRoutes('*');
   }
 }
+
+
+
 
 
 
