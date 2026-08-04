@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
@@ -480,7 +480,7 @@ class _ScanningDashboardPageState extends State<ScanningDashboardPage>
                           ),
                           AnimatedBuilder(
                             animation: _laserCtrl,
-                            builder: (_, __) {
+                            builder: (_, _) {
                               return Positioned(
                                 top: 20 + (_laserCtrl.value * 160),
                                 left: 30, right: 30,

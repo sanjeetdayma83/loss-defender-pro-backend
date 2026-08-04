@@ -1,32 +1,40 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../data/models/orders_query.dart';
+class OrdersQueryState {
+  final bool isLoading;
+  final List<Map<String, dynamic>> orders;
+  final Object? error;
 
-class OrdersQueryNotifier extends StateNotifier<OrdersQuery> {
-  OrdersQueryNotifier() : super(const OrdersQuery());
-
-  void search(String value) {
-    state = state.copyWith(search: value, page: 1);
+  OrdersQueryState({this.isLoading = false, this.orders = const [], this.error});
+  
+  OrdersQueryState copyWith({bool? isLoading, List<Map<String, dynamic>>? orders, Object? error}) {
+    return OrdersQueryState(
+      isLoading: isLoading ?? this.isLoading,
+      orders: orders ?? this.orders,
+      error: error ?? this.error,
+    );
   }
 
-  void changePage(int page) {
-    state = state.copyWith(page: page);
-  }
-
-  void changeMarketplace(String? value) {
-    state = state.copyWith(marketplace: value, page: 1);
-  }
-
-  void changeStatus(String? value) {
-    state = state.copyWith(status: value, page: 1);
-  }
-
-  void changePriority(String? value) {
-    state = state.copyWith(priority: value, page: 1);
+  R when<R>({
+    required R Function(List<Map<String, dynamic>> orders) data,
+    required R Function(Object error, StackTrace stackTrace) error,
+    required R Function() loading,
+  }) {
+    if (isLoading) return loading();
+    if (this.error != null) return error(this.error!, StackTrace.empty);
+    return data(orders);
   }
 }
 
-final ordersQueryProvider =
-    StateNotifierProvider<OrdersQueryNotifier, OrdersQuery>(
-      (ref) => OrdersQueryNotifier(),
-    );
+class OrdersQueryNotifier extends Notifier<OrdersQueryState> {
+  @override
+  OrdersQueryState build() => OrdersQueryState();
+
+  void setOrders(List<Map<String, dynamic>> orders) {
+    state = state.copyWith(orders: orders, isLoading: false);
+  }
+}
+
+final ordersQueryProvider = NotifierProvider<OrdersQueryNotifier, OrdersQueryState>(OrdersQueryNotifier.new);
+
+

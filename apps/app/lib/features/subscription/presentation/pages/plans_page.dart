@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../../shared/layout/app_layout.dart';
 
 class PlansPage extends StatefulWidget {
@@ -271,7 +271,7 @@ class _PlansPageState extends State<PlansPage> {
         ),
         boxShadow: [
           if (isPopular)
-            BoxShadow(color: const Color(0xFF6366F1).withOpacity(0.12), blurRadius: 20, offset: const Offset(0, 6))
+            BoxShadow(color: const Color(0xFF6366F1).withValues(alpha: 0.12), blurRadius: 20, offset: const Offset(0, 6))
         ],
       ),
       child: Column(

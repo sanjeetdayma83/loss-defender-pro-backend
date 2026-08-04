@@ -15,4 +15,15 @@
   static const String companies = '/companies';
   static const String warehouses = '/warehouses';
   static const String orders = '/orders';
+  static const String ordersDashboard = '/orders/dashboard';
+  static const String profile = '/auth/profile';
+  static const String refresh = '/auth/refresh';
+  static const String logout = '/auth/logout';
+  static const String analyticsMarketplace = '/analytics/marketplace';
+  static const String analyticsStatus = '/analytics/status';
+  static const String recordings = '/recordings';
+  static const String scans = '/scans';
 }
+
+
+

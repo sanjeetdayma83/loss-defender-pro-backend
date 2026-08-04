@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 import '../../data/auth_repository.dart';
@@ -161,7 +161,7 @@ class _LoginPageState extends State<LoginPage> {
                   width: isMobile ? 36 : 42,
                   height: isMobile ? 36 : 42,
                   fit: BoxFit.contain,
-                  errorBuilder: (_, __, ___) => Container(
+                  errorBuilder: (_, _, _) => Container(
                     width: isMobile ? 36 : 42,
                     height: isMobile ? 36 : 42,
                     decoration: BoxDecoration(

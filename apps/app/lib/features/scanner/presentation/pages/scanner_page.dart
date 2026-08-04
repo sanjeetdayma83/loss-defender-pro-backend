@@ -1,10 +1,8 @@
 ﻿import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-import '../../../../shared/device/providers/device_provider.dart';
 import '../../../recording/presentation/providers/recording_provider.dart';
 import '../../../recording/presentation/widgets/recording_preview.dart';
 
@@ -33,11 +31,9 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
   bool torch = false;
   bool loaded = false;
   bool processing = false;
-  
-  // Isko hum initState mein device ke hisaab se set karenge
-  late bool useHardwareScanner; 
 
-  // Platform check karne ka smart tareeka (Web browser on mobile ko bhi pakad lega)
+  late bool useHardwareScanner;
+
   bool get isMobileDevice =>
       defaultTargetPlatform == TargetPlatform.iOS ||
       defaultTargetPlatform == TargetPlatform.android;
@@ -45,9 +41,6 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
   @override
   void initState() {
     super.initState();
-    
-    // Agar mobile hai toh hardware scanner FALSE rahega (Camera ON)
-    // Agar desktop hai toh hardware scanner TRUE rahega
     useHardwareScanner = !isMobileDevice;
 
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -72,7 +65,7 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
     await ref.read(scannerProvider.notifier).scanSku(value.trim());
     await Future.delayed(const Duration(milliseconds: 500));
     processing = false;
-    
+
     if (mounted && useHardwareScanner) {
       _hiddenFocusNode.requestFocus();
     }
@@ -83,15 +76,15 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
     processing = true;
     try {
       await ref.read(scannerProvider.notifier).completeVerification();
-      await ref.read(recordingProvider.notifier).stopRecording();
-      final recording = ref.read(recordingProvider).recordingModel;
+      await ref.read(recordingProvider.notifier).stopRecording('');
+      final recording = ref.read(recordingProvider).videoPath;
       if (!mounted) return;
-      if (recording != null && recording.localPath.isNotEmpty) {
+      if (recording != null && recording.isNotEmpty) {
         await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => RecordingPreview(
-              filePath: recording.localPath,
+              filePath: recording,
               onUpload: () => Navigator.pop(context),
               onDiscard: () => Navigator.pop(context),
             ),
@@ -122,14 +115,13 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
         appBar: AppBar(
           title: Text("Scanner • ${widget.orderId}", style: const TextStyle(fontSize: 16)),
           actions: [
-            // Sirf desktop par Hardware Scanner ka toggle dikhayenge
             if (!isMobileDevice)
               Row(
                 children: [
                   const Text("Hardware Scanner", style: TextStyle(fontSize: 12)),
                   Switch(
                     value: useHardwareScanner,
-                    activeColor: Colors.green,
+                    activeThumbColor: Colors.green,
                     onChanged: (val) {
                       setState(() {
                         useHardwareScanner = val;
@@ -139,8 +131,7 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
                   ),
                 ],
               ),
-              
-            // Agar camera on hai toh torch aur switch camera ke buttons dikhayenge
+
             if (!useHardwareScanner) ...[
               IconButton(
                 icon: Icon(torch ? Icons.flash_on : Icons.flash_off),
@@ -158,7 +149,6 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
         ),
         body: Stack(
           children: [
-            // Hidden input field for hardware scanner
             Opacity(
               opacity: 0,
               child: TextField(
@@ -172,27 +162,25 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
                 },
               ),
             ),
-            
+
             if (state.loading && state.expectedItems.isEmpty)
               const Center(child: CircularProgressIndicator())
             else
               LayoutBuilder(
                 builder: (context, constraints) {
                   final isWide = constraints.maxWidth > 800;
-                  
-                  // Common header widgets
+
                   final headerWidgets = [
                     OrderSummaryCard(
-                      orderId: state.orderId,
+                      orderId: state.orderId ?? widget.orderId,
                       expected: state.totalExpected,
                       verified: state.totalVerified,
                     ),
                     const SizedBox(height: 12),
-                    
-                    // CAMERA VIEW (badi height mobile ke liye)
+
                     if (!useHardwareScanner)
                       Container(
-                        height: isWide ? 250 : 350, // Phone par camera viewport bada rakha hai
+                        height: isWide ? 250 : 350,
                         decoration: BoxDecoration(
                           color: Colors.black,
                           borderRadius: BorderRadius.circular(18),
@@ -216,14 +204,13 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
                           ),
                         ),
                       )
-                    // HARDWARE SCANNER VIEW (Sirf desktop par)
                     else
                       GestureDetector(
                         onTap: () => _hiddenFocusNode.requestFocus(),
                         child: Container(
                           height: 100,
                           decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
+                            color: Colors.blue.withValues(alpha: 0.1),
                             border: Border.all(color: Colors.blue, width: 2),
                             borderRadius: BorderRadius.circular(18),
                           ),
@@ -241,17 +228,15 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
                       ),
 
                     const SizedBox(height: 12),
-                    ScanFeedbackBanner(feedback: state.feedback),
+                    ScanFeedbackBanner(feedback: null),
                     const SizedBox(height: 8),
-                    ScanStatusCard(sku: state.lastScan, status: state.message),
+                    ScanStatusCard(sku: state.lastScan ?? '', status: state.message ?? ''),
                     const SizedBox(height: 12),
                     VerificationProgressCard(progress: state.progress),
                     const SizedBox(height: 12),
                   ];
 
-                  // Render logic based on screen width
                   if (isWide) {
-                    // DESKTOP/TABLET VIEW (Side-by-side lists)
                     return Padding(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
@@ -271,7 +256,6 @@ class _ScannerPageState extends ConsumerState<ScannerPage> {
                       ),
                     );
                   } else {
-                    // MOBILE VIEW (Vertical stacked lists inside a scrollView to prevent RenderFlex overflow)
                     return SingleChildScrollView(
                       padding: const EdgeInsets.all(16.0),
                       child: Column(

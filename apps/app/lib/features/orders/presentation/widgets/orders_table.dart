@@ -1,36 +1,27 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../data/models/order_model.dart';
 import '../providers/orders_provider.dart';
 import 'order_actions.dart';
 import 'order_details_drawer.dart';
 import 'priority_chip.dart';
 import 'status_chip.dart';
-
 class OrdersTable extends ConsumerWidget {
   final String search;
-
   const OrdersTable({super.key, required this.search});
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final orders = ref.watch(ordersProvider);
-
     return orders.when(
       loading: () => const Center(child: CircularProgressIndicator()),
-
       error: (error, stackTrace) => Center(child: Text(error.toString())),
-
       data: (response) {
-        final filtered = response.items;
-
+        final filtered = response.map((e) => OrderModel.fromJson(e)).toList();
         if (filtered.isEmpty) {
           return const Center(
             child: Text("No orders found", style: TextStyle(fontSize: 16)),
           );
         }
-
         return SingleChildScrollView(
           scrollDirection: Axis.vertical,
           child: SingleChildScrollView(
@@ -41,7 +32,6 @@ class OrdersTable extends ConsumerWidget {
               dataRowMinHeight: 64,
               dataRowMaxHeight: 64,
               columnSpacing: 28,
-
               columns: const [
                 DataColumn(label: Text("Priority")),
                 DataColumn(label: Text("Order")),
@@ -52,7 +42,6 @@ class OrdersTable extends ConsumerWidget {
                 DataColumn(label: Text("Verification")),
                 DataColumn(label: Text("Actions")),
               ],
-
               rows: filtered.map((OrderModel order) {
                 return DataRow(
                   onSelectChanged: (_) {
@@ -68,22 +57,14 @@ class OrdersTable extends ConsumerWidget {
                       },
                     );
                   },
-
                   cells: [
                     DataCell(PriorityChip(priority: order.priority)),
-
                     DataCell(Text(order.orderNumber)),
-
                     DataCell(Text(order.customerName)),
-
                     DataCell(Text(order.marketplace)),
-
                     DataCell(StatusChip(status: order.status)),
-
                     DataCell(StatusChip(status: order.packingStatus)),
-
                     DataCell(StatusChip(status: order.verificationStatus)),
-
                     DataCell(OrderActions(orderId: order.id)),
                   ],
                 );

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../../../shared/layout/app_layout.dart';
 import '../../../../core/api/api_client.dart';
@@ -158,7 +158,7 @@ class _ReturnsPageState extends State<ReturnsPage> {
                                       DataCell(
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(color: statusColor.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                                           child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
                                         ),
                                       ),

@@ -1,7 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../shared/layout/app_layout.dart';
-import '../../../../shared/device/providers/device_provider.dart';
+
 
 class DevicePage extends ConsumerStatefulWidget {
   const DevicePage({super.key});
@@ -11,12 +11,11 @@ class DevicePage extends ConsumerStatefulWidget {
 }
 
 class _DevicePageState extends ConsumerState<DevicePage> {
-  bool _isWirelessScannerConnecting = false;
   bool _isWirelessScannerConnected = true; // Set true since user attached it wirelessly
 
   @override
   Widget build(BuildContext context) {
-    final deviceState = ref.watch(deviceProvider);
+    final deviceState = 'Default Camera';
 
     return AppLayout(
       title: "Device Manager",
@@ -153,9 +152,12 @@ class _DevicePageState extends ConsumerState<DevicePage> {
                     const Text("Selected Camera", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 8),
                     Text(
-                      deviceState.selectedCamera?.name ?? "HP TrueVision HD Camera (30c9:0035)",
-                      style: const TextStyle(fontSize: 14, color: Colors.black87),
-                    ),
+  deviceState,
+  style: const TextStyle(
+    fontSize: 14,
+    color: Colors.black87,
+  ),
+),
                     const SizedBox(height: 4),
                     const Text(
                       "This camera will be used by Recording and Scanner preview.",
@@ -194,3 +196,19 @@ class _DevicePageState extends ConsumerState<DevicePage> {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -39,7 +39,7 @@ class _DashboardPageState extends State<DashboardPage> {
     fetchDashboardData();
     // Quiet auto-refresh every 60s while dashboard is open
     _refreshTimer = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (!mounted || isLoading) return;
+      if (!mounted || isLoading) { return; }
       _silentRefresh = true;
       fetchDashboardData();
     });
@@ -52,7 +52,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   Map<String, dynamic>? _unwrap(dynamic body) {
-    if (body is! Map) return null;
+    if (body is! Map) { return null; }
     final map = Map<String, dynamic>.from(body);
     if (map.containsKey('data') && map['data'] is Map) {
       return Map<String, dynamic>.from(map['data'] as Map);
@@ -70,7 +70,7 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Future<void> fetchDashboardData() async {
     setState(() {
-      if (!_silentRefresh) isLoading = true;
+      if (!_silentRefresh) { isLoading = true; }
       errorMessage = null;
     });
 
@@ -87,7 +87,7 @@ class _DashboardPageState extends State<DashboardPage> {
       }
 
       final data = _unwrap(summaryRes?.data);
-      if (data == null) throw Exception('Dashboard endpoint returned no data.');
+      if (data == null) { throw Exception('Dashboard endpoint returned no data.'); }
 
       final stats = data['statistics'] is Map ? Map<String, dynamic>.from(data['statistics'] as Map) : <String, dynamic>{};
 
@@ -110,10 +110,11 @@ class _DashboardPageState extends State<DashboardPage> {
       } else if (recentBody is Map) {
         final unwrapped = _unwrap(recentBody);
         if (unwrapped != null) {
-          if (unwrapped.containsKey('items')) items = unwrapped['items'] as List? ?? [];
-          else if (unwrapped.containsKey('data') && unwrapped['data'] is List) items = unwrapped['data'] as List;
+          if (unwrapped.containsKey('items')) {
+            items = unwrapped['items'] as List? ?? [];
+          } else if (unwrapped.containsKey('data') && unwrapped['data'] is List) { items = unwrapped['data'] as List; }
         }
-        if (items.isEmpty && recentBody['data'] is List) items = recentBody['data'] as List;
+        if (items.isEmpty && recentBody['data'] is List) { items = recentBody['data'] as List; }
       }
 
       recentOrders = items.take(8).map<Map<String, dynamic>>((e) {
@@ -139,7 +140,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   String _formatDate(dynamic raw) {
-    if (raw == null) return '—';
+    if (raw == null) { return '—'; }
     try {
       final dt = DateTime.parse(raw.toString()).toLocal();
       return '${dt.day.toString().padLeft(2, '0')} ${_month(dt.month)} ${dt.year}';
@@ -155,9 +156,9 @@ class _DashboardPageState extends State<DashboardPage> {
 
   Color _statusColor(String status) {
     final s = status.toUpperCase();
-    if (s.contains('DELIVER') || s.contains('SHIP') || s.contains('VERIF')) return Colors.green;
-    if (s.contains('CANCEL') || s.contains('RETURN') || s.contains('CLAIM') || s.contains('EXCEPT')) return Colors.red;
-    if (s.contains('PEND') || s.contains('ASSIGN') || s.contains('PACK') || s.contains('RECORD') || s.contains('CREATED')) return Colors.orange;
+    if (s.contains('DELIVER') || s.contains('SHIP') || s.contains('VERIF')) { return Colors.green; }
+    if (s.contains('CANCEL') || s.contains('RETURN') || s.contains('CLAIM') || s.contains('EXCEPT')) { return Colors.red; }
+    if (s.contains('PEND') || s.contains('ASSIGN') || s.contains('PACK') || s.contains('RECORD') || s.contains('CREATED')) { return Colors.orange; }
     return Colors.blueGrey;
   }
 
@@ -308,7 +309,7 @@ class _DashboardPageState extends State<DashboardPage> {
                                             DataCell(
                                               Container(
                                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+                                                decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
                                                 child: Text(status, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold)),
                                               ),
                                             ),
@@ -379,7 +380,7 @@ class _DashboardPageState extends State<DashboardPage> {
                   Expanded(child: Text(title, style: const TextStyle(color: Colors.grey, fontSize: 13, fontWeight: FontWeight.w600))),
                   Container(
                     padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                     child: Icon(icon, color: color, size: 18),
                   ),
                 ],
@@ -396,6 +397,8 @@ class _DashboardPageState extends State<DashboardPage> {
     );
   }
 }
+
+
 
 
 

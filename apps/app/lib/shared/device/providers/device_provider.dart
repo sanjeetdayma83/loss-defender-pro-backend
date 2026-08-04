@@ -1,74 +1,40 @@
-import 'package:camera/camera.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../services/device_service.dart';
-
-final deviceServiceProvider = Provider<DeviceService>((ref) {
-  return DeviceService();
-});
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 class DeviceState {
-  final bool loading;
-  final List<CameraDescription> cameras;
-  final CameraDescription? selectedCamera;
-  final String error;
-
-  const DeviceState({
-    this.loading = false,
-    this.cameras = const [],
+  final bool isConnected;
+  final String deviceName;
+  final String? selectedCamera;
+  
+  DeviceState({
+    this.isConnected = false, 
+    this.deviceName = '',
     this.selectedCamera,
-    this.error = '',
   });
-
+  
   DeviceState copyWith({
-    bool? loading,
-    List<CameraDescription>? cameras,
-    CameraDescription? selectedCamera,
-    String? error,
+    bool? isConnected, 
+    String? deviceName,
+    String? selectedCamera,
   }) {
     return DeviceState(
-      loading: loading ?? this.loading,
-      cameras: cameras ?? this.cameras,
+      isConnected: isConnected ?? this.isConnected,
+      deviceName: deviceName ?? this.deviceName,
       selectedCamera: selectedCamera ?? this.selectedCamera,
-      error: error ?? this.error,
     );
   }
 }
 
-class DeviceNotifier extends StateNotifier<DeviceState> {
-  DeviceNotifier(this._service) : super(const DeviceState());
+class DeviceNotifier extends Notifier<DeviceState> {
+  @override
+  DeviceState build() => DeviceState();
 
-  final DeviceService _service;
-
-  Future<void> loadDevices() async {
-    try {
-      state = state.copyWith(loading: true, error: '');
-
-      final cameras = await _service.getAvailableCameras();
-
-      state = state.copyWith(
-        loading: false,
-        cameras: cameras,
-        selectedCamera: _service.selectedCamera,
-      );
-    } catch (e) {
-      state = state.copyWith(loading: false, error: e.toString());
-    }
+  void setConnection(bool status, {String name = '', String? selectedCamera}) {
+    state = state.copyWith(isConnected: status, deviceName: name, selectedCamera: selectedCamera);
   }
 
-  Future<void> refresh() async {
-    await loadDevices();
-  }
-
-  Future<void> selectCamera(CameraDescription camera) async {
-    await _service.selectCamera(camera);
-
-    state = state.copyWith(selectedCamera: camera);
+  void disconnect() {
+    state = DeviceState(isConnected: false, deviceName: '', selectedCamera: null);
   }
 }
 
-final deviceProvider = StateNotifierProvider<DeviceNotifier, DeviceState>((
-  ref,
-) {
-  return DeviceNotifier(ref.read(deviceServiceProvider));
-});
+final deviceProvider = NotifierProvider<DeviceNotifier, DeviceState>(DeviceNotifier.new);

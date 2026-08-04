@@ -1,16 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
 class TopBar extends StatelessWidget {
   final String title;
   final bool showMenuButton;
-
   const TopBar({super.key, required this.title, this.showMenuButton = false});
-
   @override
   Widget build(BuildContext context) {
     final isMobile = MediaQuery.of(context).size.width < 650;
-
     return Container(
       height: 72,
       padding: EdgeInsets.symmetric(horizontal: isMobile ? 12 : 24),
@@ -27,7 +23,6 @@ class TopBar extends StatelessWidget {
             ),
             const SizedBox(width: 4),
           ],
-
           Expanded(
             child: Text(
               title,
@@ -40,21 +35,16 @@ class TopBar extends StatelessWidget {
               ),
             ),
           ),
-
           const SizedBox(width: 8),
-
           IconButton(
             onPressed: () {
               // Notification action or route
             },
             icon: const Icon(Icons.notifications_none, color: Colors.grey),
           ),
-
           const SizedBox(width: 4),
-
-          // Clickable Profile Avatar that navigates to /profile
           InkWell(
-            onPressed: () => context.go('/profile'),
+            onTap: () => context.go('/profile'),
             borderRadius: BorderRadius.circular(20),
             child: const Padding(
               padding: EdgeInsets.all(4.0),

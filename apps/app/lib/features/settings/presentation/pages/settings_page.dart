@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../../shared/layout/app_layout.dart';
 
 class SettingsPage extends StatefulWidget {
@@ -298,7 +298,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const Text("Timezone", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: "(GMT +05:30) Asia/Kolkata",
+          initialValue: "(GMT +05:30) Asia/Kolkata",
           items: const [DropdownMenuItem(value: "(GMT +05:30) Asia/Kolkata", child: Text("(GMT +05:30) Asia/Kolkata", style: TextStyle(fontSize: 13)))],
           onChanged: (val) {},
           decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
@@ -314,7 +314,7 @@ class _SettingsPageState extends State<SettingsPage> {
         const Text("Currency", style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          value: "INR (₹) - Indian Rupee",
+          initialValue: "INR (₹) - Indian Rupee",
           items: const [DropdownMenuItem(value: "INR (₹) - Indian Rupee", child: Text("INR (₹) - Indian Rupee", style: TextStyle(fontSize: 13)))],
           onChanged: (val) {},
           decoration: InputDecoration(border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)), contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)),
@@ -339,7 +339,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                   child: Icon(icon, color: color, size: 20),
                 ),
               ],
@@ -406,7 +406,7 @@ class _SettingsPageState extends State<SettingsPage> {
                 Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                   child: Icon(icon, color: color, size: 20),
                 ),
               ],

@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../shared/layout/app_layout.dart';
@@ -447,7 +447,7 @@ class _OrdersPageState extends State<OrdersPage> {
                                                 Container(
                                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                                   decoration: BoxDecoration(
-                                                    color: color.withOpacity(0.12),
+                                                    color: color.withValues(alpha: 0.12),
                                                     borderRadius: BorderRadius.circular(6),
                                                   ),
                                                   child: Text(

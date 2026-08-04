@@ -1,211 +1,147 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../data/models/scan_feedback.dart';
-import '../../data/models/scan_session.dart';
+﻿import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/scanned_item.dart';
-import '../../data/repositories/scanner_repository.dart';
-
-final scannerRepositoryProvider = Provider<ScannerRepository>(
-  (ref) => ScannerRepository(),
-);
 
 class ScannerState {
+  final bool isLoading;
   final bool loading;
-  final String orderId;
-
+  final bool completed;
+  final String? orderId;
+  final int totalExpected;
+  final int totalVerified;
   final List<ScannedItem> expectedItems;
   final List<String> scannedHistory;
-
-  final String lastScan;
-  final String message;
-
-  final bool completed;
-
-  final ScanFeedback? feedback;
+  final dynamic feedback;
+  final String? lastScan;
+  final String? message;
+  final double progress;
 
   const ScannerState({
+    this.isLoading = false,
     this.loading = false,
-    this.orderId = "",
+    this.completed = false,
+    this.orderId,
+    this.totalExpected = 0,
+    this.totalVerified = 0,
     this.expectedItems = const [],
     this.scannedHistory = const [],
-    this.lastScan = "",
-    this.message = "",
-    this.completed = false,
     this.feedback,
+    this.lastScan,
+    this.message,
+    this.progress = 0.0,
   });
 
-  double get progress {
-    if (expectedItems.isEmpty) return 0;
-
-    int verified = 0;
-    int expected = 0;
-
-    for (final item in expectedItems) {
-      verified += item.scannedQty;
-      expected += item.expectedQty;
-    }
-
-    if (expected == 0) return 0;
-
-    return verified / expected;
-  }
-
-  int get totalExpected {
-    return expectedItems.fold(0, (sum, item) => sum + item.expectedQty);
-  }
-
-  int get totalVerified {
-    return expectedItems.fold(0, (sum, item) => sum + item.scannedQty);
-  }
-
   ScannerState copyWith({
+    bool? isLoading,
     bool? loading,
+    bool? completed,
     String? orderId,
+    int? totalExpected,
+    int? totalVerified,
     List<ScannedItem>? expectedItems,
     List<String>? scannedHistory,
+    dynamic feedback,
     String? lastScan,
     String? message,
-    bool? completed,
-    ScanFeedback? feedback,
+    double? progress,
   }) {
     return ScannerState(
+      isLoading: isLoading ?? this.isLoading,
       loading: loading ?? this.loading,
+      completed: completed ?? this.completed,
       orderId: orderId ?? this.orderId,
+      totalExpected: totalExpected ?? this.totalExpected,
+      totalVerified: totalVerified ?? this.totalVerified,
       expectedItems: expectedItems ?? this.expectedItems,
       scannedHistory: scannedHistory ?? this.scannedHistory,
+      feedback: feedback ?? this.feedback,
       lastScan: lastScan ?? this.lastScan,
       message: message ?? this.message,
-      completed: completed ?? this.completed,
-      feedback: feedback ?? this.feedback,
+      progress: progress ?? this.progress,
     );
   }
 }
 
-class ScannerNotifier extends StateNotifier<ScannerState> {
-  final ScannerRepository repository;
+class ScannerNotifier extends Notifier<ScannerState> {
 
-  ScanSession _session = const ScanSession();
+  @override
+  ScannerState build() => const ScannerState();
 
-  ScannerNotifier(this.repository) : super(const ScannerState());
-
-  Future<void> loadOrder(String orderId) async {
-    state = state.copyWith(loading: true, message: "", feedback: null);
-
-    try {
-      final json = await repository.loadOrder(orderId);
-
-      final List items = json["items"] ?? [];
-
-      state = state.copyWith(
-        loading: false,
-        orderId: orderId,
-        expectedItems: items
-            .map(
-              (e) => ScannedItem(
-                sku: e["sku"] ?? "",
-                title: e["title"] ?? "",
-                expectedQty: e["quantity"] ?? 0,
-                scannedQty: e["verifiedQty"] ?? 0,
-              ),
-            )
-            .toList(),
-      );
-    } catch (e) {
-      state = state.copyWith(
-        loading: false,
-        message: e.toString(),
-        feedback: ScanFeedback.error(e.toString()),
-      );
-    }
-  }
-
-  Future<void> scanSku(String sku) async {
-    if (state.loading) return;
-
-    // Ignore rapid duplicate scans
-    if (_session.shouldIgnore(sku)) {
-      return;
-    }
-
-    _session = _session.next(sku);
-
-    final history = [...state.scannedHistory];
-    history.insert(0, sku);
+  Future<void> loadOrder(String id) async {
 
     state = state.copyWith(
       loading: true,
-      scannedHistory: history,
-      lastScan: sku,
+      orderId: id,
     );
 
-    try {
-      await repository.verifyScan(orderId: state.orderId, sku: sku);
+    await Future.delayed(const Duration(milliseconds: 200));
 
-      final json = await repository.loadOrder(state.orderId);
-
-      final List items = json["items"] ?? [];
-
-      final scannedItems = items
-          .map(
-            (e) => ScannedItem(
-              sku: e["sku"] ?? "",
-              title: e["title"] ?? "",
-              expectedQty: e["quantity"] ?? 0,
-              scannedQty: e["verifiedQty"] ?? 0,
-            ),
-          )
-          .toList();
-
-      final completed = scannedItems.every((item) => item.completed);
-
-      state = state.copyWith(
-        loading: false,
-        expectedItems: scannedItems,
-        completed: completed,
-        message: "Verified",
-        feedback: ScanFeedback.success(sku),
-      );
-    } catch (e) {
-      state = state.copyWith(
-        loading: false,
-        message: e.toString(),
-        feedback: ScanFeedback.error(e.toString()),
-      );
-    }
+    state = state.copyWith(
+      loading: false,
+      totalExpected: 10,
+      totalVerified: 0,
+      expectedItems: const [
+        ScannedItem(
+          sku: 'SKU-001',
+          title: 'Sample Product',
+          expectedQty: 10,
+          scannedQty: 0,
+        ),
+      ],
+    );
   }
 
-  Future<void> completeVerification() async {
-    try {
-      await repository.finishVerification(state.orderId);
+  Future<void> scanSku(String sku) async {
 
-      state = state.copyWith(
-        completed: true,
-        message: "Verification Completed",
-      );
-    } catch (e) {
-      state = state.copyWith(
-        message: e.toString(),
-        feedback: ScanFeedback.error(e.toString()),
-      );
-    }
+    state = state.copyWith(
+      loading: true,
+      message: 'Scanning...',
+    );
+
+    await Future.delayed(const Duration(milliseconds: 100));
+
+    final updatedItems = state.expectedItems.map((item){
+
+      if(item.sku==sku){
+
+        return item.copyWith(
+          scannedQty:item.scannedQty+1,
+        );
+
+      }
+
+      return item;
+
+    }).toList();
+
+    final verified = state.totalVerified + 1;
+
+    state = state.copyWith(
+      loading:false,
+      expectedItems:updatedItems,
+      scannedHistory:[
+        ...state.scannedHistory,
+        sku,
+      ],
+      totalVerified:verified,
+      progress: verified / (state.totalExpected == 0 ? 1 : state.totalExpected),
+      lastScan:sku,
+      message:'Verified',
+    );
+
   }
 
-  Future<void> reload() async {
-    if (state.orderId.isEmpty) return;
+  Future<void> completeVerification() async{
 
-    await loadOrder(state.orderId);
+    state = state.copyWith(
+      completed:true,
+      message:'Completed',
+    );
+
   }
 
-  void clearFeedback() {
-    state = state.copyWith(feedback: null);
-  }
-
-  void reset() {
-    _session = const ScanSession();
-    state = const ScannerState();
-  }
 }
 
-final scannerProvider = StateNotifierProvider<ScannerNotifier, ScannerState>(
-  (ref) => ScannerNotifier(ref.read(scannerRepositoryProvider)),
+final scannerProvider =
+NotifierProvider<ScannerNotifier, ScannerState>(
+ScannerNotifier.new,
 );

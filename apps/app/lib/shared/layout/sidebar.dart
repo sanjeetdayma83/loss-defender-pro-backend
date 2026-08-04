@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/api/api_client.dart';
 
@@ -27,7 +27,7 @@ class Sidebar extends StatelessWidget {
                     width: 36,
                     height: 36,
                     fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Container(
+                    errorBuilder: (_, _, _) => Container(
                       width: 36,
                       height: 36,
                       decoration: BoxDecoration(

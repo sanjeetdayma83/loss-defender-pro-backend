@@ -2,7 +2,6 @@
 import 'dart:io';
 
 class UploadService {
-  /// Uploads actual video file directly to Backblaze B2/S3 using Presigned URL
   static Future<bool> uploadVideoToS3(String presignedUrl, File videoFile) async {
     try {
       final dio = Dio();
@@ -14,14 +13,15 @@ class UploadService {
         options: Options(
           headers: {
             Headers.contentLengthHeader: length,
-            'Content-Type': 'video/mp4', // Security requirement for AWS S3 Signature
+            'Content-Type': 'video/mp4',
           },
         ),
       );
       
       return response.statusCode == 200;
     } catch (e) {
-      print('S3 Video Upload Failed: \');
+      // ignore: avoid_print
+      print('S3 Video Upload Failed: ');
       return false;
     }
   }

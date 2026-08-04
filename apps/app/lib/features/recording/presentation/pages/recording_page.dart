@@ -1,5 +1,5 @@
-﻿import 'dart:async';
-import 'dart:io';
+﻿// import upload_service;
+import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
@@ -111,7 +111,7 @@ class _RecordingPageState extends State<RecordingPage> {
 
       await _cameraController!.initialize();
 
-      if (!mounted) return;
+      if (!mounted) { return; }
       setState(() {
         _cameraReady = true;
         _isInitializingCamera = false;
@@ -126,8 +126,8 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 
   Future<void> _startCameraRecording() async {
-    if (_cameraController == null || !_cameraController!.value.isInitialized) return;
-    if (_cameraController!.value.isRecordingVideo) return;
+    if (_cameraController == null || !_cameraController!.value.isInitialized) { return; }
+    if (_cameraController!.value.isRecordingVideo) { return; }
 
     try {
       await _cameraController!.startVideoRecording();
@@ -138,7 +138,7 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 
   Future<XFile?> _stopCameraRecording() async {
-    if (_cameraController == null || !_cameraController!.value.isRecordingVideo) return null;
+    if (_cameraController == null || !_cameraController!.value.isRecordingVideo) { return null; }
     try {
       return await _cameraController!.stopVideoRecording();
     } catch (e) {
@@ -148,9 +148,9 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 
   Map<String, dynamic>? _unwrap(dynamic body) {
-    if (body is! Map) return null;
+    if (body is! Map) { return null; }
     final map = Map<String, dynamic>.from(body);
-    if (map['data'] is Map) return Map<String, dynamic>.from(map['data'] as Map);
+    if (map['data'] is Map) { return Map<String, dynamic>.from(map['data'] as Map); }
     if (map['data'] is Map && (map['data'] as Map)['user'] is Map) {
       return Map<String, dynamic>.from((map['data'] as Map)['user'] as Map);
     }
@@ -175,8 +175,8 @@ class _RecordingPageState extends State<RecordingPage> {
       try {
         final profileRes = await _dio.get(ApiEndpoints.profile);
         var p = _unwrap(profileRes.data);
-        if (p == null && profileRes.data is Map) p = Map<String, dynamic>.from(profileRes.data as Map);
-        if (p != null && p['id'] == null && p['user'] is Map) p = Map<String, dynamic>.from(p['user'] as Map);
+        if (p == null && profileRes.data is Map) { p = Map<String, dynamic>.from(profileRes.data as Map); }
+        if (p != null && p['id'] == null && p['user'] is Map) { p = Map<String, dynamic>.from(p['user'] as Map); }
         profile = p;
       } catch (_) {
         profile = null;
@@ -206,8 +206,9 @@ class _RecordingPageState extends State<RecordingPage> {
       List items = [];
       final rd = _unwrap(recRes?.data);
       if (rd != null) {
-        if (rd['items'] is List) items = rd['items'] as List;
-        else if (rd['data'] is List) items = rd['data'] as List;
+        if (rd['items'] is List) {
+          items = rd['items'] as List;
+        } else if (rd['data'] is List) { items = rd['data'] as List; }
       } else if (recRes?.data is List) {
         items = recRes!.data as List;
       }
@@ -244,7 +245,7 @@ class _RecordingPageState extends State<RecordingPage> {
       if (widget.autostart && !_didAutostart && order != null && !isRecording) {
         _didAutostart = true;
         Future.delayed(const Duration(milliseconds: 500), () {
-          if (mounted) _startRecording();
+          if (mounted) { _startRecording(); }
         });
       }
     } catch (e) {
@@ -262,18 +263,19 @@ class _RecordingPageState extends State<RecordingPage> {
       final data = _unwrap(res.data);
       List items = [];
       if (data != null) {
-        if (data['items'] is List) items = data['items'] as List;
-        else if (data['data'] is List) items = data['data'] as List;
+        if (data['items'] is List) {
+          items = data['items'] as List;
+        } else if (data['data'] is List) { items = data['data'] as List; }
       } else if (res.data is List) {
         items = res.data as List;
       }
       warehouses = items.map((e) => Map<String, dynamic>.from(e as Map)).toList();
     } catch (_) {}
 
-    if (warehouses.isEmpty) throw Exception('No warehouses found');
-    if (currentId != null && warehouses.any((w) => w['id']?.toString() == currentId)) return currentId;
+    if (warehouses.isEmpty) { throw Exception('No warehouses found'); }
+    if (currentId != null && warehouses.any((w) => w['id']?.toString() == currentId)) { return currentId; }
 
-    final fallback = warehouses.first['id']?.toString()!;
+    final fallback = warehouses.first['id']?.toString();
     final oid = order?['id']?.toString();
     if (oid != null) {
       try {
@@ -296,8 +298,8 @@ class _RecordingPageState extends State<RecordingPage> {
       final orderId = order!['id']?.toString();
       final operatorId = profile?['id']?.toString();
 
-      if (operatorId == null || operatorId.isEmpty) throw Exception('Operator missing. Please re-login.');
-      if (companyId == null || orderId == null) throw Exception('Missing company or order id');
+      if (operatorId == null || operatorId.isEmpty) { throw Exception('Operator missing. Please re-login.'); }
+      if (companyId == null || orderId == null) { throw Exception('Missing company or order id'); }
 
       warehouseId = await _resolveWarehouseId(companyId, warehouseId);
 
@@ -313,7 +315,7 @@ class _RecordingPageState extends State<RecordingPage> {
       );
 
       final session = _unwrap(createRes.data) ?? (createRes.data is Map ? Map<String, dynamic>.from(createRes.data as Map) : null);
-      if (session == null || session['id'] == null) throw Exception('Create recording returned no id');
+      if (session == null || session['id'] == null) { throw Exception('Create recording returned no id'); }
 
       final sessionId = session['id'].toString();
       await _dio.post('${ApiEndpoints.recordings}/$sessionId/start');
@@ -339,7 +341,7 @@ class _RecordingPageState extends State<RecordingPage> {
 
   Future<void> _stopRecording() async {
     final id = activeSession?['id']?.toString();
-    if (id == null) return;
+    if (id == null) { return; }
     setState(() => isActionLoading = true);
     try {
       final videoFile = await _stopCameraRecording();
@@ -367,7 +369,7 @@ class _RecordingPageState extends State<RecordingPage> {
 
   Future<void> _markCompleted() async {
     final id = activeSession?['id']?.toString();
-    if (id == null) return;
+    if (id == null) { return; }
     setState(() => isActionLoading = true);
     try {
       try {
@@ -388,9 +390,9 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 
   void _tick() {
-    if (!isRecording || _startedAt == null) return;
+    if (!isRecording || _startedAt == null) { return; }
     Future.delayed(const Duration(seconds: 1), () {
-      if (!mounted || !isRecording) return;
+      if (!mounted || !isRecording) { return; }
       setState(() {
         elapsedSeconds = DateTime.now().difference(_startedAt!).inSeconds;
       });
@@ -401,14 +403,14 @@ class _RecordingPageState extends State<RecordingPage> {
   String _err(Object e) {
     if (e is DioException) {
       final d = e.response?.data;
-      if (d is Map) return (d['message'] ?? d['error'] ?? e.message ?? 'Request failed').toString();
+      if (d is Map) { return (d['message'] ?? d['error'] ?? e.message ?? 'Request failed').toString(); }
       return e.message ?? 'Request failed';
     }
     return e.toString().replaceFirst('Exception: ', '');
   }
 
   void _toast(String msg, {bool error = false}) {
-    if (!mounted) return;
+    if (!mounted) { return; }
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg), backgroundColor: error ? Colors.red.shade700 : Colors.green.shade700, behavior: SnackBarBehavior.floating, duration: Duration(seconds: error ? 5 : 3)));
   }
 
@@ -419,7 +421,7 @@ class _RecordingPageState extends State<RecordingPage> {
   }
 
   String _fmtDate(dynamic raw) {
-    if (raw == null) return '—';
+    if (raw == null) { return '—'; }
     try {
       final dt = DateTime.parse(raw.toString()).toLocal();
       return '${dt.day}/${dt.month} ${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
@@ -430,16 +432,16 @@ class _RecordingPageState extends State<RecordingPage> {
 
   Color _statusColor(String status) {
     final s = status.toUpperCase();
-    if (s.contains('START') || s.contains('RECORD')) return Colors.red;
-    if (s.contains('STOP')) return Colors.orange;
-    if (s.contains('COMPLETE') || s.contains('UPLOAD')) return Colors.green;
+    if (s.contains('START') || s.contains('RECORD')) { return Colors.red; }
+    if (s.contains('STOP')) { return Colors.orange; }
+    if (s.contains('COMPLETE') || s.contains('UPLOAD')) { return Colors.green; }
     return Colors.blueGrey;
   }
 
   String get _operatorLabel {
-    if (profile == null) return 'Not logged in';
+    if (profile == null) { return 'Not logged in'; }
     final name = [profile!['firstName'], profile!['lastName']].where((e) => e != null && e.toString().isNotEmpty).join(' ');
-    if (name.isNotEmpty) return name;
+    if (name.isNotEmpty) { return name; }
     return profile!['email']?.toString() ?? profile!['id']?.toString() ?? '—';
   }
 
@@ -844,7 +846,7 @@ class _RecordingPageState extends State<RecordingPage> {
                     DataCell(Text(r['orderId'].toString().length > 8 ? r['orderId'].toString().substring(0, 8) : r['orderId'].toString())),
                     DataCell(Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: color.withOpacity(0.12), borderRadius: BorderRadius.circular(6)),
+                      decoration: BoxDecoration(color: color.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6)),
                       child: Text(st, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
                     )),
                     DataCell(Text(_fmtDuration((r['duration'] as num?)?.toInt() ?? 0))),
@@ -858,3 +860,8 @@ class _RecordingPageState extends State<RecordingPage> {
     );
   }
 }
+
+
+
+
+

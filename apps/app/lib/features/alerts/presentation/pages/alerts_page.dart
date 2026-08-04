@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import '../../../../shared/layout/app_layout.dart';
 
 class AlertsPage extends StatefulWidget {
@@ -203,7 +203,7 @@ class _AlertsPageState extends State<AlertsPage> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Icon(Icons.videocam, color: Colors.white.withOpacity(0.3), size: 48),
+                  Icon(Icons.videocam, color: Colors.white.withValues(alpha: 0.3), size: 48),
                   const Icon(Icons.play_circle_fill, color: Colors.white, size: 48),
                 ],
               ),
@@ -272,7 +272,7 @@ class _AlertsPageState extends State<AlertsPage> {
                 Text(title, style: const TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.w500)),
                 Container(
                   padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                  decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
                   child: Icon(icon, color: color, size: 20),
                 ),
               ],
@@ -304,7 +304,7 @@ class _AlertsPageState extends State<AlertsPage> {
   Widget _badge(String text, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(4)),
+      decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4)),
       child: Text(text, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
     );
   }

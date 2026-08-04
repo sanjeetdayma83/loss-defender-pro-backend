@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../../../../shared/layout/app_layout.dart';
 import '../../../../core/api/api_client.dart';
@@ -136,7 +136,7 @@ class _ProfilePageState extends State<ProfilePage> {
                           borderRadius: BorderRadius.circular(16),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF1E40AF).withOpacity(0.25),
+                              color: const Color(0xFF1E40AF).withValues(alpha: 0.25),
                               blurRadius: 20,
                               offset: const Offset(0, 8),
                             ),
@@ -148,7 +148,7 @@ class _ProfilePageState extends State<ProfilePage> {
                               width: isMobile ? 56 : 72,
                               height: isMobile ? 56 : 72,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
+                                color: Colors.white.withValues(alpha: 0.2),
                                 shape: BoxShape.circle,
                                 border: Border.all(color: Colors.white24, width: 2),
                               ),
@@ -176,13 +176,13 @@ class _ProfilePageState extends State<ProfilePage> {
                                       const SizedBox(width: 10),
                                       Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                        decoration: BoxDecoration(color: Colors.white.withOpacity(0.2), borderRadius: BorderRadius.circular(20)),
+                                        decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(20)),
                                         child: Text(_role, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w600)),
                                       ),
                                     ],
                                   ),
                                   const SizedBox(height: 6),
-                                  Text(_email, style: TextStyle(color: Colors.white.withOpacity(0.85), fontSize: isMobile ? 12 : 13), overflow: TextOverflow.ellipsis),
+                                  Text(_email, style: TextStyle(color: Colors.white.withValues(alpha: 0.85), fontSize: isMobile ? 12 : 13), overflow: TextOverflow.ellipsis),
                                   const SizedBox(height: 8),
                                   Row(
                                     children: [
@@ -194,7 +194,7 @@ class _ProfilePageState extends State<ProfilePage> {
                                         ),
                                       ),
                                       const SizedBox(width: 6),
-                                      Text('Status: $_status', style: TextStyle(color: Colors.white.withOpacity(0.9), fontSize: 12)),
+                                      Text('Status: $_status', style: TextStyle(color: Colors.white.withValues(alpha: 0.9), fontSize: 12)),
                                     ],
                                   ),
                                 ],
@@ -226,8 +226,11 @@ class _ProfilePageState extends State<ProfilePage> {
                             ),
                           FilledButton.icon(
                             onPressed: () {
-                              if (isEditing) saveProfile();
-                              else setState(() => isEditing = true);
+                              if (isEditing) {
+                                saveProfile();
+                              } else {
+                                setState(() => isEditing = true);
+                              }
                             },
                             icon: Icon(isEditing ? Icons.check : Icons.edit, size: 16),
                             label: Text(isEditing ? (isSaving ? 'Saving…' : 'Save') : 'Edit Profile'),
@@ -421,7 +424,7 @@ class _ProfilePageState extends State<ProfilePage> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(8)),
             child: Icon(icon, size: 16, color: color),
           ),
           const SizedBox(width: 12),
