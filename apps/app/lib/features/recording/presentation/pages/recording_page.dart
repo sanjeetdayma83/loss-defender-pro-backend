@@ -40,6 +40,8 @@ class _RecordingPageState extends State<RecordingPage> {
   bool isRecording = false;
   int elapsedSeconds = 0;
   DateTime? _startedAt;
+  DateTime _liveClock = DateTime.now();
+  Timer? _clockTimer;
   bool _didAutostart = false;
 
   // Camera
@@ -389,6 +391,25 @@ class _RecordingPageState extends State<RecordingPage> {
     }
   }
 
+  
+  void _startLiveClock() {
+    _clockTimer?.cancel();
+    _liveClock = DateTime.now();
+    _clockTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!mounted) return;
+      setState(() => _liveClock = DateTime.now());
+    });
+  }
+
+  String _fmtProofTimestamp(DateTime dt) {
+    final d = dt.day.toString().padLeft(2, '0');
+    final m = dt.month.toString().padLeft(2, '0');
+    final y = dt.year.toString();
+    final h = dt.hour.toString().padLeft(2, '0');
+    final min = dt.minute.toString().padLeft(2, '0');
+    final s = dt.second.toString().padLeft(2, '0');
+    return '$d/$m/$y $h:$min:$s';
+  }
   void _tick() {
     if (!isRecording || _startedAt == null) { return; }
     Future.delayed(const Duration(seconds: 1), () {
@@ -627,13 +648,59 @@ class _RecordingPageState extends State<RecordingPage> {
                         ],
                       ),
                     ),
+                                    // CCTV-style live proof timestamp (always visible when camera ready)
+                  if (_cameraReady)
+                    Positioned(
+                      top: 10,
+                      right: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.72),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.white24, width: 0.5),
+                        ),
+                        child: Text(
+                          _fmtProofTimestamp(_liveClock),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                            fontFamily: 'monospace',
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                  // REC badge top-left while recording
                   if (isRecording)
                     Positioned(
-                      top: 12, left: 12,
+                      top: 10,
+                      left: 10,
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(color: Colors.red, borderRadius: BorderRadius.circular(4)),
-                        child: const Text('● REC', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                        child: Text(
+                          '● REC  ${_fmtDuration(elapsedSeconds)}',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11),
+                        ),
+                      ),
+                    ),
+                  // Order ID bottom-left for stronger evidence link
+                  if (_cameraReady && order != null)
+                    Positioned(
+                      bottom: 36,
+                      left: 10,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.65),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'ORD: ${order?['orderNumber'] ?? order?['id'] ?? '—'}',
+                          style: const TextStyle(color: Colors.white70, fontSize: 11, fontFamily: 'monospace'),
+                        ),
                       ),
                     ),
                   Positioned(
@@ -860,6 +927,11 @@ class _RecordingPageState extends State<RecordingPage> {
     );
   }
 }
+
+
+
+
+
 
 
 

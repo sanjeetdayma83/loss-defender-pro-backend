@@ -119,7 +119,7 @@ class _SidebarState extends State<Sidebar> {
                 _item(context, Icons.home_outlined, Icons.home, 'Dashboard', '/dashboard', activeRoute),
                 _item(context, Icons.inventory_2_outlined, Icons.inventory_2, 'Orders', '/orders', activeRoute),
                 _item(context, Icons.qr_code_scanner_outlined, Icons.qr_code_scanner, 'Scanning', '/scanning', activeRoute),
-                _item(context, Icons.videocam_outlined, Icons.videocam, 'Recordings', '/recordings', activeRoute),
+                _item(context, Icons.videocam_outlined, Icons.videocam, 'Recordings', '/recording', activeRoute),
                 _item(context, Icons.analytics_outlined, Icons.analytics, 'Analytics', '/analytics', activeRoute),
                 _item(context, Icons.notifications_outlined, Icons.notifications, 'Alerts', '/alerts', activeRoute, badge: alertsBadge),
                 _item(context, Icons.assignment_return_outlined, Icons.assignment_return, 'Returns', '/returns', activeRoute),
@@ -283,3 +283,4 @@ class _SidebarState extends State<Sidebar> {
     );
   }
 }
+

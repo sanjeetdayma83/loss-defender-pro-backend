@@ -35,13 +35,9 @@ import { AlertsModule } from './modules/alerts/alerts.module';
       isGlobal: true,
       cache: true,
       expandVariables: true,
-
       load: [appConfig, authConfig, databaseConfig, storageConfig],
-
       validate: (config) => envSchema.parse(config),
     }),
-
-    // Global rate limit: 100 req / 60s (login overrides stricter)
     ThrottlerModule.forRoot([
       {
         name: 'default',
@@ -49,29 +45,26 @@ import { AlertsModule } from './modules/alerts/alerts.module';
         limit: 100,
       },
     ]),
-
     LoggerModule,
-
     PrismaModule,
-
     AuthModule,
-
     HealthModule,
-
     CompanyModule,
-
     WarehousesModule,
-
     RecordingModule,
-
     OrdersModule,
     DashboardModule,
-
     UsersModule,
     ScannerModule,
     UploadModule,
     ReturnsModule,
     AlertsModule,
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule implements NestModule {
@@ -79,12 +72,3 @@ export class AppModule implements NestModule {
     consumer.apply(RequestIdMiddleware).forRoutes('*');
   }
 }
-
-
-
-
-
-
-
-
-
