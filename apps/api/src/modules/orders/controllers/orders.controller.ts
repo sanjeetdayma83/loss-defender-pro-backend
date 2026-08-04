@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -7,11 +7,16 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 
-import { Order } from '@prisma/client';
+import { Order, UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
 
 import { OrderService } from '../services/order.service';
 
@@ -20,6 +25,16 @@ import { UpdateOrderDto } from '../dto/update-order.dto';
 import { OrderQueryDto } from '../dto/order-query.dto';
 
 @ApiTags('Orders')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(
+  UserRole.SUPER_ADMIN,
+  UserRole.COMPANY_ADMIN,
+  UserRole.WAREHOUSE_MANAGER,
+  UserRole.SUPERVISOR,
+  UserRole.OPERATOR,
+  UserRole.VIEWER,
+)
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly orderService: OrderService) {}

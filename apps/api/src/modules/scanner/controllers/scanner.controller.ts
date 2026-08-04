@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -7,7 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 import { ScannerService } from '../services/scanner.service';
 
@@ -15,6 +21,17 @@ import { CreateScannerDto } from '../dto/create-scanner.dto';
 import { UpdateScannerDto } from '../dto/update-scanner.dto';
 import { ScannerQueryDto } from '../dto/scanner-query.dto';
 
+@ApiTags('Scanner')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(
+  UserRole.SUPER_ADMIN,
+  UserRole.COMPANY_ADMIN,
+  UserRole.WAREHOUSE_MANAGER,
+  UserRole.SUPERVISOR,
+  UserRole.OPERATOR,
+  UserRole.VIEWER,
+)
 @Controller('scanner')
 export class ScannerController {
   constructor(private readonly service: ScannerService) {}
@@ -277,3 +294,4 @@ export class ScannerController {
     return this.service.metadata();
   }
 }
+

@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 
 import { PrismaService } from '../../database/prisma.service';
 
@@ -15,7 +16,7 @@ import { ConfigModule } from '@nestjs/config';
 import { UploadStateMachine } from './utils/upload-state-machine';
 
 @Module({
-  imports: [ConfigModule],
+  imports: [AuthModule, ConfigModule],
 
   controllers: [UploadController],
   providers: [
@@ -36,3 +37,4 @@ import { UploadStateMachine } from './utils/upload-state-machine';
   exports: [UploadService, StorageService, UploadRepository],
 })
 export class UploadModule {}
+

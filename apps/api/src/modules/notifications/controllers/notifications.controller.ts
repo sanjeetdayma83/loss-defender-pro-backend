@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -7,7 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 import { CreateNotificationDto } from '../dto/create-notification.dto';
 import { NotificationQueryDto } from '../dto/notification-query.dto';
@@ -18,6 +24,17 @@ import type {
   UserNotificationPreferences,
 } from '../types/notification.types';
 
+@ApiTags('Notifications')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(
+  UserRole.SUPER_ADMIN,
+  UserRole.COMPANY_ADMIN,
+  UserRole.WAREHOUSE_MANAGER,
+  UserRole.SUPERVISOR,
+  UserRole.OPERATOR,
+  UserRole.VIEWER,
+)
 @Controller('notifications')
 export class NotificationsController {
   constructor(private readonly notificationService: NotificationService) {}
@@ -120,3 +137,4 @@ export class NotificationsController {
     return this.notificationService.updateUserPreferences(userId, preferences);
   }
 }
+

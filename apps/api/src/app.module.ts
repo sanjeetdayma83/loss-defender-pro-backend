@@ -1,5 +1,7 @@
-import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+﻿import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
+import { APP_GUARD } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import appConfig from './config/app.config';
 import authConfig from './config/auth.config';
@@ -19,6 +21,13 @@ import { CompanyModule } from './modules/company/company.module';
 
 import { RequestIdMiddleware } from './common/middleware/request-id.middleware';
 import { UsersModule } from './modules/users/users.module';
+import { ReturnsModule } from './modules/returns/returns.module';
+import { ClaimsModule } from './modules/claims/claims.module';
+import { EvidenceModule } from './modules/evidence/evidence.module';
+import { ScannerModule } from './modules/scanner/scanner.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ReportsModule } from './modules/reports/reports.module';
+import { UploadModule } from './modules/upload/upload.module';
 
 @Module({
   imports: [
@@ -31,6 +40,15 @@ import { UsersModule } from './modules/users/users.module';
 
       validate: (config) => envSchema.parse(config),
     }),
+
+    // Global rate limit: 100 req / 60s (login overrides stricter)
+    ThrottlerModule.forRoot([
+      {
+        name: 'default',
+        ttl: 60_000,
+        limit: 100,
+      },
+    ]),
 
     LoggerModule,
 
@@ -49,6 +67,14 @@ import { UsersModule } from './modules/users/users.module';
     OrdersModule,
 
     UsersModule,
+
+    ReturnsModule,
+    ClaimsModule,
+    EvidenceModule,
+    ScannerModule,
+    NotificationsModule,
+    ReportsModule,
+    UploadModule,
   ],
 })
 export class AppModule implements NestModule {
@@ -56,3 +82,6 @@ export class AppModule implements NestModule {
     consumer.apply(RequestIdMiddleware).forRoutes('*');
   }
 }
+
+
+

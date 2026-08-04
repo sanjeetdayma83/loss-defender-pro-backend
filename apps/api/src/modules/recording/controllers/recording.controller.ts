@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -7,10 +7,14 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { RecordingStatus } from '@prisma/client';
+import { RecordingStatus, UserRole } from '@prisma/client';
 
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateRecordingDto } from '../dto/create-recording.dto';
 import { RecordingQueryDto } from '../dto/recording-query.dto';
 import { UpdateRecordingDto } from '../dto/update-recording.dto';
@@ -18,6 +22,14 @@ import { RecordingService } from '../services/recording.service';
 
 @ApiTags('Recordings')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(
+  UserRole.SUPER_ADMIN,
+  UserRole.COMPANY_ADMIN,
+  UserRole.WAREHOUSE_MANAGER,
+  UserRole.SUPERVISOR,
+  UserRole.OPERATOR,
+)
 @Controller('recordings')
 export class RecordingController {
   constructor(private readonly recordingService: RecordingService) {}
@@ -134,3 +146,4 @@ export class RecordingController {
     return this.recordingService.changeStatus(id, RecordingStatus.FAILED);
   }
 }
+

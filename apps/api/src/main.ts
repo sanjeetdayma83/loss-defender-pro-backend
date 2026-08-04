@@ -1,4 +1,4 @@
-import {
+﻿import {
   ClassSerializerInterceptor,
   ValidationPipe,
 } from '@nestjs/common';
@@ -24,8 +24,31 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
 
+    // CORS: explicit allow-list from ALLOWED_ORIGINS (comma-separated).
+  // Never reflect arbitrary Origin when credentials are enabled.
+  const allowedOrigins = (
+    process.env.ALLOWED_ORIGINS ??
+    'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000'
+  )
+    .split(',')
+    .map((o) => o.trim())
+    .filter(Boolean);
+
   app.enableCors({
-    origin: true,
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error(`CORS blocked for origin: ${origin}`), false);
+    },
     credentials: true,
   });
 
@@ -49,7 +72,9 @@ async function bootstrap(): Promise<void> {
 
   app.useGlobalFilters(new GlobalExceptionFilter());
 
-  setupSwagger(app, config);
+  if ((process.env.NODE_ENV ?? 'development') !== 'production') {
+    setupSwagger(app, config);
+  }
 
   app.enableShutdownHooks();
 
@@ -63,3 +88,5 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+
+

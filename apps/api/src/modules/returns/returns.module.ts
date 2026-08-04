@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 
 import { PrismaService } from '../../database/prisma.service';
 
@@ -8,6 +9,7 @@ import { ReturnService } from './services/return.service';
 import { ReturnStateMachine } from './utils/return-state-machine';
 
 @Module({
+  imports: [AuthModule],
   controllers: [ReturnsController],
   providers: [
     PrismaService,
@@ -18,3 +20,4 @@ import { ReturnStateMachine } from './utils/return-state-machine';
   exports: [ReturnRepository, ReturnService, ReturnStateMachine],
 })
 export class ReturnsModule {}
+

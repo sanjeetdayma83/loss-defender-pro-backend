@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module';
 
 import { PrismaModule } from '../../database/prisma.module';
 
@@ -8,9 +9,10 @@ import { RecordingService } from './services/recording.service';
 import { RecordingStateMachine } from './utils/recording-state-machine';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [PrismaModule, AuthModule],
   controllers: [RecordingController],
   providers: [RecordingRepository, RecordingService, RecordingStateMachine],
   exports: [RecordingRepository, RecordingService, RecordingStateMachine],
 })
 export class RecordingModule {}
+

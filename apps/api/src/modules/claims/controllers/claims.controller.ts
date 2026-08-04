@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -7,7 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 import {
   ClaimPriority,
@@ -21,6 +27,17 @@ import { UpdateClaimDto } from '../dto/update-claim.dto';
 import { ClaimQueryDto } from '../dto/claim-query.dto';
 import { ClaimService } from '../services/claim.service';
 
+@ApiTags('Claims')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(
+  UserRole.SUPER_ADMIN,
+  UserRole.COMPANY_ADMIN,
+  UserRole.WAREHOUSE_MANAGER,
+  UserRole.SUPERVISOR,
+  UserRole.OPERATOR,
+  UserRole.VIEWER,
+)
 @Controller('claims')
 export class ClaimsController {
   constructor(private readonly claimsService: ClaimService) {}
@@ -135,3 +152,4 @@ export class ClaimsController {
     return this.claimsService.generateResolution(id);
   }
 }
+

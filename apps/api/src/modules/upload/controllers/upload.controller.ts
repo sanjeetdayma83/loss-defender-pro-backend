@@ -1,4 +1,4 @@
-import {
+﻿import {
   Body,
   Controller,
   Delete,
@@ -7,7 +7,13 @@ import {
   Patch,
   Post,
   Query,
+  UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { UserRole } from '@prisma/client';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
 
 import { UploadStatus } from '@prisma/client';
 
@@ -17,6 +23,16 @@ import { UploadQueryDto } from '../dto/upload-query.dto';
 
 import { UploadService } from '../services/upload.service';
 
+@ApiTags('Uploads')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(
+  UserRole.SUPER_ADMIN,
+  UserRole.COMPANY_ADMIN,
+  UserRole.WAREHOUSE_MANAGER,
+  UserRole.SUPERVISOR,
+  UserRole.OPERATOR,
+)
 @Controller('uploads')
 export class UploadController {
   constructor(private readonly uploadService: UploadService) {}
@@ -139,3 +155,4 @@ export class UploadController {
     return this.uploadService.generateUploadUrl(key);
   }
 }
+
