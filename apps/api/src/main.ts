@@ -25,33 +25,73 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
 
-    // CORS: explicit allow-list from ALLOWED_ORIGINS (comma-separated).
-  // Never reflect arbitrary Origin when credentials are enabled.
-  const allowedOrigins = (
-    process.env.ALLOWED_ORIGINS ??
-    'http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000'
-  )
-    .split(',')
-    .map((o) => o.trim())
-    .filter(Boolean);
+    // ==========================================================
+// CORS
+// ==========================================================
 
-  app.enableCors({
-    origin: (
-      origin: string | undefined,
-      callback: (err: Error | null, allow?: boolean) => void,
-    ) => {
-      if (!origin) {
-        callback(null, true);
-        return;
-      }
-      if (allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
-        callback(null, true);
-        return;
-      }
-      callback(new Error(`CORS blocked for origin: ${origin}`), false);
-    },
-    credentials: true,
-  });
+const allowedOrigins = (
+  process.env.ALLOWED_ORIGINS ??
+  [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:8080',
+    'http://localhost:51352',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:51352',
+
+    'https://lossdefender.in',
+    'https://www.lossdefender.in',
+
+    'https://app.lossdefender.in',
+    'https://admin.lossdefender.in',
+    'https://api.lossdefender.in'
+  ].join(',')
+)
+.split(',')
+.map(o => o.trim())
+.filter(Boolean);
+
+app.enableCors({
+  origin: (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => {
+
+    if (!origin) {
+      callback(null, true);
+      return;
+    }
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+      return;
+    }
+
+    console.log('❌ CORS Blocked:', origin);
+
+    callback(new Error(`CORS blocked for origin: ${origin}`), false);
+  },
+
+  credentials: true,
+
+  methods: [
+    'GET',
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+    'OPTIONS',
+  ],
+
+  allowedHeaders: [
+    'Origin',
+    'Content-Type',
+    'Accept',
+    'Authorization',
+    'X-Requested-With',
+  ],
+});
 
   app.setGlobalPrefix(config.get<string>('app.apiPrefix') ?? 'api');
 
@@ -90,6 +130,7 @@ async function bootstrap(): Promise<void> {
 }
 
 void bootstrap();
+
 
 
 
