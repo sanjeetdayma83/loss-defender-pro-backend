@@ -1,9 +1,3 @@
-// ======================================================
-// Loss Defender Pro
-// Enterprise Warehouse Intelligence Platform
-// Prisma Schema v2 (complete — aligned with application modules)
-// ======================================================
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -12,9 +6,585 @@ datasource db {
   provider = "postgresql"
 }
 
-// ------------------------------------------------------
-// Enums
-// ------------------------------------------------------
+model Company {
+  id            String             @id @default(uuid())
+  /// Primary business code (also exposed as companyCode in richer modules)
+  code          String             @unique @db.VarChar(30)
+  name          String             @db.VarChar(150)
+  email         String?            @unique @db.VarChar(150)
+  phone         String?            @db.VarChar(20)
+  status        CompanyStatus      @default(ACTIVE)
+  /// Optional rich-module fields (companies/ module)
+  legalName     String?            @db.VarChar(200)
+  companyType   String?            @db.VarChar(50)
+  gstNumber     String?            @db.VarChar(30)
+  panNumber     String?            @db.VarChar(20)
+  emailVerified Boolean            @default(false)
+  phoneVerified Boolean            @default(false)
+  blockReason   String?
+  blockedAt     DateTime?
+  address       Json?
+  contact       Json?
+  branding      Json?
+  subscription  Json?
+  settings      Json?
+  storage       Json?
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+  deletedAt     DateTime?
+  isDeleted     Boolean            @default(false)
+  aiJobs        AIJob[]
+  claims        Claim[]
+  evidences     Evidence[]
+  notifications Notification[]
+  orders        Order[]
+  recordings    RecordingSession[]
+  reports       Report[]
+  returns       Return[]
+  scanners      Scanner[]
+  uploads       Upload[]
+  users         User[]
+  warehouses    Warehouse[]
+
+  @@index([gstNumber])
+  @@index([panNumber])
+  @@map("companies")
+}
+
+model User {
+  id                String             @id @default(uuid())
+  companyId         String
+  firstName         String             @db.VarChar(100)
+  lastName          String             @db.VarChar(100)
+  email             String             @unique @db.VarChar(150)
+  /// Rich users/ module fields
+  username          String?            @unique @db.VarChar(100)
+  employeeCode      String?            @db.VarChar(50)
+  passwordHash      String
+  refreshTokenHash  String?
+  role              UserRole           @default(OPERATOR)
+  status            UserStatus         @default(PENDING)
+  lastLoginAt       DateTime?
+  passwordChangedAt DateTime?
+  profile           Json?
+  assignment        Json?
+  permissions       Json?
+  statistics        Json?
+  emailVerified     Boolean            @default(false)
+  phoneVerified     Boolean            @default(false)
+  twoFactorEnabled  Boolean            @default(false)
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  deletedAt         DateTime?
+  isDeleted         Boolean            @default(false)
+  claimsAssigned    Claim[]            @relation("ClaimAssignedTo")
+  claimsResolved    Claim[]            @relation("ClaimResolvedBy")
+  notifications     Notification[]
+  ordersCreated     Order[]            @relation("OrderCreatedBy")
+  recordings        RecordingSession[] @relation("RecordingOperator")
+  reportsGenerated  Report[]           @relation("ReportGeneratedBy")
+  returnsAssigned   Return[]           @relation("ReturnAssignedTo")
+  returnsResolved   Return[]           @relation("ReturnResolvedBy")
+  scansScanned      Scanner[]          @relation("ScanScannedBy")
+  scansVerified     Scanner[]          @relation("ScanVerifiedBy")
+  company           Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([email])
+  @@index([username])
+  @@index([employeeCode])
+  @@map("users")
+}
+
+model Warehouse {
+  id             String             @id @default(uuid())
+  companyId      String
+  code           String             @db.VarChar(30)
+  name           String             @db.VarChar(150)
+  description    String?            @db.VarChar(500)
+  /// Flat address fields (lean warehouse module)
+  address        String?            @db.VarChar(500)
+  city           String?            @db.VarChar(100)
+  state          String?            @db.VarChar(100)
+  country        String?            @db.VarChar(100)
+  pincode        String?            @db.VarChar(20)
+  phone          String?            @db.VarChar(20)
+  email          String?            @db.VarChar(150)
+  isActive       Boolean            @default(true)
+  /// Rich warehouses/ module fields
+  warehouseType  String?            @db.VarChar(50)
+  status         String?            @db.VarChar(30)
+  timezone       String?            @db.VarChar(50)
+  operatingHours String?
+  contactEmail   String?            @db.VarChar(150)
+  contactPhone   String?            @db.VarChar(30)
+  isDefault      Boolean            @default(false)
+  /// structured address object
+  addressJson    Json?
+  location       Json?
+  manager        Json?
+  capacity       Json?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  deletedAt      DateTime?
+  isDeleted      Boolean            @default(false)
+  aiJobs         AIJob[]
+  claims         Claim[]
+  evidences      Evidence[]
+  orders         Order[]
+  recordings     RecordingSession[]
+  reports        Report[]
+  returns        Return[]
+  scanners       Scanner[]
+  uploads        Upload[]
+  company        Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@unique([companyId, code])
+  @@index([companyId])
+  @@index([name])
+  @@map("warehouses")
+}
+
+model Order {
+  id                    String             @id @default(uuid())
+  companyId             String
+  warehouseId           String
+  createdById           String
+  marketplace           Marketplace
+  marketplaceOrderId    String?            @db.VarChar(100)
+  marketplaceShipmentId String?            @db.VarChar(100)
+  orderNumber           String             @db.VarChar(100)
+  awbNumber             String?            @db.VarChar(100)
+  customerName          String?            @db.VarChar(150)
+  customerPhone         String?            @db.VarChar(30)
+  status                OrderStatus        @default(CREATED)
+  packingStatus         PackingStatus      @default(PENDING)
+  verificationStatus    VerificationStatus @default(PENDING)
+  priority              OrderPriority      @default(MEDIUM)
+  expectedItemCount     Int                @default(0)
+  verifiedItemCount     Int                @default(0)
+  /// Rich orders/ module fields
+  customerId            String?
+  assignedTo            String?
+  trackingNumber        String?            @db.VarChar(100)
+  courier               String?            @db.VarChar(100)
+  recordingId           String?
+  evidenceId            String?
+  claimId               String?
+  returnId              String?
+  remarks               String?
+  items                 Json?
+  customer              Json?
+  shippingAddress       Json?
+  metadata              Json?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+  deletedAt             DateTime?
+  isDeleted             Boolean            @default(false)
+  aiJobs                AIJob[]
+  claims                Claim[]
+  evidences             Evidence[]
+  company               Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdBy             User               @relation("OrderCreatedBy", fields: [createdById], references: [id])
+  warehouse             Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  recordings            RecordingSession[]
+  returns               Return[]
+  scanners              Scanner[]
+  uploads               Upload[]
+
+  @@unique([companyId, marketplace, marketplaceOrderId])
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([createdById])
+  @@index([status])
+  @@index([packingStatus])
+  @@index([priority])
+  @@index([marketplace])
+  @@index([orderNumber])
+  @@index([awbNumber])
+  @@index([assignedTo])
+  @@index([customerId])
+  @@map("orders")
+}
+
+model RecordingSession {
+  id               String          @id @default(uuid())
+  companyId        String
+  warehouseId      String
+  orderId          String
+  operatorId       String
+  status           RecordingStatus @default(CREATED)
+  startedAt        DateTime?
+  pausedAt         DateTime?
+  resumedAt        DateTime?
+  stoppedAt        DateTime?
+  durationSeconds  Int             @default(0)
+  localFileName    String?
+  originalFileName String?
+  fileUrl          String?
+  thumbnailUrl     String?
+  fileSize         BigInt?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+  deletedAt        DateTime?
+  isDeleted        Boolean         @default(false)
+  aiJobs           AIJob[]
+  claims           Claim[]
+  evidences        Evidence[]
+  company          Company         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  operator         User            @relation("RecordingOperator", fields: [operatorId], references: [id], onDelete: Cascade)
+  order            Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  warehouse        Warehouse       @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  returns          Return[]
+  scanners         Scanner[]
+  uploads          Upload[]
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([operatorId])
+  @@index([status])
+  @@map("recording_sessions")
+}
+
+model Evidence {
+  id                String           @id @default(uuid())
+  companyId         String
+  warehouseId       String
+  orderId           String
+  recordingId       String
+  status            EvidenceStatus   @default(CREATED)
+  type              EvidenceType     @default(PACKING_VIDEO)
+  originalVideoUrl  String?
+  processedVideoUrl String?
+  thumbnailUrl      String?
+  hash              String?
+  checksum          String?
+  durationSeconds   Int              @default(0)
+  fileSize          BigInt?
+  metadata          Json?
+  generatedAt       DateTime?
+  verifiedAt        DateTime?
+  archivedAt        DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  deletedAt         DateTime?
+  isDeleted         Boolean          @default(false)
+  aiJobs            AIJob[]
+  claims            Claim[]
+  company           Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  order             Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recording         RecordingSession @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  warehouse         Warehouse        @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  returns           Return[]
+  scanners          Scanner[]
+  uploads           Upload[]
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([recordingId])
+  @@index([status])
+  @@map("evidence")
+}
+
+model Upload {
+  id           String            @id @default(uuid())
+  companyId    String
+  warehouseId  String
+  orderId      String?
+  recordingId  String?
+  evidenceId   String?
+  originalName String
+  fileName     String
+  storageKey   String            @unique
+  bucket       String
+  provider     String
+  mimeType     String
+  extension    String
+  category     UploadCategory
+  visibility   UploadVisibility  @default(PRIVATE)
+  status       UploadStatus      @default(PENDING)
+  size         BigInt            @default(0)
+  checksum     String?
+  hash         String?
+  etag         String?
+  metadata     Json?
+  uploadedAt   DateTime?
+  expiresAt    DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
+  isDeleted    Boolean           @default(false)
+  aiJobs       AIJob[]
+  company      Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  evidence     Evidence?         @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
+  order        Order?            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recording    RecordingSession? @relation(fields: [recordingId], references: [id], onDelete: Cascade)
+  warehouse    Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([recordingId])
+  @@index([evidenceId])
+  @@index([status])
+  @@index([category])
+  @@index([storageKey])
+  @@map("uploads")
+}
+
+model AIJob {
+  id             String            @id @default(uuid())
+  companyId      String
+  warehouseId    String
+  orderId        String?
+  uploadId       String?
+  recordingId    String?
+  evidenceId     String?
+  provider       AIProvider
+  model          String
+  jobType        String
+  status         AIJobStatus       @default(PENDING)
+  prompt         String
+  input          Json
+  output         Json?
+  confidence     Float             @default(0)
+  tokensUsed     Int?
+  processingTime Int?
+  error          String?
+  startedAt      DateTime?
+  completedAt    DateTime?
+  metadata       Json?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+  isDeleted      Boolean           @default(false)
+  company        Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  evidence       Evidence?         @relation(fields: [evidenceId], references: [id])
+  order          Order?            @relation(fields: [orderId], references: [id])
+  recording      RecordingSession? @relation(fields: [recordingId], references: [id])
+  upload         Upload?           @relation(fields: [uploadId], references: [id])
+  warehouse      Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  claims         Claim[]
+  returns        Return[]
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([status])
+  @@index([provider])
+  @@map("ai_jobs")
+}
+
+model Notification {
+  id                String               @id @default(uuid())
+  userId            String?
+  companyId         String?
+  title             String
+  body              String
+  channel           NotificationChannel
+  priority          NotificationPriority @default(MEDIUM)
+  status            NotificationStatus   @default(PENDING)
+  template          String?
+  recipient         String
+  subject           String?
+  provider          String?
+  providerMessageId String?
+  data              Json?
+  metadata          Json?
+  retryCount        Int                  @default(0)
+  scheduledAt       DateTime?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  failedAt          DateTime?
+  failureReason     String?
+  expiresAt         DateTime?
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  deletedAt         DateTime?
+  isDeleted         Boolean              @default(false)
+  company           Company?             @relation(fields: [companyId], references: [id])
+  user              User?                @relation(fields: [userId], references: [id])
+
+  @@index([companyId])
+  @@index([userId])
+  @@index([status])
+  @@index([channel])
+  @@map("notifications")
+}
+
+model Claim {
+  id               String               @id @default(uuid())
+  claimNumber      String               @unique @db.VarChar(50)
+  companyId        String
+  warehouseId      String
+  orderId          String
+  recordingId      String?
+  evidenceId       String?
+  aiJobId          String?
+  assignedTo       String?
+  resolvedBy       String?
+  status           ClaimStatus          @default(DRAFT)
+  priority         ClaimPriority        @default(MEDIUM)
+  resolutionType   ClaimResolutionType?
+  title            String
+  description      String
+  customerRemarks  String?
+  internalRemarks  String?
+  aiSummary        String?
+  aiConfidence     Float                @default(0)
+  aiRecommendation String?
+  metadata         Json?
+  resolutionData   Json?
+  resolvedAt       DateTime?
+  closedAt         DateTime?
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  deletedAt        DateTime?
+  isDeleted        Boolean              @default(false)
+  aiJob            AIJob?               @relation(fields: [aiJobId], references: [id])
+  assignee         User?                @relation("ClaimAssignedTo", fields: [assignedTo], references: [id])
+  company          Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  evidence         Evidence?            @relation(fields: [evidenceId], references: [id])
+  order            Order                @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recording        RecordingSession?    @relation(fields: [recordingId], references: [id])
+  resolver         User?                @relation("ClaimResolvedBy", fields: [resolvedBy], references: [id])
+  warehouse        Warehouse            @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  returns          Return[]
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([status])
+  @@index([priority])
+  @@map("claims")
+}
+
+model Return {
+  id                        String                @id @default(uuid())
+  returnNumber              String                @unique @db.VarChar(50)
+  companyId                 String
+  warehouseId               String
+  orderId                   String
+  claimId                   String?
+  recordingId               String?
+  evidenceId                String?
+  aiJobId                   String?
+  assignedTo                String?
+  resolvedBy                String?
+  status                    ReturnStatus          @default(DRAFT)
+  priority                  ReturnPriority        @default(MEDIUM)
+  resolutionType            ReturnResolutionType?
+  marketplace               String
+  marketplaceReturnId       String?
+  title                     String
+  description               String
+  customerReason            String?
+  internalRemarks           String?
+  aiSummary                 String?
+  aiConfidence              Float                 @default(0)
+  aiRecommendation          String?
+  refundAmount              Float?
+  refundCurrency            String?
+  replacementOrderId        String?
+  replacementTrackingNumber String?
+  metadata                  Json?
+  resolutionData            Json?
+  resolvedAt                DateTime?
+  closedAt                  DateTime?
+  createdAt                 DateTime              @default(now())
+  updatedAt                 DateTime              @updatedAt
+  deletedAt                 DateTime?
+  isDeleted                 Boolean               @default(false)
+  aiJob                     AIJob?                @relation(fields: [aiJobId], references: [id])
+  assignee                  User?                 @relation("ReturnAssignedTo", fields: [assignedTo], references: [id])
+  claim                     Claim?                @relation(fields: [claimId], references: [id])
+  company                   Company               @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  evidence                  Evidence?             @relation(fields: [evidenceId], references: [id])
+  order                     Order                 @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  recording                 RecordingSession?     @relation(fields: [recordingId], references: [id])
+  resolver                  User?                 @relation("ReturnResolvedBy", fields: [resolvedBy], references: [id])
+  warehouse                 Warehouse             @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([status])
+  @@index([priority])
+  @@map("returns")
+}
+
+model Scanner {
+  id          String           @id @default(uuid())
+  companyId   String
+  warehouseId String
+  orderId     String
+  sessionId   String
+  evidenceId  String?
+  scannedBy   String
+  verifiedBy  String?
+  barcode     String
+  barcodeType String
+  status      ScanStatus       @default(PENDING)
+  location    Json?
+  device      Json?
+  result      Json?
+  statistics  Json?
+  remarks     String?
+  scannedAt   DateTime         @default(now())
+  verifiedAt  DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  deletedAt   DateTime?
+  isDeleted   Boolean          @default(false)
+  company     Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  evidence    Evidence?        @relation(fields: [evidenceId], references: [id])
+  order       Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  operator    User             @relation("ScanScannedBy", fields: [scannedBy], references: [id])
+  recording   RecordingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  verifier    User?            @relation("ScanVerifiedBy", fields: [verifiedBy], references: [id])
+  warehouse   Warehouse        @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([orderId])
+  @@index([sessionId])
+  @@index([barcode])
+  @@index([status])
+  @@map("scans")
+}
+
+model Report {
+  id           String       @id @default(uuid())
+  companyId    String
+  warehouseId  String?
+  generatedBy  String
+  reportType   String
+  reportName   String
+  description  String?
+  status       ReportStatus @default(PENDING)
+  dateRange    Json?
+  summary      Json?
+  kpi          Json?
+  exportFormat String?
+  downloadUrl  String?
+  isScheduled  Boolean      @default(false)
+  scheduleCron String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+  isDeleted    Boolean      @default(false)
+  company      Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  generator    User         @relation("ReportGeneratedBy", fields: [generatedBy], references: [id])
+  warehouse    Warehouse?   @relation(fields: [warehouseId], references: [id])
+
+  @@index([companyId])
+  @@index([warehouseId])
+  @@index([reportType])
+  @@index([status])
+  @@map("reports")
+}
 
 enum CompanyStatus {
   ACTIVE
@@ -256,718 +826,4 @@ enum ReportStatus {
   COMPLETED
   FAILED
   CANCELLED
-}
-
-// ------------------------------------------------------
-// Core models
-// ------------------------------------------------------
-
-model Company {
-  id String @id @default(uuid())
-
-  /// Primary business code (also exposed as companyCode in richer modules)
-  code  String         @unique @db.VarChar(30)
-  name  String         @db.VarChar(150)
-  email String?        @unique @db.VarChar(150)
-  phone String?        @db.VarChar(20)
-  status CompanyStatus @default(ACTIVE)
-
-  /// Optional rich-module fields (companies/ module)
-  legalName     String? @db.VarChar(200)
-  companyType   String? @db.VarChar(50)
-  gstNumber     String? @db.VarChar(30)
-  panNumber     String? @db.VarChar(20)
-  emailVerified Boolean @default(false)
-  phoneVerified Boolean @default(false)
-  blockReason   String?
-  blockedAt     DateTime?
-
-  address      Json?
-  contact      Json?
-  branding     Json?
-  subscription Json?
-  settings     Json?
-  storage      Json?
-
-  users         User[]
-  warehouses    Warehouse[]
-  orders        Order[]
-  recordings    RecordingSession[]
-  evidences     Evidence[]
-  uploads       Upload[]
-  aiJobs        AIJob[]
-  notifications Notification[]
-  claims        Claim[]
-  returns       Return[]
-  scanners      Scanner[]
-  reports       Report[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([gstNumber])
-  @@index([panNumber])
-  @@map("companies")
-}
-
-model User {
-  id String @id @default(uuid())
-
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  firstName String @db.VarChar(100)
-  lastName  String @db.VarChar(100)
-  email     String @unique @db.VarChar(150)
-
-  /// Rich users/ module fields
-  username     String? @unique @db.VarChar(100)
-  employeeCode String? @db.VarChar(50)
-
-  passwordHash     String
-  refreshTokenHash String?
-
-  role   UserRole   @default(OPERATOR)
-  status UserStatus @default(PENDING)
-
-  lastLoginAt       DateTime?
-  passwordChangedAt DateTime?
-
-  profile     Json?
-  assignment  Json?
-  permissions Json?
-  statistics  Json?
-
-  emailVerified    Boolean @default(false)
-  phoneVerified    Boolean @default(false)
-  twoFactorEnabled Boolean @default(false)
-
-  ordersCreated     Order[]            @relation("OrderCreatedBy")
-  recordings        RecordingSession[] @relation("RecordingOperator")
-  notifications     Notification[]
-  claimsAssigned    Claim[]            @relation("ClaimAssignedTo")
-  claimsResolved    Claim[]            @relation("ClaimResolvedBy")
-  returnsAssigned   Return[]           @relation("ReturnAssignedTo")
-  returnsResolved   Return[]           @relation("ReturnResolvedBy")
-  scansScanned      Scanner[]          @relation("ScanScannedBy")
-  scansVerified     Scanner[]          @relation("ScanVerifiedBy")
-  reportsGenerated  Report[]           @relation("ReportGeneratedBy")
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([email])
-  @@index([username])
-  @@index([employeeCode])
-  @@map("users")
-}
-
-model Warehouse {
-  id String @id @default(uuid())
-
-  companyId String
-  company   Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
-
-  code        String  @db.VarChar(30)
-  name        String  @db.VarChar(150)
-  description String? @db.VarChar(500)
-
-  /// Flat address fields (lean warehouse module)
-  address String? @db.VarChar(500)
-  city    String? @db.VarChar(100)
-  state   String? @db.VarChar(100)
-  country String? @db.VarChar(100)
-  pincode String? @db.VarChar(20)
-  phone   String? @db.VarChar(20)
-  email   String? @db.VarChar(150)
-  isActive Boolean @default(true)
-
-  /// Rich warehouses/ module fields
-  warehouseType  String? @db.VarChar(50)
-  status         String? @db.VarChar(30)
-  timezone       String? @db.VarChar(50)
-  operatingHours String?
-  contactEmail   String? @db.VarChar(150)
-  contactPhone   String? @db.VarChar(30)
-  isDefault      Boolean @default(false)
-
-  addressJson Json? /// structured address object
-  location    Json?
-  manager     Json?
-  capacity    Json?
-
-  orders     Order[]
-  recordings RecordingSession[]
-  evidences  Evidence[]
-  uploads    Upload[]
-  aiJobs     AIJob[]
-  claims     Claim[]
-  returns    Return[]
-  scanners   Scanner[]
-  reports    Report[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@unique([companyId, code])
-  @@index([companyId])
-  @@index([name])
-  @@map("warehouses")
-}
-
-model Order {
-  id String @id @default(uuid())
-
-  companyId   String
-  warehouseId String
-  createdById String
-
-  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  createdBy User      @relation("OrderCreatedBy", fields: [createdById], references: [id])
-
-  marketplace           Marketplace
-  marketplaceOrderId    String? @db.VarChar(100)
-  marketplaceShipmentId String? @db.VarChar(100)
-
-  orderNumber   String  @db.VarChar(100)
-  awbNumber     String? @db.VarChar(100)
-  customerName  String? @db.VarChar(150)
-  customerPhone String? @db.VarChar(30)
-
-  status             OrderStatus        @default(CREATED)
-  packingStatus      PackingStatus      @default(PENDING)
-  verificationStatus VerificationStatus @default(PENDING)
-  priority           OrderPriority      @default(MEDIUM)
-
-  expectedItemCount Int @default(0)
-  verifiedItemCount Int @default(0)
-
-  /// Rich orders/ module fields
-  customerId     String?
-  assignedTo     String?
-  trackingNumber String? @db.VarChar(100)
-  courier        String? @db.VarChar(100)
-  recordingId    String?
-  evidenceId     String?
-  claimId        String?
-  returnId       String?
-  remarks        String?
-
-  items           Json?
-  customer        Json?
-  shippingAddress Json?
-  metadata        Json?
-
-  recordings RecordingSession[]
-  evidences  Evidence[]
-  uploads    Upload[]
-  aiJobs     AIJob[]
-  claims     Claim[]
-  returns    Return[]
-  scanners   Scanner[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([createdById])
-  @@index([status])
-  @@index([packingStatus])
-  @@index([priority])
-  @@index([marketplace])
-  @@index([orderNumber])
-  @@index([awbNumber])
-  @@index([assignedTo])
-  @@index([customerId])
-  @@map("orders")
-  @@unique([companyId, marketplace, marketplaceOrderId])
-}
-
-model RecordingSession {
-  id String @id @default(uuid())
-
-  companyId   String
-  warehouseId String
-  orderId     String
-  operatorId  String
-
-  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  order     Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  operator  User      @relation("RecordingOperator", fields: [operatorId], references: [id], onDelete: Cascade)
-
-  status RecordingStatus @default(CREATED)
-
-  startedAt DateTime?
-  pausedAt  DateTime?
-  resumedAt DateTime?
-  stoppedAt DateTime?
-
-  durationSeconds Int @default(0)
-
-  localFileName    String?
-  originalFileName String?
-  fileUrl          String?
-  thumbnailUrl     String?
-  fileSize         BigInt?
-
-  evidences Evidence[]
-  uploads   Upload[]
-  aiJobs    AIJob[]
-  claims    Claim[]
-  returns   Return[]
-  scanners  Scanner[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([orderId])
-  @@index([operatorId])
-  @@index([status])
-  @@map("recording_sessions")
-}
-
-model Evidence {
-  id String @id @default(uuid())
-
-  companyId   String
-  warehouseId String
-  orderId     String
-  recordingId String
-
-  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  order     Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  recording RecordingSession  @relation(fields: [recordingId], references: [id], onDelete: Cascade)
-
-  status EvidenceStatus @default(CREATED)
-  type   EvidenceType   @default(PACKING_VIDEO)
-
-  originalVideoUrl  String?
-  processedVideoUrl String?
-  thumbnailUrl      String?
-
-  hash     String?
-  checksum String?
-
-  durationSeconds Int    @default(0)
-  fileSize        BigInt?
-
-  metadata Json?
-
-  generatedAt DateTime?
-  verifiedAt  DateTime?
-  archivedAt  DateTime?
-
-  uploads Upload[]
-  aiJobs  AIJob[]
-  claims  Claim[]
-  returns Return[]
-  scanners Scanner[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([orderId])
-  @@index([recordingId])
-  @@index([status])
-  @@map("evidence")
-}
-
-model Upload {
-  id String @id @default(uuid())
-
-  companyId   String
-  warehouseId String
-  orderId     String?
-  recordingId String?
-  evidenceId  String?
-
-  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  order     Order?             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  recording RecordingSession?  @relation(fields: [recordingId], references: [id], onDelete: Cascade)
-  evidence  Evidence?          @relation(fields: [evidenceId], references: [id], onDelete: Cascade)
-
-  originalName String
-  fileName     String
-  storageKey   String @unique
-  bucket       String
-  provider     String
-  mimeType     String
-  extension    String
-
-  category   UploadCategory
-  visibility UploadVisibility @default(PRIVATE)
-  status     UploadStatus     @default(PENDING)
-
-  size     BigInt  @default(0)
-  checksum String?
-  hash     String?
-  etag     String?
-  metadata Json?
-
-  uploadedAt DateTime?
-  expiresAt  DateTime?
-
-  aiJobs AIJob[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([orderId])
-  @@index([recordingId])
-  @@index([evidenceId])
-  @@index([status])
-  @@index([category])
-  @@index([storageKey])
-  @@map("uploads")
-}
-
-// ------------------------------------------------------
-// AI
-// ------------------------------------------------------
-
-model AIJob {
-  id String @id @default(uuid())
-
-  companyId   String
-  warehouseId String
-  orderId     String?
-  uploadId    String?
-  recordingId String?
-  evidenceId  String?
-
-  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  order     Order?             @relation(fields: [orderId], references: [id], onDelete: SetNull)
-  upload    Upload?            @relation(fields: [uploadId], references: [id], onDelete: SetNull)
-  recording RecordingSession?  @relation(fields: [recordingId], references: [id], onDelete: SetNull)
-  evidence  Evidence?          @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
-
-  provider AIProvider
-  model    String
-  jobType  String
-  status   AIJobStatus @default(PENDING)
-
-  prompt String
-  input  Json
-  output Json?
-
-  confidence     Float  @default(0)
-  tokensUsed     Int?
-  processingTime Int?
-  error          String?
-
-  startedAt   DateTime?
-  completedAt DateTime?
-  metadata    Json?
-
-  claims  Claim[]
-  returns Return[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([status])
-  @@index([provider])
-  @@map("ai_jobs")
-}
-
-// ------------------------------------------------------
-// Notifications
-// ------------------------------------------------------
-
-model Notification {
-  id String @id @default(uuid())
-
-  userId    String?
-  companyId String?
-
-  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
-  company Company? @relation(fields: [companyId], references: [id], onDelete: SetNull)
-
-  title    String
-  body     String
-  channel  NotificationChannel
-  priority NotificationPriority @default(MEDIUM)
-  status   NotificationStatus   @default(PENDING)
-
-  template          String?
-  recipient         String
-  subject           String?
-  provider          String?
-  providerMessageId String?
-
-  data     Json?
-  metadata Json?
-
-  retryCount Int @default(0)
-
-  scheduledAt   DateTime?
-  sentAt        DateTime?
-  deliveredAt   DateTime?
-  readAt        DateTime?
-  failedAt      DateTime?
-  failureReason String?
-  expiresAt     DateTime?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([userId])
-  @@index([status])
-  @@index([channel])
-  @@map("notifications")
-}
-
-// ------------------------------------------------------
-// Claims
-// ------------------------------------------------------
-
-model Claim {
-  id String @id @default(uuid())
-
-  claimNumber String @unique @db.VarChar(50)
-
-  companyId   String
-  warehouseId String
-  orderId     String
-  recordingId String?
-  evidenceId  String?
-  aiJobId     String?
-  assignedTo  String?
-  resolvedBy  String?
-
-  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  order     Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  recording RecordingSession?  @relation(fields: [recordingId], references: [id], onDelete: SetNull)
-  evidence  Evidence?          @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
-  aiJob     AIJob?             @relation(fields: [aiJobId], references: [id], onDelete: SetNull)
-  assignee  User?              @relation("ClaimAssignedTo", fields: [assignedTo], references: [id], onDelete: SetNull)
-  resolver  User?              @relation("ClaimResolvedBy", fields: [resolvedBy], references: [id], onDelete: SetNull)
-
-  status         ClaimStatus          @default(DRAFT)
-  priority       ClaimPriority        @default(MEDIUM)
-  resolutionType ClaimResolutionType?
-
-  title            String
-  description      String
-  customerRemarks  String?
-  internalRemarks  String?
-  aiSummary        String?
-  aiConfidence     Float   @default(0)
-  aiRecommendation String?
-
-  metadata       Json?
-  resolutionData Json?
-
-  resolvedAt DateTime?
-  closedAt   DateTime?
-
-  returns Return[]
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([orderId])
-  @@index([status])
-  @@index([priority])
-  @@map("claims")
-}
-
-// ------------------------------------------------------
-// Returns
-// ------------------------------------------------------
-
-model Return {
-  id String @id @default(uuid())
-
-  returnNumber String @unique @db.VarChar(50)
-
-  companyId   String
-  warehouseId String
-  orderId     String
-  claimId     String?
-  recordingId String?
-  evidenceId  String?
-  aiJobId     String?
-  assignedTo  String?
-  resolvedBy  String?
-
-  company   Company            @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse          @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  order     Order              @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  claim     Claim?             @relation(fields: [claimId], references: [id], onDelete: SetNull)
-  recording RecordingSession?  @relation(fields: [recordingId], references: [id], onDelete: SetNull)
-  evidence  Evidence?          @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
-  aiJob     AIJob?             @relation(fields: [aiJobId], references: [id], onDelete: SetNull)
-  assignee  User?              @relation("ReturnAssignedTo", fields: [assignedTo], references: [id], onDelete: SetNull)
-  resolver  User?              @relation("ReturnResolvedBy", fields: [resolvedBy], references: [id], onDelete: SetNull)
-
-  status         ReturnStatus          @default(DRAFT)
-  priority       ReturnPriority        @default(MEDIUM)
-  resolutionType ReturnResolutionType?
-
-  marketplace           String
-  marketplaceReturnId   String?
-
-  title           String
-  description     String
-  customerReason  String?
-  internalRemarks String?
-
-  aiSummary        String?
-  aiConfidence     Float  @default(0)
-  aiRecommendation String?
-
-  refundAmount               Float?
-  refundCurrency             String?
-  replacementOrderId         String?
-  replacementTrackingNumber  String?
-
-  metadata       Json?
-  resolutionData Json?
-
-  resolvedAt DateTime?
-  closedAt   DateTime?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([orderId])
-  @@index([status])
-  @@index([priority])
-  @@map("returns")
-}
-
-// ------------------------------------------------------
-// Scanner (barcode scans) — model name Scanner → prisma.scanner
-// ------------------------------------------------------
-
-model Scanner {
-  id String @id @default(uuid())
-
-  companyId   String
-  warehouseId String
-  orderId     String
-  sessionId   String
-  evidenceId  String?
-  scannedBy   String
-  verifiedBy  String?
-
-  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse         @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
-  order     Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  recording RecordingSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  evidence  Evidence?         @relation(fields: [evidenceId], references: [id], onDelete: SetNull)
-  operator  User              @relation("ScanScannedBy", fields: [scannedBy], references: [id])
-  verifier  User?             @relation("ScanVerifiedBy", fields: [verifiedBy], references: [id], onDelete: SetNull)
-
-  barcode     String
-  barcodeType String
-  status      ScanStatus @default(PENDING)
-
-  location   Json?
-  device     Json?
-  result     Json?
-  statistics Json?
-
-  remarks String?
-
-  scannedAt  DateTime  @default(now())
-  verifiedAt DateTime?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([orderId])
-  @@index([sessionId])
-  @@index([barcode])
-  @@index([status])
-  @@map("scans")
-}
-
-// ------------------------------------------------------
-// Reports
-// ------------------------------------------------------
-
-model Report {
-  id String @id @default(uuid())
-
-  companyId   String
-  warehouseId String?
-  generatedBy String
-
-  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  warehouse Warehouse? @relation(fields: [warehouseId], references: [id], onDelete: SetNull)
-  generator User       @relation("ReportGeneratedBy", fields: [generatedBy], references: [id])
-
-  reportType  String
-  reportName  String
-  description String?
-  status      ReportStatus @default(PENDING)
-
-  dateRange    Json?
-  summary      Json?
-  kpi          Json?
-  exportFormat String?
-  downloadUrl  String?
-
-  isScheduled  Boolean @default(false)
-  scheduleCron String?
-
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
-  isDeleted Boolean   @default(false)
-
-  @@index([companyId])
-  @@index([warehouseId])
-  @@index([reportType])
-  @@index([status])
-  @@map("reports")
 }

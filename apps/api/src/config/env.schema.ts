@@ -28,7 +28,21 @@ export const envSchema = z.object({
 
   JWT_REFRESH_EXPIRES: z.string().default('30d'),
 
+  STORAGE_DRIVER: z
+    .enum(['local', 'b2', 's3', 'minio'])
+    .default('b2'),
+
   UPLOAD_PATH: z.string().default('uploads'),
+
+  B2_BUCKET_NAME: z.string().min(1),
+
+  B2_ENDPOINT: z.string().min(1),
+
+  B2_REGION: z.string().default('us-east-005'),
+
+  B2_KEY_ID: z.string().min(1),
+
+  B2_APPLICATION_KEY: z.string().min(1),
 
   LOG_LEVEL: z
     .enum(['error', 'warn', 'info', 'debug', 'verbose'])
