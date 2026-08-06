@@ -19,86 +19,77 @@ const crypto_1 = require("crypto");
 let StorageService = StorageService_1 = class StorageService {
     constructor(config) {
         this.config = config;
-        this.log = new common_1.Logger(StorageService_1.name);
+        this.logger = new common_1.Logger(StorageService_1.name);
         this.client = null;
+        this.bucket = null;
         this.configured = false;
-        const keyId = this.config.get("b2.keyId");
-        const appKey = this.config.get("b2.appKey");
-        const endpoint = this.config.get("b2.endpoint");
-        this.bucket = this.config.get("b2.bucket") || "loss-defender-pro-media-dev";
-        this.ttl = this.config.get("b2.signedUrlTtl") || 900;
-        if (keyId && appKey && endpoint) {
+        const keyId = this.config.get('B2_KEY_ID');
+        const appKey = this.config.get('B2_APP_KEY');
+        const bucket = this.config.get('B2_BUCKET');
+        const endpoint = this.config.get('B2_ENDPOINT');
+        const region = this.config.get('B2_REGION') || 'us-west-002';
+        if (keyId &&
+            appKey &&
+            bucket &&
+            endpoint &&
+            !keyId.includes('PLACE_YOUR') &&
+            !appKey.includes('PLACE_YOUR')) {
             this.client = new client_s3_1.S3Client({
+                region,
                 endpoint,
-                region: "us-west-002",
                 credentials: { accessKeyId: keyId, secretAccessKey: appKey },
                 forcePathStyle: true,
             });
+            this.bucket = bucket;
             this.configured = true;
-            this.log.log(`B2 storage configured → bucket=${this.bucket}`);
+            this.logger.log(`B2 storage configured bucket=${bucket}`);
         }
         else {
-            this.log.warn("B2 keys missing — storage endpoints will return 503 until .env is set");
+            this.logger.warn('B2 not configured — presign returns configured:false (set .env keys)');
         }
-    }
-    ensure() {
-        if (!this.configured || !this.client) {
-            throw new common_1.BadRequestException("Storage not configured. Set B2_KEY_ID, B2_APPLICATION_KEY, B2_ENDPOINT in .env");
-        }
-    }
-    buildKey(companyId, purpose, filename) {
-        const now = new Date();
-        const yyyy = now.getUTCFullYear();
-        const mm = String(now.getUTCMonth() + 1).padStart(2, "0");
-        const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "_");
-        return `${companyId}/${purpose}/${yyyy}/${mm}/${(0, crypto_1.randomUUID)()}-${safe}`;
-    }
-    async getUploadUrl(opts) {
-        this.ensure();
-        const key = this.buildKey(opts.companyId, opts.purpose, opts.filename);
-        const command = new client_s3_1.PutObjectCommand({
-            Bucket: this.bucket,
-            Key: key,
-            ContentType: opts.contentType,
-        });
-        const uploadUrl = await (0, s3_request_presigner_1.getSignedUrl)(this.client, command, { expiresIn: this.ttl });
-        return {
-            key,
-            uploadUrl,
-            publicUrl: null,
-            expiresIn: this.ttl,
-            bucket: this.bucket,
-        };
-    }
-    async getDownloadUrl(key) {
-        this.ensure();
-        const command = new client_s3_1.GetObjectCommand({ Bucket: this.bucket, Key: key });
-        const downloadUrl = await (0, s3_request_presigner_1.getSignedUrl)(this.client, command, { expiresIn: this.ttl });
-        return { key, downloadUrl, expiresIn: this.ttl };
-    }
-    async head(key) {
-        this.ensure();
-        try {
-            const res = await this.client.send(new client_s3_1.HeadObjectCommand({ Bucket: this.bucket, Key: key }));
-            return {
-                key,
-                contentType: res.ContentType,
-                contentLength: res.ContentLength,
-                etag: res.ETag,
-                lastModified: res.LastModified,
-            };
-        }
-        catch {
-            return null;
-        }
-    }
-    async delete(key) {
-        this.ensure();
-        await this.client.send(new client_s3_1.DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
-        return { deleted: true, key };
     }
     isConfigured() {
         return this.configured;
+    }
+    buildKey(companyId, purpose, filename) {
+        const now = new Date();
+        const y = now.getUTCFullYear();
+        const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+        const id = (0, crypto_1.randomUUID)();
+        const name = filename || id;
+        return `${companyId}/${purpose}/${y}/${m}/${name}`;
+    }
+    recordingSegmentKey(companyId, recordingId, index) {
+        return this.buildKey(companyId, 'recordings', `${recordingId}/seg_${index}.webm`);
+    }
+    evidencePackKey(companyId, evidenceId) {
+        return this.buildKey(companyId, 'evidence', `${evidenceId}/pack.json`);
+    }
+    async presignPut(key, contentType = 'application/octet-stream', expiresIn = 900) {
+        if (!this.configured || !this.client || !this.bucket) {
+            return {
+                configured: false,
+                uploadUrl: null,
+                key,
+                expiresIn,
+                message: 'Set B2_KEY_ID, B2_APP_KEY, B2_BUCKET, B2_ENDPOINT in .env',
+            };
+        }
+        const cmd = new client_s3_1.PutObjectCommand({
+            Bucket: this.bucket,
+            Key: key,
+            ContentType: contentType,
+        });
+        const uploadUrl = await (0, s3_request_presigner_1.getSignedUrl)(this.client, cmd, { expiresIn });
+        return { configured: true, uploadUrl, key, expiresIn, contentType };
+    }
+    async presignGet(key, expiresIn = 900) {
+        if (!this.configured || !this.client || !this.bucket) {
+            return { configured: false, downloadUrl: null, key };
+        }
+        const cmd = new client_s3_1.GetObjectCommand({ Bucket: this.bucket, Key: key });
+        const downloadUrl = await (0, s3_request_presigner_1.getSignedUrl)(this.client, cmd, { expiresIn });
+        return { configured: true, downloadUrl, key, expiresIn };
     }
 };
 exports.StorageService = StorageService;

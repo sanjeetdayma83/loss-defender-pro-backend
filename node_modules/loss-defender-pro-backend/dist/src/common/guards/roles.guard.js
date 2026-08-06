@@ -14,11 +14,18 @@ const common_1 = require("@nestjs/common");
 const core_1 = require("@nestjs/core");
 const client_1 = require("@prisma/client");
 const roles_decorator_1 = require("../decorators/roles.decorator");
+const public_decorator_1 = require("../decorators/public.decorator");
 let RolesGuard = class RolesGuard {
     constructor(reflector) {
         this.reflector = reflector;
     }
     canActivate(context) {
+        const isPublic = this.reflector.getAllAndOverride(public_decorator_1.IS_PUBLIC_KEY, [
+            context.getHandler(),
+            context.getClass(),
+        ]);
+        if (isPublic)
+            return true;
         const required = this.reflector.getAllAndOverride(roles_decorator_1.ROLES_KEY, [
             context.getHandler(),
             context.getClass(),
@@ -26,13 +33,11 @@ let RolesGuard = class RolesGuard {
         if (!required || required.length === 0)
             return true;
         const { user } = context.switchToHttp().getRequest();
-        if (!user?.role) {
+        if (!user?.role)
             throw new common_1.ForbiddenException('Missing role');
-        }
         if (user.role === client_1.Role.super_admin)
             return true;
-        const ok = required.includes(user.role);
-        if (!ok) {
+        if (!required.includes(user.role)) {
             throw new common_1.ForbiddenException(`Requires one of: ${required.join(', ')}`);
         }
         return true;

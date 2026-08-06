@@ -1,39 +1,33 @@
 ﻿import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-  UnauthorizedException,
+  Injectable, CanActivate, ExecutionContext,
+  ForbiddenException, UnauthorizedException,
 } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
+import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
-/**
- * Ensures every authenticated request has a valid companyId (tenant).
- * Attaches request.tenantId for downstream services.
- * Super-admin can optionally pass X-Tenant-Id to act on another company.
- */
 @Injectable()
 export class TenantGuard implements CanActivate {
+  constructor(private readonly reflector: Reflector) {}
+
   canActivate(context: ExecutionContext): boolean {
+    const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+    if (isPublic) return true;
+
     const request = context.switchToHttp().getRequest();
     const user = request.user;
+    if (!user) throw new UnauthorizedException('Not authenticated');
 
-    if (!user) {
-      throw new UnauthorizedException('Not authenticated');
-    }
-
-    // JWT must carry companyId (set in auth strategy)
     let companyId: string | undefined = user.companyId;
-
-    // Super-admin impersonation / cross-tenant support
     if (user.role === 'super_admin') {
       const headerTenant = request.headers['x-tenant-id'] as string | undefined;
       if (headerTenant) companyId = headerTenant;
     }
-
     if (!companyId) {
-      throw new ForbiddenException('Tenant context missing — companyId required');
+      throw new ForbiddenException('Tenant context missing');
     }
-
     request.tenantId = companyId;
     request.user = { ...user, companyId };
     return true;

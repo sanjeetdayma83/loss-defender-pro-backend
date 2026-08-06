@@ -15,64 +15,79 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ClaimsController = void 0;
 const common_1 = require("@nestjs/common");
 const claims_service_1 = require("./claims.service");
-const create_claim_dto_1 = require("./dto/create-claim.dto");
-const update_claim_dto_1 = require("./dto/update-claim.dto");
-const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
-const tenant_guard_1 = require("../common/guards/tenant.guard");
+const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
+const class_validator_1 = require("class-validator");
+const swagger_1 = require("@nestjs/swagger");
+class CreateClaimDto {
+}
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsUUID)(),
+    __metadata("design:type", String)
+], CreateClaimDto.prototype, "orderId", void 0);
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateClaimDto.prototype, "title", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateClaimDto.prototype, "reason", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsNumber)(),
+    __metadata("design:type", Number)
+], CreateClaimDto.prototype, "amount", void 0);
+class UpdateClaimDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateClaimDto.prototype, "status", void 0);
 let ClaimsController = class ClaimsController {
-    constructor(service) {
-        this.service = service;
+    constructor(claims) {
+        this.claims = claims;
     }
-    create(req, dto) {
-        return this.service.create(req.user.companyId, dto);
+    list(u) {
+        return this.claims.list(u.companyId);
     }
-    list(req, status) {
-        return this.service.list(req.user.companyId, status);
+    create(u, dto) {
+        return this.claims.create(u.companyId, u.sub, dto);
     }
-    findOne(req, id) {
-        return this.service.findOne(req.user.companyId, id);
-    }
-    update(req, id, dto) {
-        return this.service.update(req.user.companyId, id, dto);
+    update(u, id, dto) {
+        return this.claims.updateStatus(u.companyId, id, dto.status);
     }
 };
 exports.ClaimsController = ClaimsController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, create_claim_dto_1.CreateClaimDto]),
-    __metadata("design:returntype", void 0)
-], ClaimsController.prototype, "create", null);
-__decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('status')),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ClaimsController.prototype, "list", null);
 __decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('id')),
+    (0, common_1.Post)(),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, CreateClaimDto]),
     __metadata("design:returntype", void 0)
-], ClaimsController.prototype, "findOne", null);
+], ClaimsController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
     __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, update_claim_dto_1.UpdateClaimDto]),
+    __metadata("design:paramtypes", [Object, String, UpdateClaimDto]),
     __metadata("design:returntype", void 0)
 ], ClaimsController.prototype, "update", null);
 exports.ClaimsController = ClaimsController = __decorate([
+    (0, swagger_1.ApiTags)('claims'),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('claims'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, tenant_guard_1.TenantGuard),
     __metadata("design:paramtypes", [claims_service_1.ClaimsService])
 ], ClaimsController);
 //# sourceMappingURL=claims.controller.js.map

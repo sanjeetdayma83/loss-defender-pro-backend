@@ -1,11 +1,51 @@
-﻿import { NestFactory } from '@nestjs/core';
+import { NestFactory } from '@nestjs/core';
+
+// Prisma BigInt → JSON string
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
 import { ValidationPipe } from '@nestjs/common';
+
+// Prisma BigInt → JSON string
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
 import { AppModule } from './app.module';
+
+// Prisma BigInt → JSON string
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
 import { LoggingInterceptor } from './common/interceptors/logging.interceptor';
+
+// Prisma BigInt → JSON string
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+
+// Prisma BigInt → JSON string
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+
+// Prisma BigInt → JSON string
+(BigInt.prototype as any).toJSON = function () {
+  return this.toString();
+};
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  const swaggerConfig = new DocumentBuilder()
+  .setTitle('Loss Defender Pro API')
+  .setDescription('Warehouse intelligence — /api/v1')
+  .setVersion('1.0')
+  .addBearerAuth()
+  .build();
+const document = SwaggerModule.createDocument(app, swaggerConfig);
+SwaggerModule.setup('api/docs', app, document);
 
   app.enableCors({
     origin: true,

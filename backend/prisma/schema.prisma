@@ -160,6 +160,7 @@ model Station {
 }
 
 model User {
+  refreshSessions RefreshSession[]
   id               String     @id @default(uuid())
   companyId        String
   company          Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
@@ -486,4 +487,49 @@ model Return {
   @@index([companyId, status])
   @@index([orderId])
   @@map("returns")
+}
+
+model AuthOtp {
+  id        String    @id @default(uuid())
+  email     String
+  code      String
+  purpose   String
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([email, purpose])
+  @@map("auth_otps")
+}
+model RefreshSession {
+  id           String    @id @default(uuid())
+  userId       String
+  tokenHash    String
+  deviceId     String?
+  userAgent    String?
+  ipAddress    String?
+  expiresAt    DateTime
+  revokedAt    DateTime?
+  replacedById String?
+  createdAt    DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([tokenHash])
+  @@map("refresh_sessions")
+}
+model ScanEvent {
+  id            String   @id @default(uuid())
+  companyId     String
+  orderId       String
+  operatorId    String
+  barcode       String
+  result        String
+  expectedSku   String?
+  matchedItemId String?
+  createdAt     DateTime @default(now())
+
+  @@index([companyId, orderId, barcode])
+  @@map("scan_events")
 }

@@ -1,34 +1,41 @@
-import {
-  Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Req,
-} from '@nestjs/common';
+﻿import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
 import { ReturnsService } from './returns.service';
-import { CreateReturnDto } from './dto/create-return.dto';
-import { UpdateReturnDto } from './dto/update-return.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { TenantGuard } from '../common/guards/tenant.guard';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { IsUUID, IsOptional, IsString } from 'class-validator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+class CreateReturnDto {
+  @IsUUID() orderId: string;
+  @IsOptional() @IsString() reason?: string;
+  @IsOptional() @IsString() notes?: string;
+}
+
+class UpdateReturnDto {
+  @IsString() status: string;
+}
+
+@ApiTags('returns')
+@ApiBearerAuth()
 @Controller('returns')
-@UseGuards(JwtAuthGuard, TenantGuard)
 export class ReturnsController {
-  constructor(private readonly service: ReturnsService) {}
-
-  @Post()
-  create(@Req() req: any, @Body() dto: CreateReturnDto) {
-    return this.service.create(req.user.companyId, dto);
-  }
+  constructor(private readonly returns: ReturnsService) {}
 
   @Get()
-  list(@Req() req: any, @Query('status') status?: string) {
-    return this.service.list(req.user.companyId, status);
+  list(@CurrentUser() u: AuthenticatedUser) {
+    return this.returns.list(u.companyId);
   }
 
-  @Get(':id')
-  findOne(@Req() req: any, @Param('id') id: string) {
-    return this.service.findOne(req.user.companyId, id);
+  @Post()
+  create(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateReturnDto) {
+    return this.returns.create(u.companyId, dto);
   }
 
   @Patch(':id')
-  update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateReturnDto) {
-    return this.service.update(req.user.companyId, id, dto);
+  update(
+    @CurrentUser() u: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateReturnDto,
+  ) {
+    return this.returns.updateStatus(u.companyId, id, dto.status);
   }
 }

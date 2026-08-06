@@ -1,10 +1,10 @@
-import { Module } from '@nestjs/common';
+﻿import { Module } from '@nestjs/common';
 import { EvidenceService } from './evidence.service';
 import { EvidenceController } from './evidence.controller';
-import { PrismaModule } from '../prisma/prisma.module';
+import { StorageModule } from '../storage/storage.module';
 
 @Module({
-  imports: [PrismaModule],
+  imports: [StorageModule],
   controllers: [EvidenceController],
   providers: [EvidenceService],
   exports: [EvidenceService],

@@ -15,43 +15,49 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.OrdersController = void 0;
 const common_1 = require("@nestjs/common");
 const orders_service_1 = require("./orders.service");
-const order_dto_1 = require("./dto/order.dto");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
+const class_validator_1 = require("class-validator");
+const swagger_1 = require("@nestjs/swagger");
 const roles_decorator_1 = require("../common/decorators/roles.decorator");
 const client_1 = require("@prisma/client");
+class TransitionDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], TransitionDto.prototype, "status", void 0);
+class DispatchDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], DispatchDto.prototype, "awb", void 0);
 let OrdersController = class OrdersController {
     constructor(orders) {
         this.orders = orders;
     }
-    list(user, status) {
-        return this.orders.list(user.companyId, status);
+    list(u) {
+        return this.orders.list(u.companyId);
     }
-    getOne(user, id) {
-        return this.orders.getOne(user.companyId, id);
+    getOne(u, id) {
+        return this.orders.getOne(u.companyId, id);
     }
-    create(user, dto, req) {
-        return this.orders.create(user.companyId, user.sub, dto, req.ip);
+    transition(u, id, dto) {
+        return this.orders.transition(u.companyId, id, dto.status);
     }
-    assign(user, id, dto, req) {
-        return this.orders.assign(user.companyId, id, user.sub, dto, req.ip);
+    dispatch(u, id, dto) {
+        return this.orders.dispatch(u.companyId, id, dto.awb);
     }
-    updateStatus(user, id, dto, req) {
-        return this.orders.updateStatus(user.companyId, id, user.sub, dto, req.ip);
-    }
-    scan(user, id, dto, DispatchOrderDto, req) {
-        return this.orders.scan(user.companyId, id, user.sub, dto, req.ip);
-    }
-    dispatch(user, id, dto, req) {
-        return this.orders.dispatch(user.companyId, id, user.sub, dto, req.ip);
+    ship(u, id) {
+        return this.orders.markShipped(u.companyId, id);
     }
 };
 exports.OrdersController = OrdersController;
 __decorate([
     (0, common_1.Get)(),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Query)('status')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], OrdersController.prototype, "list", null);
 __decorate([
@@ -63,60 +69,37 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], OrdersController.prototype, "getOne", null);
 __decorate([
-    (0, common_1.Post)(),
-    (0, roles_decorator_1.Roles)(client_1.Role.owner, client_1.Role.manager, client_1.Role.supervisor, client_1.Role.marketplace_manager, client_1.Role.super_admin),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Body)()),
-    __param(2, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, order_dto_1.CreateOrderDto, Object]),
-    __metadata("design:returntype", void 0)
-], OrdersController.prototype, "create", null);
-__decorate([
-    (0, common_1.Post)(':id/assign'),
-    (0, roles_decorator_1.Roles)(client_1.Role.owner, client_1.Role.manager, client_1.Role.supervisor, client_1.Role.super_admin),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)()),
-    __param(3, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, order_dto_1.AssignOrderDto, Object]),
-    __metadata("design:returntype", void 0)
-], OrdersController.prototype, "assign", null);
-__decorate([
     (0, common_1.Patch)(':id/status'),
-    (0, roles_decorator_1.Roles)(client_1.Role.owner, client_1.Role.manager, client_1.Role.supervisor, client_1.Role.packing_operator, client_1.Role.super_admin),
+    (0, roles_decorator_1.Roles)(client_1.Role.owner, client_1.Role.manager, client_1.Role.supervisor, client_1.Role.packing_operator),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
     __param(2, (0, common_1.Body)()),
-    __param(3, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, order_dto_1.UpdateOrderStatusDto, Object]),
+    __metadata("design:paramtypes", [Object, String, TransitionDto]),
     __metadata("design:returntype", void 0)
-], OrdersController.prototype, "updateStatus", null);
-__decorate([
-    (0, common_1.Post)(':id/scan'),
-    (0, roles_decorator_1.Roles)(client_1.Role.owner, client_1.Role.manager, client_1.Role.supervisor, client_1.Role.packing_operator, client_1.Role.qc_operator, client_1.Role.super_admin),
-    __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Param)('id')),
-    __param(2, (0, common_1.Body)()),
-    __param(4, (0, common_1.Req)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, order_dto_1.ScanItemDto, Object, Object]),
-    __metadata("design:returntype", void 0)
-], OrdersController.prototype, "scan", null);
+], OrdersController.prototype, "transition", null);
 __decorate([
     (0, common_1.Post)(':id/dispatch'),
-    (0, roles_decorator_1.Roles)(client_1.Role.owner, client_1.Role.manager, client_1.Role.supervisor, client_1.Role.packing_operator, client_1.Role.super_admin),
+    (0, roles_decorator_1.Roles)(client_1.Role.owner, client_1.Role.manager, client_1.Role.supervisor),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
     __param(2, (0, common_1.Body)()),
-    __param(3, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, order_dto_1.DispatchOrderDto, Object]),
+    __metadata("design:paramtypes", [Object, String, DispatchDto]),
     __metadata("design:returntype", void 0)
 ], OrdersController.prototype, "dispatch", null);
+__decorate([
+    (0, common_1.Post)(':id/ship'),
+    (0, roles_decorator_1.Roles)(client_1.Role.owner, client_1.Role.manager, client_1.Role.supervisor),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:returntype", void 0)
+], OrdersController.prototype, "ship", null);
 exports.OrdersController = OrdersController = __decorate([
+    (0, swagger_1.ApiTags)('orders'),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('orders'),
     __metadata("design:paramtypes", [orders_service_1.OrdersService])
 ], OrdersController);

@@ -1,34 +1,42 @@
-import {
-  Controller, Get, Post, Patch, Param, Body, Query, UseGuards, Req,
-} from '@nestjs/common';
+﻿import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
 import { ClaimsService } from './claims.service';
-import { CreateClaimDto } from './dto/create-claim.dto';
-import { UpdateClaimDto } from './dto/update-claim.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { TenantGuard } from '../common/guards/tenant.guard';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { IsString, IsOptional, IsUUID, IsNumber } from 'class-validator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+class CreateClaimDto {
+  @IsOptional() @IsUUID() orderId?: string;
+  @IsString() title: string;
+  @IsOptional() @IsString() reason?: string;
+  @IsOptional() @IsNumber() amount?: number;
+}
+
+class UpdateClaimDto {
+  @IsString() status: string;
+}
+
+@ApiTags('claims')
+@ApiBearerAuth()
 @Controller('claims')
-@UseGuards(JwtAuthGuard, TenantGuard)
 export class ClaimsController {
-  constructor(private readonly service: ClaimsService) {}
-
-  @Post()
-  create(@Req() req: any, @Body() dto: CreateClaimDto) {
-    return this.service.create(req.user.companyId, dto);
-  }
+  constructor(private readonly claims: ClaimsService) {}
 
   @Get()
-  list(@Req() req: any, @Query('status') status?: string) {
-    return this.service.list(req.user.companyId, status);
+  list(@CurrentUser() u: AuthenticatedUser) {
+    return this.claims.list(u.companyId);
   }
 
-  @Get(':id')
-  findOne(@Req() req: any, @Param('id') id: string) {
-    return this.service.findOne(req.user.companyId, id);
+  @Post()
+  create(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateClaimDto) {
+    return this.claims.create(u.companyId, u.sub, dto);
   }
 
   @Patch(':id')
-  update(@Req() req: any, @Param('id') id: string, @Body() dto: UpdateClaimDto) {
-    return this.service.update(req.user.companyId, id, dto);
+  update(
+    @CurrentUser() u: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: UpdateClaimDto,
+  ) {
+    return this.claims.updateStatus(u.companyId, id, dto.status);
   }
 }

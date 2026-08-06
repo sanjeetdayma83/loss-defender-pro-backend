@@ -24,6 +24,8 @@ const recordings_module_1 = require("./recordings/recordings.module");
 const evidence_module_1 = require("./evidence/evidence.module");
 const claims_module_1 = require("./claims/claims.module");
 const returns_module_1 = require("./returns/returns.module");
+const scanner_module_1 = require("./scanner/scanner.module");
+const alerts_module_1 = require("./alerts/alerts.module");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
@@ -41,10 +43,12 @@ exports.AppModule = AppModule = __decorate([
             orders_module_1.OrdersModule,
             storage_module_1.StorageModule,
             health_module_1.HealthModule,
+            scanner_module_1.ScannerModule,
             recordings_module_1.RecordingsModule,
             evidence_module_1.EvidenceModule,
             claims_module_1.ClaimsModule,
             returns_module_1.ReturnsModule,
+            alerts_module_1.AlertsModule,
         ],
     })
 ], AppModule);

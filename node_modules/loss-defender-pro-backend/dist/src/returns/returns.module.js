@@ -10,13 +10,11 @@ exports.ReturnsModule = void 0;
 const common_1 = require("@nestjs/common");
 const returns_service_1 = require("./returns.service");
 const returns_controller_1 = require("./returns.controller");
-const prisma_module_1 = require("../prisma/prisma.module");
 let ReturnsModule = class ReturnsModule {
 };
 exports.ReturnsModule = ReturnsModule;
 exports.ReturnsModule = ReturnsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
         controllers: [returns_controller_1.ReturnsController],
         providers: [returns_service_1.ReturnsService],
         exports: [returns_service_1.ReturnsService],

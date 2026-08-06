@@ -12,65 +12,53 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReturnsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const ALLOWED = {
+    requested: ['received', 'rejected', 'closed'],
+    received: ['inspecting', 'rejected', 'closed'],
+    inspecting: ['refunded', 'restocked', 'rejected', 'closed'],
+    refunded: ['closed'],
+    restocked: ['closed'],
+    rejected: ['closed'],
+    closed: [],
+};
 let ReturnsService = class ReturnsService {
     constructor(prisma) {
         this.prisma = prisma;
     }
-    async create(companyId, dto) {
-        const order = await this.prisma.order.findFirst({
-            where: { id: dto.orderId, companyId },
+    list(companyId) {
+        return this.prisma.return.findMany({
+            where: { companyId },
+            orderBy: { createdAt: 'desc' },
+            take: 100,
         });
-        if (!order)
+    }
+    async create(companyId, data) {
+        const o = await this.prisma.order.findFirst({ where: { id: data.orderId, companyId } });
+        if (!o)
             throw new common_1.NotFoundException('Order not found');
         return this.prisma.return.create({
             data: {
                 companyId,
-                orderId: dto.orderId,
-                reason: dto.reason,
-            },
-            include: {
-                order: { select: { id: true, marketplaceOrderId: true, status: true } },
+                orderId: data.orderId,
+                reason: data.reason ?? 'customer_return',
+                status: 'requested',
+                conditionNote: data.notes,
             },
         });
     }
-    async list(companyId, status) {
-        return this.prisma.return.findMany({
-            where: {
-                companyId,
-                ...(status ? { status: status } : {}),
-            },
-            orderBy: { createdAt: 'desc' },
-            include: {
-                order: { select: { id: true, marketplaceOrderId: true, status: true } },
-            },
-            take: 50,
-        });
-    }
-    async findOne(companyId, id) {
-        const r = await this.prisma.return.findFirst({
-            where: { id, companyId },
-            include: {
-                order: { select: { id: true, marketplaceOrderId: true, status: true } },
-            },
-        });
-        if (!r)
+    async updateStatus(companyId, id, status) {
+        const row = await this.prisma.return.findFirst({ where: { id, companyId } });
+        if (!row)
             throw new common_1.NotFoundException('Return not found');
-        return r;
-    }
-    async update(companyId, id, dto) {
-        await this.findOne(companyId, id);
-        return this.prisma.return.update({
-            where: { id },
-            data: {
-                ...(dto.status ? { status: dto.status } : {}),
-                ...(dto.conditionNote !== undefined ? { conditionNote: dto.conditionNote } : {}),
-                ...(dto.decision !== undefined ? { decision: dto.decision } : {}),
-                ...(dto.status === 'closed' ? { closedAt: new Date() } : {}),
-            },
-            include: {
-                order: { select: { id: true, marketplaceOrderId: true, status: true } },
-            },
-        });
+        const cur = row.status;
+        const next = ALLOWED[cur] || [];
+        if (!next.includes(status)) {
+            throw new common_1.BadRequestException(`Cannot transition ${cur} → ${status}. Allowed: ${next.join(', ') || 'none'}`);
+        }
+        const data = { status };
+        if (status === 'closed')
+            data.closedAt = new Date();
+        return this.prisma.return.update({ where: { id }, data });
     }
 };
 exports.ReturnsService = ReturnsService;

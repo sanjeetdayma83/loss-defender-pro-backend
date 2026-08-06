@@ -15,39 +15,39 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EvidenceController = void 0;
 const common_1 = require("@nestjs/common");
 const evidence_service_1 = require("./evidence.service");
-const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
-const tenant_guard_1 = require("../common/guards/tenant.guard");
+const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
+const swagger_1 = require("@nestjs/swagger");
 let EvidenceController = class EvidenceController {
-    constructor(service) {
-        this.service = service;
+    constructor(evidence) {
+        this.evidence = evidence;
     }
-    list(req, orderId) {
-        return this.service.list(req.user.companyId, orderId);
+    list(u) {
+        return this.evidence.list(u.companyId);
     }
-    findOne(req, id) {
-        return this.service.findOne(req.user.companyId, id);
+    getOne(u, id) {
+        return this.evidence.getOne(u.companyId, id);
     }
 };
 exports.EvidenceController = EvidenceController;
 __decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('orderId')),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], EvidenceController.prototype, "list", null);
 __decorate([
     (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
-], EvidenceController.prototype, "findOne", null);
+], EvidenceController.prototype, "getOne", null);
 exports.EvidenceController = EvidenceController = __decorate([
+    (0, swagger_1.ApiTags)('evidence'),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('evidence'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, tenant_guard_1.TenantGuard),
     __metadata("design:paramtypes", [evidence_service_1.EvidenceService])
 ], EvidenceController);
 //# sourceMappingURL=evidence.controller.js.map

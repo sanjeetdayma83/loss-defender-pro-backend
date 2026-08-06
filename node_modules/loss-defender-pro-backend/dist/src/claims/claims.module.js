@@ -10,13 +10,11 @@ exports.ClaimsModule = void 0;
 const common_1 = require("@nestjs/common");
 const claims_service_1 = require("./claims.service");
 const claims_controller_1 = require("./claims.controller");
-const prisma_module_1 = require("../prisma/prisma.module");
 let ClaimsModule = class ClaimsModule {
 };
 exports.ClaimsModule = ClaimsModule;
 exports.ClaimsModule = ClaimsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
         controllers: [claims_controller_1.ClaimsController],
         providers: [claims_service_1.ClaimsService],
         exports: [claims_service_1.ClaimsService],

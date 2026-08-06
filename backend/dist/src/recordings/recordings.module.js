@@ -10,13 +10,13 @@ exports.RecordingsModule = void 0;
 const common_1 = require("@nestjs/common");
 const recordings_service_1 = require("./recordings.service");
 const recordings_controller_1 = require("./recordings.controller");
-const prisma_module_1 = require("../prisma/prisma.module");
+const storage_module_1 = require("../storage/storage.module");
 let RecordingsModule = class RecordingsModule {
 };
 exports.RecordingsModule = RecordingsModule;
 exports.RecordingsModule = RecordingsModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
+        imports: [storage_module_1.StorageModule],
         controllers: [recordings_controller_1.RecordingsController],
         providers: [recordings_service_1.RecordingsService],
         exports: [recordings_service_1.RecordingsService],

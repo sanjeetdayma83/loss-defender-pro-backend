@@ -10,13 +10,13 @@ exports.EvidenceModule = void 0;
 const common_1 = require("@nestjs/common");
 const evidence_service_1 = require("./evidence.service");
 const evidence_controller_1 = require("./evidence.controller");
-const prisma_module_1 = require("../prisma/prisma.module");
+const storage_module_1 = require("../storage/storage.module");
 let EvidenceModule = class EvidenceModule {
 };
 exports.EvidenceModule = EvidenceModule;
 exports.EvidenceModule = EvidenceModule = __decorate([
     (0, common_1.Module)({
-        imports: [prisma_module_1.PrismaModule],
+        imports: [storage_module_1.StorageModule],
         controllers: [evidence_controller_1.EvidenceController],
         providers: [evidence_service_1.EvidenceService],
         exports: [evidence_service_1.EvidenceService],

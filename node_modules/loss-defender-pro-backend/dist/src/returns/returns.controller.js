@@ -15,64 +15,74 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ReturnsController = void 0;
 const common_1 = require("@nestjs/common");
 const returns_service_1 = require("./returns.service");
-const create_return_dto_1 = require("./dto/create-return.dto");
-const update_return_dto_1 = require("./dto/update-return.dto");
-const jwt_auth_guard_1 = require("../common/guards/jwt-auth.guard");
-const tenant_guard_1 = require("../common/guards/tenant.guard");
+const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
+const class_validator_1 = require("class-validator");
+const swagger_1 = require("@nestjs/swagger");
+class CreateReturnDto {
+}
+__decorate([
+    (0, class_validator_1.IsUUID)(),
+    __metadata("design:type", String)
+], CreateReturnDto.prototype, "orderId", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateReturnDto.prototype, "reason", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], CreateReturnDto.prototype, "notes", void 0);
+class UpdateReturnDto {
+}
+__decorate([
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateReturnDto.prototype, "status", void 0);
 let ReturnsController = class ReturnsController {
-    constructor(service) {
-        this.service = service;
+    constructor(returns) {
+        this.returns = returns;
     }
-    create(req, dto) {
-        return this.service.create(req.user.companyId, dto);
+    list(u) {
+        return this.returns.list(u.companyId);
     }
-    list(req, status) {
-        return this.service.list(req.user.companyId, status);
+    create(u, dto) {
+        return this.returns.create(u.companyId, dto);
     }
-    findOne(req, id) {
-        return this.service.findOne(req.user.companyId, id);
-    }
-    update(req, id, dto) {
-        return this.service.update(req.user.companyId, id, dto);
+    update(u, id, dto) {
+        return this.returns.updateStatus(u.companyId, id, dto.status);
     }
 };
 exports.ReturnsController = ReturnsController;
 __decorate([
-    (0, common_1.Post)(),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, create_return_dto_1.CreateReturnDto]),
-    __metadata("design:returntype", void 0)
-], ReturnsController.prototype, "create", null);
-__decorate([
     (0, common_1.Get)(),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Query)('status')),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], ReturnsController.prototype, "list", null);
 __decorate([
-    (0, common_1.Get)(':id'),
-    __param(0, (0, common_1.Req)()),
-    __param(1, (0, common_1.Param)('id')),
+    (0, common_1.Post)(),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String]),
+    __metadata("design:paramtypes", [Object, CreateReturnDto]),
     __metadata("design:returntype", void 0)
-], ReturnsController.prototype, "findOne", null);
+], ReturnsController.prototype, "create", null);
 __decorate([
     (0, common_1.Patch)(':id'),
-    __param(0, (0, common_1.Req)()),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
     __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, String, update_return_dto_1.UpdateReturnDto]),
+    __metadata("design:paramtypes", [Object, String, UpdateReturnDto]),
     __metadata("design:returntype", void 0)
 ], ReturnsController.prototype, "update", null);
 exports.ReturnsController = ReturnsController = __decorate([
+    (0, swagger_1.ApiTags)('returns'),
+    (0, swagger_1.ApiBearerAuth)(),
     (0, common_1.Controller)('returns'),
-    (0, common_1.UseGuards)(jwt_auth_guard_1.JwtAuthGuard, tenant_guard_1.TenantGuard),
     __metadata("design:paramtypes", [returns_service_1.ReturnsService])
 ], ReturnsController);
 //# sourceMappingURL=returns.controller.js.map

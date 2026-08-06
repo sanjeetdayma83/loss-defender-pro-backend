@@ -12,52 +12,43 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.EvidenceService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const storage_service_1 = require("../storage/storage.service");
 let EvidenceService = class EvidenceService {
-    constructor(prisma) {
+    constructor(prisma, storage) {
         this.prisma = prisma;
+        this.storage = storage;
     }
-    async findOne(companyId, id) {
-        const ev = await this.prisma.evidence.findFirst({
-            where: { id, companyId },
-            include: {
-                frames: { orderBy: { sequence: 'asc' } },
-                recording: {
-                    select: {
-                        id: true,
-                        status: true,
-                        durationSec: true,
-                        startedAt: true,
-                        completedAt: true,
-                        operator: { select: { id: true, name: true } },
-                    },
-                },
-                order: {
-                    select: { id: true, marketplaceOrderId: true, status: true },
-                },
-            },
-        });
-        if (!ev)
-            throw new common_1.NotFoundException('Evidence not found');
-        return ev;
-    }
-    async list(companyId, orderId) {
+    list(companyId) {
         return this.prisma.evidence.findMany({
-            where: {
-                companyId,
-                ...(orderId ? { orderId } : {}),
-            },
+            where: { companyId },
             orderBy: { createdAt: 'desc' },
-            include: {
-                recording: { select: { id: true, status: true, durationSec: true } },
-                order: { select: { id: true, marketplaceOrderId: true } },
-            },
-            take: 50,
+            take: 100,
         });
+    }
+    async getOne(companyId, id) {
+        const row = await this.prisma.evidence.findFirst({ where: { id, companyId } });
+        if (!row)
+            throw new common_1.NotFoundException('Evidence not found');
+        return row;
+    }
+    async getDownloadUrl(companyId, id) {
+        const row = await this.prisma.evidence.findFirst({ where: { id, companyId } });
+        if (!row)
+            throw new common_1.NotFoundException('Evidence not found');
+        if (!row.packKey) {
+            return { configured: false, downloadUrl: null, message: 'No packKey yet' };
+        }
+        const signed = await this.storage.presignGet(row.packKey);
+        return {
+            ...signed,
+            evidenceId: id,
+        };
     }
 };
 exports.EvidenceService = EvidenceService;
 exports.EvidenceService = EvidenceService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [prisma_service_1.PrismaService])
+    __metadata("design:paramtypes", [prisma_service_1.PrismaService,
+        storage_service_1.StorageService])
 ], EvidenceService);
 //# sourceMappingURL=evidence.service.js.map

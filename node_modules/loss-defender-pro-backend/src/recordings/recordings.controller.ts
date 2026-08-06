@@ -1,49 +1,65 @@
-import {
-  Controller, Post, Get, Param, Body, Query, UseGuards, Req,
-} from '@nestjs/common';
+﻿import { Controller, Get, Post, Body, Param } from '@nestjs/common';
 import { RecordingsService } from './recordings.service';
-import { StartRecordingDto } from './dto/start-recording.dto';
-import { AddSegmentDto } from './dto/add-segment.dto';
-import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
-import { TenantGuard } from '../common/guards/tenant.guard';
+import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
+import { IsUUID, IsOptional, IsInt, IsString } from 'class-validator';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 
+class StartRecordingDto {
+  @IsUUID() orderId: string;
+  @IsUUID() warehouseId: string;
+}
+
+class StopRecordingDto {
+  @IsOptional() @IsInt() durationSec?: number;
+  @IsOptional() @IsInt() segmentCount?: number;
+}
+
+class PresignSegmentDto {
+  @IsInt() segmentIndex: number;
+  @IsOptional() @IsString() contentType?: string;
+}
+
+@ApiTags('recordings')
+@ApiBearerAuth()
 @Controller('recordings')
-@UseGuards(JwtAuthGuard, TenantGuard)
 export class RecordingsController {
-  constructor(private readonly service: RecordingsService) {}
+  constructor(private readonly recordings: RecordingsService) {}
 
-  @Post('start')
-  start(@Req() req: any, @Body() dto: StartRecordingDto) {
-    return this.service.start(req.user.companyId, req.user.sub ?? req.user.id, dto);
-  }
-
-  @Post(':id/pause')
-  pause(@Req() req: any, @Param('id') id: string) {
-    return this.service.pause(req.user.companyId, id);
-  }
-
-  @Post(':id/resume')
-  resume(@Req() req: any, @Param('id') id: string) {
-    return this.service.resume(req.user.companyId, id);
-  }
-
-  @Post(':id/stop')
-  stop(@Req() req: any, @Param('id') id: string) {
-    return this.service.stop(req.user.companyId, id);
-  }
-
-  @Post(':id/segments')
-  addSegment(@Req() req: any, @Param('id') id: string, @Body() dto: AddSegmentDto) {
-    return this.service.addSegment(req.user.companyId, id, dto);
+  @Get()
+  list(@CurrentUser() u: AuthenticatedUser) {
+    return this.recordings.list(u.companyId);
   }
 
   @Get(':id')
-  findOne(@Req() req: any, @Param('id') id: string) {
-    return this.service.findOne(req.user.companyId, id);
+  getOne(@CurrentUser() u: AuthenticatedUser, @Param('id') id: string) {
+    return this.recordings.getOne(u.companyId, id);
   }
 
-  @Get()
-  list(@Req() req: any, @Query('orderId') orderId?: string) {
-    return this.service.list(req.user.companyId, orderId);
+  @Post('start')
+  start(@CurrentUser() u: AuthenticatedUser, @Body() dto: StartRecordingDto) {
+    return this.recordings.start(u.companyId, u.sub, dto.orderId, dto.warehouseId);
+  }
+
+  @Post(':id/stop')
+  stop(
+    @CurrentUser() u: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: StopRecordingDto,
+  ) {
+    return this.recordings.stop(u.companyId, id, dto.durationSec, dto.segmentCount);
+  }
+
+  @Post(':id/segments/presign')
+  presign(
+    @CurrentUser() u: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() dto: PresignSegmentDto,
+  ) {
+    return this.recordings.presignSegment(
+      u.companyId,
+      id,
+      dto.segmentIndex,
+      dto.contentType ?? 'video/webm',
+    );
   }
 }

@@ -14,121 +14,137 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuthController = void 0;
 const common_1 = require("@nestjs/common");
-const passport_1 = require("@nestjs/passport");
 const auth_service_1 = require("./auth.service");
-const register_dto_1 = require("./dto/register.dto");
-const login_dto_1 = require("./dto/login.dto");
-const refresh_dto_1 = require("./dto/refresh.dto");
-const forgot_password_dto_1 = require("./dto/forgot-password.dto");
-const reset_password_dto_1 = require("./dto/reset-password.dto");
+const auth_dto_1 = require("./dto/auth.dto");
+const change_password_dto_1 = require("./dto/change-password.dto");
 const public_decorator_1 = require("../common/decorators/public.decorator");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
+const swagger_1 = require("@nestjs/swagger");
 let AuthController = class AuthController {
-    constructor(authService) {
-        this.authService = authService;
+    constructor(auth) {
+        this.auth = auth;
     }
-    async register(dto) {
-        const result = await this.authService.register(dto);
-        return { success: true, data: result };
+    register(dto, req) {
+        return this.auth.register(dto, req.ip);
     }
-    async login(dto, ip, req) {
-        const result = await this.authService.login(dto, { ip, userAgent: req.headers['user-agent'] });
-        return { success: true, data: result };
+    login(dto, req) {
+        return this.auth.login(dto, req.ip, req.headers['user-agent']);
     }
-    async refresh(dto, req) {
-        const result = await this.authService.refresh(req.user.sub, dto.refreshToken);
-        return { success: true, data: result };
+    refresh(dto, req) {
+        return this.auth.refresh(dto, req.ip, req.headers['user-agent']);
     }
-    async logout(user, body) {
-        await this.authService.logout(user.sub, body?.refreshToken);
+    logout(user, dto) {
+        return this.auth.logout(user.sub, dto);
     }
-    async forgotPassword(dto) {
-        await this.authService.forgotPassword(dto.email);
+    forgot(dto) {
+        return this.auth.forgotPassword(dto);
     }
-    async resetPassword(dto) {
-        await this.authService.resetPassword(dto.token, dto.password);
+    reset(dto) {
+        return this.auth.resetPassword(dto);
     }
-    async sessions(user) {
-        const data = await this.authService.listSessions(user.sub);
-        return { success: true, data };
+    verify(dto) {
+        return this.auth.verifyEmail(dto);
     }
-    async revokeSession(user, id) {
-        await this.authService.revokeSession(user.sub, id);
+    changePassword(user, dto) {
+        return this.auth.changePassword(user.sub, dto.currentPassword, dto.newPassword);
+    }
+    sessions(user) {
+        return this.auth.sessions(user.sub);
+    }
+    revoke(user, id) {
+        return this.auth.revokeSession(user.sub, id);
     }
 };
 exports.AuthController = AuthController;
 __decorate([
     (0, public_decorator_1.Public)(),
     (0, common_1.Post)('register'),
+    (0, swagger_1.ApiOperation)({ summary: 'Register company + owner' }),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [register_dto_1.RegisterDto]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:paramtypes", [auth_dto_1.RegisterDto, Object]),
+    __metadata("design:returntype", void 0)
 ], AuthController.prototype, "register", null);
 __decorate([
     (0, public_decorator_1.Public)(),
     (0, common_1.Post)('login'),
     __param(0, (0, common_1.Body)()),
-    __param(1, (0, common_1.Ip)()),
-    __param(2, (0, common_1.Req)()),
+    __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [login_dto_1.LoginDto, String, Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:paramtypes", [auth_dto_1.LoginDto, Object]),
+    __metadata("design:returntype", void 0)
 ], AuthController.prototype, "login", null);
 __decorate([
     (0, public_decorator_1.Public)(),
-    (0, common_1.UseGuards)((0, passport_1.AuthGuard)('jwt-refresh')),
     (0, common_1.Post)('refresh'),
     __param(0, (0, common_1.Body)()),
     __param(1, (0, common_1.Req)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [refresh_dto_1.RefreshDto, Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:paramtypes", [auth_dto_1.RefreshDto, Object]),
+    __metadata("design:returntype", void 0)
 ], AuthController.prototype, "refresh", null);
 __decorate([
     (0, common_1.Post)('logout'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
+    (0, swagger_1.ApiBearerAuth)(),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:paramtypes", [Object, auth_dto_1.LogoutDto]),
+    __metadata("design:returntype", void 0)
 ], AuthController.prototype, "logout", null);
 __decorate([
     (0, public_decorator_1.Public)(),
     (0, common_1.Post)('forgot-password'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.ACCEPTED),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [forgot_password_dto_1.ForgotPasswordDto]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "forgotPassword", null);
+    __metadata("design:paramtypes", [auth_dto_1.ForgotPasswordDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "forgot", null);
 __decorate([
     (0, public_decorator_1.Public)(),
     (0, common_1.Post)('reset-password'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [reset_password_dto_1.ResetPasswordDto]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "resetPassword", null);
+    __metadata("design:paramtypes", [auth_dto_1.ResetPasswordDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "reset", null);
+__decorate([
+    (0, public_decorator_1.Public)(),
+    (0, common_1.Post)('verify-email'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [auth_dto_1.VerifyEmailDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "verify", null);
+__decorate([
+    (0, common_1.Post)('change-password'),
+    (0, swagger_1.ApiBearerAuth)(),
+    __param(0, (0, current_user_decorator_1.CurrentUser)()),
+    __param(1, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object, change_password_dto_1.ChangePasswordDto]),
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "changePassword", null);
 __decorate([
     (0, common_1.Get)('sessions'),
+    (0, swagger_1.ApiBearerAuth)(),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
+    __metadata("design:returntype", void 0)
 ], AuthController.prototype, "sessions", null);
 __decorate([
     (0, common_1.Delete)('sessions/:id'),
-    (0, common_1.HttpCode)(common_1.HttpStatus.NO_CONTENT),
+    (0, swagger_1.ApiBearerAuth)(),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String]),
-    __metadata("design:returntype", Promise)
-], AuthController.prototype, "revokeSession", null);
+    __metadata("design:returntype", void 0)
+], AuthController.prototype, "revoke", null);
 exports.AuthController = AuthController = __decorate([
+    (0, swagger_1.ApiTags)('auth'),
     (0, common_1.Controller)('auth'),
     __metadata("design:paramtypes", [auth_service_1.AuthService])
 ], AuthController);
