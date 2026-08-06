@@ -16,8 +16,13 @@ export class UsersController {
     return this.users.list(user.companyId);
   }
 
+  @Get('me')
+  me(@CurrentUser() user: AuthenticatedUser) {
+    return this.users.me(user.sub, user.companyId);
+  }
+
   @Get(':id')
-  @Roles(Role.owner, Role.manager, Role.supervisor, Role.super_admin)
+  @Roles(Role.owner, Role.manager, Role.super_admin)
   getOne(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     return this.users.getOne(user.companyId, id);
   }
@@ -30,6 +35,17 @@ export class UsersController {
     @Req() req: Request,
   ) {
     return this.users.invite(user.companyId, user.sub, dto, req.ip);
+  }
+
+  @Patch('me')
+  updateMe(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: UpdateUserDto,
+    @Req() req: Request,
+  ) {
+    // self can only change name/phone
+    const safe = { name: dto.name, phone: dto.phone };
+    return this.users.update(user.companyId, user.sub, user.sub, safe, req.ip);
   }
 
   @Patch(':id')

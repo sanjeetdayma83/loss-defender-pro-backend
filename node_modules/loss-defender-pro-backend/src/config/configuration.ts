@@ -1,21 +1,22 @@
-export default () => ({
-  port: parseInt(process.env.PORT || '3000', 10),
+﻿const configuration = () => ({
+  port: parseInt(process.env.PORT ?? '3000', 10),
+  database: { url: process.env.DATABASE_URL },
   jwt: {
-    accessSecret: process.env.JWT_ACCESS_SECRET,
-    refreshSecret: process.env.JWT_REFRESH_SECRET,
-    accessTtl: process.env.JWT_ACCESS_TTL || '15m',
-    refreshTtl: process.env.JWT_REFRESH_TTL || '7d',
+    accessSecret: process.env.JWT_ACCESS_SECRET ?? process.env.JWT_SECRET ?? 'dev-access-secret-change-me',
+    refreshSecret: process.env.JWT_REFRESH_SECRET ?? 'dev-refresh-secret-change-me',
+    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES ?? '15m',
+    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES ?? '7d',
   },
-  security: {
-    bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS || '12', 10),
-    failedLoginThreshold: parseInt(process.env.FAILED_LOGIN_THRESHOLD || '5', 10),
-    accountLockMinutes: parseInt(process.env.ACCOUNT_LOCK_MINUTES || '15', 10),
-  },
+  redis: { url: process.env.REDIS_URL ?? 'redis://localhost:6379' },
   b2: {
     keyId: process.env.B2_KEY_ID,
     appKey: process.env.B2_APPLICATION_KEY,
-    bucket: process.env.B2_BUCKET,
+    bucketId: process.env.B2_BUCKET_ID,
+    bucketName: process.env.B2_BUCKET_NAME,
     endpoint: process.env.B2_ENDPOINT,
-    signedUrlTtl: parseInt(process.env.B2_SIGNED_URL_TTL || '900', 10),
   },
+  app: { name: 'Loss Defender Pro', apiPrefix: 'api/v1' },
 });
+
+export default configuration;
+export { configuration };

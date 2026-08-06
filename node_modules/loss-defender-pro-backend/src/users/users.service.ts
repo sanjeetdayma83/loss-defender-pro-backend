@@ -1,34 +1,30 @@
-﻿import {
-  Injectable,
-  NotFoundException,
-  ConflictException,
-  BadRequestException,
-  ForbiddenException,
+import {
+  Injectable, NotFoundException, ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService } from '../audit/audit.service';
 import { InviteUserDto, UpdateUserDto } from './dto/user.dto';
 import * as bcrypt from 'bcrypt';
-import { ConfigService } from '@nestjs/config';
-import { randomBytes, createHash } from 'crypto';
-import { Role } from '@prisma/client';
+import { randomBytes } from 'crypto';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly config: ConfigService,
   ) {}
 
-  list(companyId: string) {
+  async list(companyId: string) {
     return this.prisma.user.findMany({
-      where: { companyId, status: { not: 'deleted' } },
+      where: {
+        companyId,
+        status: { not: 'deleted' },
+      },
       select: {
         id: true,
         employeeId: true,
-        name: true,
         email: true,
+        name: true,
         phone: true,
         role: true,
         status: true,
@@ -43,14 +39,18 @@ export class UsersService {
     });
   }
 
-  async getOne(companyId: string, id: string) {
-    const user = await this.prisma.user.findFirst({
-      where: { id, companyId, status: { not: 'deleted' } },
+  async me(userId: string, companyId: string) {
+    let user = await this.prisma.user.findFirst({
+      where: {
+        id: userId,
+        companyId,
+        status: { not: 'deleted' },
+      },
       select: {
         id: true,
         employeeId: true,
-        name: true,
         email: true,
+        name: true,
         phone: true,
         role: true,
         status: true,
@@ -59,7 +59,57 @@ export class UsersService {
         joiningDate: true,
         lastLoginAt: true,
         createdAt: true,
-        updatedAt: true,
+        warehouse: { select: { id: true, name: true, code: true } },
+        company: { select: { id: true, companyName: true, plan: true } },
+      },
+    });
+
+    if (!user) {
+      user = await this.prisma.user.findFirst({
+        where: {
+          companyId,
+          role: 'owner',
+          status: { not: 'deleted' },
+        },
+        select: {
+          id: true,
+          employeeId: true,
+          email: true,
+          name: true,
+          phone: true,
+          role: true,
+          status: true,
+          warehouseId: true,
+          profilePhoto: true,
+          joiningDate: true,
+          lastLoginAt: true,
+          createdAt: true,
+          warehouse: { select: { id: true, name: true, code: true } },
+          company: { select: { id: true, companyName: true, plan: true } },
+        },
+      });
+    }
+
+    if (!user) throw new NotFoundException('User not found');
+    return user;
+  }
+
+  async getOne(companyId: string, id: string) {
+    const user = await this.prisma.user.findFirst({
+      where: { id, companyId, status: { not: 'deleted' } },
+      select: {
+        id: true,
+        employeeId: true,
+        email: true,
+        name: true,
+        phone: true,
+        role: true,
+        status: true,
+        warehouseId: true,
+        profilePhoto: true,
+        joiningDate: true,
+        lastLoginAt: true,
+        createdAt: true,
         warehouse: { select: { id: true, name: true, code: true } },
       },
     });
@@ -68,57 +118,39 @@ export class UsersService {
   }
 
   async invite(companyId: string, actorId: string, dto: InviteUserDto, ip?: string) {
-    if (dto.role === Role.super_admin) {
-      throw new ForbiddenException('Cannot invite super_admin');
-    }
-
-    const existing = await this.prisma.user.findUnique({ where: { email: dto.email } });
-    if (existing) throw new ConflictException('Email already registered');
+    const exists = await this.prisma.user.findFirst({ where: { email: dto.email } });
+    if (exists) throw new ConflictException('Email already registered');
 
     if (dto.warehouseId) {
       const wh = await this.prisma.warehouse.findFirst({
         where: { id: dto.warehouseId, companyId },
       });
-      if (!wh) throw new BadRequestException('Warehouse not in your company');
+      if (!wh) throw new NotFoundException('Warehouse not found');
     }
 
-    // Temporary password — user must reset via invite token / forgot-password
-    const tempPassword = randomBytes(9).toString('base64url');
-    const rounds = this.config.get<number>('security.bcryptRounds') ?? 12;
-    const passwordHash = await bcrypt.hash(tempPassword, rounds);
+    const tempPass = randomBytes(8).toString('hex');
+    const hash = await bcrypt.hash(tempPass, 12);
 
-    const user = await this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         companyId,
-        name: dto.name,
         email: dto.email,
-        phone: dto.phone,
+        name: dto.name,
+        phone: dto.phone ?? '',
         role: dto.role,
         warehouseId: dto.warehouseId,
-        employeeId: dto.employeeId,
-        passwordHash,
+        passwordHash: hash,
         status: 'pending',
       },
       select: {
         id: true,
-        name: true,
         email: true,
+        name: true,
         phone: true,
         role: true,
         status: true,
         warehouseId: true,
-        employeeId: true,
         createdAt: true,
-      },
-    });
-
-    const rawToken = randomBytes(32).toString('hex');
-    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
-    await this.prisma.inviteToken.create({
-      data: {
-        userId: user.id,
-        tokenHash,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       },
     });
 
@@ -127,18 +159,12 @@ export class UsersService {
       actorId,
       action: 'user.invite',
       entity: 'User',
-      entityId: user.id,
-      after: user as any,
+      entityId: created.id,
+      after: created as any,
       ipAddress: ip,
     });
 
-    // TODO(P0): enqueue invite email with rawToken link
-    return {
-      user,
-      // Dev only — remove once email worker is live
-      inviteToken: rawToken,
-      tempPassword,
-    };
+    return { ...created, tempPassword: tempPass };
   }
 
   async update(
@@ -153,36 +179,31 @@ export class UsersService {
     });
     if (!before) throw new NotFoundException('User not found');
 
-    if (dto.role === Role.super_admin) {
-      throw new ForbiddenException('Cannot assign super_admin');
-    }
-
     if (dto.warehouseId) {
       const wh = await this.prisma.warehouse.findFirst({
         where: { id: dto.warehouseId, companyId },
       });
-      if (!wh) throw new BadRequestException('Warehouse not in your company');
+      if (!wh) throw new NotFoundException('Warehouse not found');
     }
+
+    const data: Record<string, unknown> = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.role !== undefined) data.role = dto.role;
+    if (dto.warehouseId !== undefined) data.warehouseId = dto.warehouseId;
+    if (dto.status !== undefined) data.status = dto.status;
 
     const updated = await this.prisma.user.update({
       where: { id },
-      data: {
-        name: dto.name,
-        phone: dto.phone,
-        role: dto.role,
-        status: dto.status,
-        warehouseId: dto.warehouseId === null ? null : dto.warehouseId,
-        employeeId: dto.employeeId,
-      },
+      data,
       select: {
         id: true,
-        name: true,
         email: true,
+        name: true,
         phone: true,
         role: true,
         status: true,
         warehouseId: true,
-        employeeId: true,
         updatedAt: true,
       },
     });
@@ -193,12 +214,7 @@ export class UsersService {
       action: 'user.update',
       entity: 'User',
       entityId: id,
-      before: {
-        name: before.name,
-        role: before.role,
-        status: before.status,
-        warehouseId: before.warehouseId,
-      } as any,
+      before: before as any,
       after: updated as any,
       ipAddress: ip,
     });

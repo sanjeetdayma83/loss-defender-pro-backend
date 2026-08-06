@@ -1,16 +1,15 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+﻿import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 export interface AuthenticatedUser {
-  sub: string;       // user id
-  companyId: string; // tenant claim — every query MUST filter by this
-  role: string;
+  sub: string;
   email: string;
+  companyId: string;
+  role: string;
 }
 
-// Usage: findAll(@CurrentUser() user: AuthenticatedUser)
 export const CurrentUser = createParamDecorator(
   (_data: unknown, ctx: ExecutionContext): AuthenticatedUser => {
     const request = ctx.switchToHttp().getRequest();
-    return request.user;
+    return request.user as AuthenticatedUser;
   },
 );
