@@ -29,13 +29,41 @@ export class EvidenceService {
   async getDownloadUrl(companyId: string, id: string) {
     const row = await this.prisma.evidence.findFirst({ where: { id, companyId } });
     if (!row) throw new NotFoundException('Evidence not found');
-    if (!(row as any).packKey) {
+    const packKey = (row as any).packKey;
+    if (!packKey) {
       return { configured: false, downloadUrl: null, message: 'No packKey yet' };
     }
-    const signed = await this.storage.presignGet((row as any).packKey);
-    return {
-      ...signed,
-      evidenceId: id,
-    };
+    const signed = await this.storage.presignGet(packKey);
+    return { ...signed, evidenceId: id };
+  }
+
+  /** Called from RecordingsService.stop — creates evidence + optional pack */
+  async createFromRecording(
+    companyId: string,
+    orderId: string,
+    recordingId: string,
+    segmentCount = 1,
+  ) {
+    let evidence = await this.prisma.evidence.create({
+      data: {
+        companyId,
+        orderId,
+        recordingId,
+        status: 'pending',
+        frameCount: segmentCount,
+      } as any,
+    });
+
+    // Always generate a logical pack key (even if B2 not configured)
+    const packKey = this.storage.evidencePackKey(companyId, evidence.id);
+
+    const newStatus = this.storage.isConfigured() ? 'ready' : 'pending';
+
+    evidence = await this.prisma.evidence.update({
+      where: { id: evidence.id },
+      data: { packKey, status: newStatus } as any,
+    });
+
+    return evidence;
   }
 }

@@ -2,9 +2,10 @@
 import { RecordingsService } from './recordings.service';
 import { RecordingsController } from './recordings.controller';
 import { StorageModule } from '../storage/storage.module';
+import { EvidenceModule } from '../evidence/evidence.module';
 
 @Module({
-  imports: [StorageModule],
+  imports: [StorageModule, EvidenceModule],
   controllers: [RecordingsController],
   providers: [RecordingsService],
   exports: [RecordingsService],

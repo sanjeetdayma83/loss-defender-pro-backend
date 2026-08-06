@@ -18,6 +18,7 @@ const recordings_service_1 = require("./recordings.service");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
+const class_transformer_1 = require("class-transformer");
 class StartRecordingDto {
 }
 __decorate([
@@ -32,18 +33,21 @@ class StopRecordingDto {
 }
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsInt)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], StopRecordingDto.prototype, "durationSec", void 0);
 __decorate([
     (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsInt)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], StopRecordingDto.prototype, "segmentCount", void 0);
 class PresignSegmentDto {
 }
 __decorate([
-    (0, class_validator_1.IsInt)(),
+    (0, class_transformer_1.Type)(() => Number),
+    (0, class_validator_1.IsNumber)(),
     __metadata("design:type", Number)
 ], PresignSegmentDto.prototype, "segmentIndex", void 0);
 __decorate([
@@ -62,13 +66,15 @@ let RecordingsController = class RecordingsController {
         return this.recordings.getOne(u.companyId, id);
     }
     start(u, dto) {
-        return this.recordings.start(u.companyId, u.sub, dto.orderId, dto.warehouseId);
+        const actorId = u.id || u.sub || u.userId;
+        return this.recordings.start(u.companyId, actorId, dto.orderId, dto.warehouseId);
     }
     stop(u, id, dto) {
-        return this.recordings.stop(u.companyId, id, dto.durationSec, dto.segmentCount);
+        const actorId = u.id || u.sub || u.userId;
+        return this.recordings.stop(u.companyId, id, actorId, dto.durationSec, dto.segmentCount);
     }
-    presign(u, id, dto) {
-        return this.recordings.presignSegment(u.companyId, id, dto.segmentIndex, dto.contentType ?? 'video/webm');
+    presignSegment(u, id, dto) {
+        return this.recordings.presignSegment(u.companyId, id, dto.segmentIndex, dto.contentType || 'video/webm');
     }
 };
 exports.RecordingsController = RecordingsController;
@@ -105,14 +111,14 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], RecordingsController.prototype, "stop", null);
 __decorate([
-    (0, common_1.Post)(':id/segments/presign'),
+    (0, common_1.Post)(':id/presign-segment'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
     __param(1, (0, common_1.Param)('id')),
     __param(2, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object, String, PresignSegmentDto]),
     __metadata("design:returntype", void 0)
-], RecordingsController.prototype, "presign", null);
+], RecordingsController.prototype, "presignSegment", null);
 exports.RecordingsController = RecordingsController = __decorate([
     (0, swagger_1.ApiTags)('recordings'),
     (0, swagger_1.ApiBearerAuth)(),

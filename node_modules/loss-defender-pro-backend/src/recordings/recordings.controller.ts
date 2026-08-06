@@ -1,8 +1,17 @@
-﻿import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+﻿import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Body,
+  Param,
+  Query,
+} from '@nestjs/common';
 import { RecordingsService } from './recordings.service';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
-import { IsUUID, IsOptional, IsInt, IsString } from 'class-validator';
+import { IsUUID, IsOptional, IsNumber, IsString } from 'class-validator';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 
 class StartRecordingDto {
   @IsUUID() orderId: string;
@@ -10,12 +19,12 @@ class StartRecordingDto {
 }
 
 class StopRecordingDto {
-  @IsOptional() @IsInt() durationSec?: number;
-  @IsOptional() @IsInt() segmentCount?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() durationSec?: number;
+  @IsOptional() @Type(() => Number) @IsNumber() segmentCount?: number;
 }
 
 class PresignSegmentDto {
-  @IsInt() segmentIndex: number;
+  @Type(() => Number) @IsNumber() segmentIndex: number;
   @IsOptional() @IsString() contentType?: string;
 }
 
@@ -37,7 +46,8 @@ export class RecordingsController {
 
   @Post('start')
   start(@CurrentUser() u: AuthenticatedUser, @Body() dto: StartRecordingDto) {
-    return this.recordings.start(u.companyId, u.sub, dto.orderId, dto.warehouseId);
+    const actorId = (u as any).id || (u as any).sub || (u as any).userId;
+    return this.recordings.start(u.companyId, actorId, dto.orderId, dto.warehouseId);
   }
 
   @Post(':id/stop')
@@ -46,11 +56,18 @@ export class RecordingsController {
     @Param('id') id: string,
     @Body() dto: StopRecordingDto,
   ) {
-    return this.recordings.stop(u.companyId, id, dto.durationSec, dto.segmentCount);
+    const actorId = (u as any).id || (u as any).sub || (u as any).userId;
+    return this.recordings.stop(
+      u.companyId,
+      id,
+      actorId,
+      dto.durationSec,
+      dto.segmentCount,
+    );
   }
 
-  @Post(':id/segments/presign')
-  presign(
+  @Post(':id/presign-segment')
+  presignSegment(
     @CurrentUser() u: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: PresignSegmentDto,
@@ -59,7 +76,7 @@ export class RecordingsController {
       u.companyId,
       id,
       dto.segmentIndex,
-      dto.contentType ?? 'video/webm',
+      dto.contentType || 'video/webm',
     );
   }
 }

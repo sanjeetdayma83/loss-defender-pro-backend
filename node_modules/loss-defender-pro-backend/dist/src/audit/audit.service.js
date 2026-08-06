@@ -8,31 +8,48 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
+var AuditService_1;
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AuditService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
-let AuditService = class AuditService {
+let AuditService = AuditService_1 = class AuditService {
     constructor(prisma) {
         this.prisma = prisma;
+        this.logger = new common_1.Logger(AuditService_1.name);
     }
-    async log(entry) {
-        return this.prisma.auditLog.create({
-            data: {
-                companyId: entry.companyId,
-                actorId: entry.actorId,
-                action: entry.action,
-                entity: entry.entity,
-                entityId: entry.entityId,
-                before: entry.before,
-                after: entry.after,
-                ipAddress: entry.ipAddress,
-            },
+    async log(payload) {
+        try {
+            const meta = {
+                ...(payload.meta || {}),
+                ...(payload.before !== undefined ? { before: payload.before } : {}),
+                ...(payload.after !== undefined ? { after: payload.after } : {}),
+            };
+            await this.prisma.auditLog.create({
+                data: {
+                    companyId: payload.companyId,
+                    actorId: payload.actorId ?? null,
+                    action: payload.action,
+                    entity: payload.entity,
+                    entityId: payload.entityId ?? null,
+                    meta,
+                },
+            });
+        }
+        catch (e) {
+            this.logger.warn(`Audit log failed: ${e?.message}`);
+        }
+    }
+    list(companyId, take = 50) {
+        return this.prisma.auditLog.findMany({
+            where: { companyId },
+            orderBy: { createdAt: 'desc' },
+            take,
         });
     }
 };
 exports.AuditService = AuditService;
-exports.AuditService = AuditService = __decorate([
+exports.AuditService = AuditService = AuditService_1 = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService])
 ], AuditService);

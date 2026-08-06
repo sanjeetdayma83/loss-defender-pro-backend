@@ -11,12 +11,13 @@ const common_1 = require("@nestjs/common");
 const recordings_service_1 = require("./recordings.service");
 const recordings_controller_1 = require("./recordings.controller");
 const storage_module_1 = require("../storage/storage.module");
+const evidence_module_1 = require("../evidence/evidence.module");
 let RecordingsModule = class RecordingsModule {
 };
 exports.RecordingsModule = RecordingsModule;
 exports.RecordingsModule = RecordingsModule = __decorate([
     (0, common_1.Module)({
-        imports: [storage_module_1.StorageModule],
+        imports: [storage_module_1.StorageModule, evidence_module_1.EvidenceModule],
         controllers: [recordings_controller_1.RecordingsController],
         providers: [recordings_service_1.RecordingsService],
         exports: [recordings_service_1.RecordingsService],

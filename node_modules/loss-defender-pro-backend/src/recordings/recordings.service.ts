@@ -5,12 +5,14 @@
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { StorageService } from '../storage/storage.service';
+import { EvidenceService } from '../evidence/evidence.service';
 
 @Injectable()
 export class RecordingsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storage: StorageService,
+    private readonly evidence: EvidenceService,
   ) {}
 
   list(companyId: string) {
@@ -52,10 +54,13 @@ export class RecordingsService {
       });
     } catch (_) {}
 
+    // Audit
+    await this.writeAudit(companyId, actorId, 'recording.start', 'Recording', rec.id, { orderId });
+
     return rec;
   }
 
-  async stop(companyId: string, recordingId: string, durationSec?: number, segmentCount?: number) {
+  async stop(companyId: string, recordingId: string, actorId: string, durationSec?: number, segmentCount?: number) {
     const rec = await this.prisma.recording.findFirst({ where: { id: recordingId, companyId } });
     if (!rec) throw new NotFoundException('Recording not found');
 
@@ -68,25 +73,15 @@ export class RecordingsService {
 
     const updated = await this.prisma.recording.update({ where: { id: recordingId }, data });
 
+    // Create evidence properly
     let evidence: any = null;
     try {
-      evidence = await this.prisma.evidence.create({
-        data: {
-          companyId,
-          orderId: rec.orderId,
-          recordingId: rec.id,
-          status: 'pending',
-          frameCount: segmentCount ?? 1,
-        } as any,
-      });
-
-      if (this.storage.isConfigured()) {
-        const packKey = this.storage.evidencePackKey(companyId, evidence.id);
-        evidence = await this.prisma.evidence.update({
-          where: { id: evidence.id },
-          data: { packKey, status: 'ready' } as any,
-        });
-      }
+      evidence = await this.evidence.createFromRecording(
+        companyId,
+        rec.orderId,
+        rec.id,
+        segmentCount ?? 1,
+      );
     } catch (e: any) {
       console.error('evidence create', e?.message);
     }
@@ -97,6 +92,12 @@ export class RecordingsService {
         data: { status: 'evidence_ready' as any },
       });
     } catch (_) {}
+
+    await this.writeAudit(companyId, actorId, 'recording.stop', 'Recording', recordingId, {
+      durationSec,
+      segmentCount,
+      evidenceId: evidence?.id,
+    });
 
     return { recording: updated, evidence };
   }
@@ -115,5 +116,30 @@ export class RecordingsService {
       segmentIndex,
       recordingId,
     };
+  }
+
+  private async writeAudit(
+    companyId: string,
+    actorId: string,
+    action: string,
+    entity: string,
+    entityId: string,
+    meta?: any,
+  ) {
+    try {
+      await this.prisma.auditLog.create({
+        data: {
+          companyId,
+          actorId,
+          action,
+          entity,
+          entityId,
+          meta: meta ?? {},
+        } as any,
+      });
+    } catch (e) {
+      // never break main flow
+      console.warn('audit write failed', e);
+    }
   }
 }

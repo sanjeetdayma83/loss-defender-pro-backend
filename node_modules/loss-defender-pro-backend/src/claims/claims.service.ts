@@ -1,5 +1,15 @@
-﻿import { Injectable, NotFoundException } from '@nestjs/common';
+﻿import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+
+const ALLOWED: Record<string, string[]> = {
+  open: ['under_review', 'approved', 'rejected', 'closed'],
+  under_review: ['approved', 'rejected', 'closed'],
+  approved: ['closed'],
+  rejected: ['closed'],
+  closed: [],
+  // fallback for older statuses
+  pending: ['under_review', 'approved', 'rejected', 'closed'],
+};
 
 @Injectable()
 export class ClaimsService {
@@ -13,67 +23,46 @@ export class ClaimsService {
     });
   }
 
-  async create(
-    companyId: string,
-    actorId: string,
-    data: {
-      orderId?: string;
-      title: string;
-      reason?: string;
-      amount?: number;
-    },
-  ) {
-    if (data.orderId) {
-      const o = await this.prisma.order.findFirst({
-        where: { id: data.orderId, companyId },
-      });
-      if (!o) throw new NotFoundException('Order not found');
-    }
-
-    const attempts: any[] = [
-      {
-        companyId,
-        orderId: data.orderId,
-        title: data.title,
-        reason: data.reason ?? data.title,
-        amount: data.amount,
-        status: 'open',
-        createdById: actorId,
-      },
-      {
-        companyId,
-        orderId: data.orderId,
-        title: data.title,
-        reason: data.reason ?? data.title,
-        status: 'open',
-      },
-      {
-        companyId,
-        orderId: data.orderId,
-        reason: data.reason ?? data.title,
-        status: 'open',
-      },
-    ];
-
-    let last: unknown;
-    for (const row of attempts) {
-      try {
-        return await this.prisma.claim.create({ data: row });
-      } catch (e) {
-        last = e;
-      }
-    }
-    throw new NotFoundException(
-      `Claim create failed: ${(last as any)?.message ?? last}`,
-    );
+  async getOne(companyId: string, id: string) {
+    const row = await this.prisma.claim.findFirst({ where: { id, companyId } });
+    if (!row) throw new NotFoundException('Claim not found');
+    return row;
   }
 
-  async updateStatus(companyId: string, id: string, status: string) {
-    const c = await this.prisma.claim.findFirst({ where: { id, companyId } });
-    if (!c) throw new NotFoundException('Claim not found');
-    return this.prisma.claim.update({
-      where: { id },
-      data: { status } as any,
-    });
+  async updateStatus(companyId: string, actorId: string, id: string, status: string, decisionNote?: string) {
+    const row = await this.prisma.claim.findFirst({ where: { id, companyId } });
+    if (!row) throw new NotFoundException('Claim not found');
+
+    const cur = (row.status as string) || 'open';
+    const next = ALLOWED[cur] || ALLOWED['open'] || [];
+    if (!next.includes(status) && cur !== status) {
+      throw new BadRequestException(`Cannot transition ${cur} → ${status}. Allowed: ${next.join(', ') || 'none'}`);
+    }
+
+    const data: any = { status };
+    if (decisionNote) data.decisionNote = decisionNote;
+    if (status === 'closed' || status === 'approved' || status === 'rejected') {
+      data.closedAt = new Date();
+    }
+
+    const updated = await this.prisma.claim.update({ where: { id }, data });
+
+    await this.writeAudit(companyId, actorId, 'claim.status', 'Claim', id, { from: cur, to: status });
+    return updated;
+  }
+
+  private async writeAudit(companyId: string, actorId: string, action: string, entity: string, entityId: string, meta?: any) {
+    try {
+      await this.prisma.auditLog.create({
+        data: {
+          companyId,
+          actorId,
+          action,
+          entity,
+          entityId,
+          meta: meta ?? {},
+        } as any,
+      });
+    } catch (_) {}
   }
 }

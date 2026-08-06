@@ -12,6 +12,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.ClaimsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
+const ALLOWED = {
+    open: ['under_review', 'approved', 'rejected', 'closed'],
+    under_review: ['approved', 'rejected', 'closed'],
+    approved: ['closed'],
+    rejected: ['closed'],
+    closed: [],
+    pending: ['under_review', 'approved', 'rejected', 'closed'],
+};
 let ClaimsService = class ClaimsService {
     constructor(prisma) {
         this.prisma = prisma;
@@ -23,57 +31,45 @@ let ClaimsService = class ClaimsService {
             take: 100,
         });
     }
-    async create(companyId, actorId, data) {
-        if (data.orderId) {
-            const o = await this.prisma.order.findFirst({
-                where: { id: data.orderId, companyId },
-            });
-            if (!o)
-                throw new common_1.NotFoundException('Order not found');
-        }
-        const attempts = [
-            {
-                companyId,
-                orderId: data.orderId,
-                title: data.title,
-                reason: data.reason ?? data.title,
-                amount: data.amount,
-                status: 'open',
-                createdById: actorId,
-            },
-            {
-                companyId,
-                orderId: data.orderId,
-                title: data.title,
-                reason: data.reason ?? data.title,
-                status: 'open',
-            },
-            {
-                companyId,
-                orderId: data.orderId,
-                reason: data.reason ?? data.title,
-                status: 'open',
-            },
-        ];
-        let last;
-        for (const row of attempts) {
-            try {
-                return await this.prisma.claim.create({ data: row });
-            }
-            catch (e) {
-                last = e;
-            }
-        }
-        throw new common_1.NotFoundException(`Claim create failed: ${last?.message ?? last}`);
-    }
-    async updateStatus(companyId, id, status) {
-        const c = await this.prisma.claim.findFirst({ where: { id, companyId } });
-        if (!c)
+    async getOne(companyId, id) {
+        const row = await this.prisma.claim.findFirst({ where: { id, companyId } });
+        if (!row)
             throw new common_1.NotFoundException('Claim not found');
-        return this.prisma.claim.update({
-            where: { id },
-            data: { status },
-        });
+        return row;
+    }
+    async updateStatus(companyId, actorId, id, status, decisionNote) {
+        const row = await this.prisma.claim.findFirst({ where: { id, companyId } });
+        if (!row)
+            throw new common_1.NotFoundException('Claim not found');
+        const cur = row.status || 'open';
+        const next = ALLOWED[cur] || ALLOWED['open'] || [];
+        if (!next.includes(status) && cur !== status) {
+            throw new common_1.BadRequestException(`Cannot transition ${cur} → ${status}. Allowed: ${next.join(', ') || 'none'}`);
+        }
+        const data = { status };
+        if (decisionNote)
+            data.decisionNote = decisionNote;
+        if (status === 'closed' || status === 'approved' || status === 'rejected') {
+            data.closedAt = new Date();
+        }
+        const updated = await this.prisma.claim.update({ where: { id }, data });
+        await this.writeAudit(companyId, actorId, 'claim.status', 'Claim', id, { from: cur, to: status });
+        return updated;
+    }
+    async writeAudit(companyId, actorId, action, entity, entityId, meta) {
+        try {
+            await this.prisma.auditLog.create({
+                data: {
+                    companyId,
+                    actorId,
+                    action,
+                    entity,
+                    entityId,
+                    meta: meta ?? {},
+                },
+            });
+        }
+        catch (_) { }
     }
 };
 exports.ClaimsService = ClaimsService;

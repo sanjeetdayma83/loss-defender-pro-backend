@@ -32,11 +32,11 @@ let ReturnsService = class ReturnsService {
             take: 100,
         });
     }
-    async create(companyId, data) {
+    async create(companyId, actorId, data) {
         const o = await this.prisma.order.findFirst({ where: { id: data.orderId, companyId } });
         if (!o)
             throw new common_1.NotFoundException('Order not found');
-        return this.prisma.return.create({
+        const row = await this.prisma.return.create({
             data: {
                 companyId,
                 orderId: data.orderId,
@@ -45,8 +45,10 @@ let ReturnsService = class ReturnsService {
                 conditionNote: data.notes,
             },
         });
+        await this.writeAudit(companyId, actorId, 'return.create', 'Return', row.id, { orderId: data.orderId });
+        return row;
     }
-    async updateStatus(companyId, id, status) {
+    async updateStatus(companyId, actorId, id, status) {
         const row = await this.prisma.return.findFirst({ where: { id, companyId } });
         if (!row)
             throw new common_1.NotFoundException('Return not found');
@@ -58,7 +60,17 @@ let ReturnsService = class ReturnsService {
         const data = { status };
         if (status === 'closed')
             data.closedAt = new Date();
-        return this.prisma.return.update({ where: { id }, data });
+        const updated = await this.prisma.return.update({ where: { id }, data });
+        await this.writeAudit(companyId, actorId, 'return.status', 'Return', id, { from: cur, to: status });
+        return updated;
+    }
+    async writeAudit(companyId, actorId, action, entity, entityId, meta) {
+        try {
+            await this.prisma.auditLog.create({
+                data: { companyId, actorId, action, entity, entityId, meta: meta ?? {} },
+            });
+        }
+        catch (_) { }
     }
 };
 exports.ReturnsService = ReturnsService;

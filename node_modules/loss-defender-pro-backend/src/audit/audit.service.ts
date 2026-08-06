@@ -1,33 +1,60 @@
-import { Injectable } from '@nestjs/common';
+﻿import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 
-interface AuditEntry {
+export interface AuditLogPayload {
   companyId: string;
-  actorId?: string;
+  actorId?: string | null;
   action: string;
   entity: string;
-  entityId?: string;
-  before?: unknown;
-  after?: unknown;
-  ipAddress?: string;
+  entityId?: string | null;
+  meta?: any;
+  ip?: string | null;
+  ipAddress?: string | null;
+  userAgent?: string | null;
+  before?: any;
+  after?: any;
+  [key: string]: any; // allow any extra fields
 }
 
 @Injectable()
 export class AuditService {
-  constructor(private prisma: PrismaService) {}
+  private readonly logger = new Logger(AuditService.name);
 
-  async log(entry: AuditEntry) {
-    return this.prisma.auditLog.create({
-      data: {
-        companyId: entry.companyId,
-        actorId: entry.actorId,
-        action: entry.action,
-        entity: entry.entity,
-        entityId: entry.entityId,
-        before: entry.before as any,
-        after: entry.after as any,
-        ipAddress: entry.ipAddress,
-      },
+  constructor(private readonly prisma: PrismaService) {}
+
+  /** Used by existing services & interceptor */
+  async log(payload: AuditLogPayload) {
+    try {
+      const meta = {
+        ...(payload.meta || {}),
+        ...(payload.before !== undefined ? { before: payload.before } : {}),
+        ...(payload.after !== undefined ? { after: payload.after } : {}),
+      };
+
+      await this.prisma.auditLog.create({
+        data: {
+          companyId: payload.companyId,
+          actorId: payload.actorId ?? null,
+          action: payload.action,
+          entity: payload.entity,
+          entityId: payload.entityId ?? null,
+          meta,
+          // if your schema has these columns, uncomment:
+          // ipAddress: payload.ipAddress || payload.ip || null,
+          // userAgent: payload.userAgent || null,
+        } as any,
+      });
+    } catch (e: any) {
+      this.logger.warn(`Audit log failed: ${e?.message}`);
+    }
+  }
+
+  /** Used by AuditController */
+  list(companyId: string, take = 50) {
+    return this.prisma.auditLog.findMany({
+      where: { companyId },
+      orderBy: { createdAt: 'desc' },
+      take,
     });
   }
 }

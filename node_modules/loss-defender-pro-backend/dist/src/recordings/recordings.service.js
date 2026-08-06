@@ -13,10 +13,12 @@ exports.RecordingsService = void 0;
 const common_1 = require("@nestjs/common");
 const prisma_service_1 = require("../prisma/prisma.service");
 const storage_service_1 = require("../storage/storage.service");
+const evidence_service_1 = require("../evidence/evidence.service");
 let RecordingsService = class RecordingsService {
-    constructor(prisma, storage) {
+    constructor(prisma, storage, evidence) {
         this.prisma = prisma;
         this.storage = storage;
+        this.evidence = evidence;
     }
     list(companyId) {
         return this.prisma.recording.findMany({
@@ -56,9 +58,10 @@ let RecordingsService = class RecordingsService {
             });
         }
         catch (_) { }
+        await this.writeAudit(companyId, actorId, 'recording.start', 'Recording', rec.id, { orderId });
         return rec;
     }
-    async stop(companyId, recordingId, durationSec, segmentCount) {
+    async stop(companyId, recordingId, actorId, durationSec, segmentCount) {
         const rec = await this.prisma.recording.findFirst({ where: { id: recordingId, companyId } });
         if (!rec)
             throw new common_1.NotFoundException('Recording not found');
@@ -73,22 +76,7 @@ let RecordingsService = class RecordingsService {
         const updated = await this.prisma.recording.update({ where: { id: recordingId }, data });
         let evidence = null;
         try {
-            evidence = await this.prisma.evidence.create({
-                data: {
-                    companyId,
-                    orderId: rec.orderId,
-                    recordingId: rec.id,
-                    status: 'pending',
-                    frameCount: segmentCount ?? 1,
-                },
-            });
-            if (this.storage.isConfigured()) {
-                const packKey = this.storage.evidencePackKey(companyId, evidence.id);
-                evidence = await this.prisma.evidence.update({
-                    where: { id: evidence.id },
-                    data: { packKey, status: 'ready' },
-                });
-            }
+            evidence = await this.evidence.createFromRecording(companyId, rec.orderId, rec.id, segmentCount ?? 1);
         }
         catch (e) {
             console.error('evidence create', e?.message);
@@ -100,6 +88,11 @@ let RecordingsService = class RecordingsService {
             });
         }
         catch (_) { }
+        await this.writeAudit(companyId, actorId, 'recording.stop', 'Recording', recordingId, {
+            durationSec,
+            segmentCount,
+            evidenceId: evidence?.id,
+        });
         return { recording: updated, evidence };
     }
     async presignSegment(companyId, recordingId, segmentIndex, contentType = 'video/webm') {
@@ -113,11 +106,29 @@ let RecordingsService = class RecordingsService {
             recordingId,
         };
     }
+    async writeAudit(companyId, actorId, action, entity, entityId, meta) {
+        try {
+            await this.prisma.auditLog.create({
+                data: {
+                    companyId,
+                    actorId,
+                    action,
+                    entity,
+                    entityId,
+                    meta: meta ?? {},
+                },
+            });
+        }
+        catch (e) {
+            console.warn('audit write failed', e);
+        }
+    }
 };
 exports.RecordingsService = RecordingsService;
 exports.RecordingsService = RecordingsService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [prisma_service_1.PrismaService,
-        storage_service_1.StorageService])
+        storage_service_1.StorageService,
+        evidence_service_1.EvidenceService])
 ], RecordingsService);
 //# sourceMappingURL=recordings.service.js.map

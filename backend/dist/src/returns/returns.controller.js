@@ -48,10 +48,10 @@ let ReturnsController = class ReturnsController {
         return this.returns.list(u.companyId);
     }
     create(u, dto) {
-        return this.returns.create(u.companyId, dto);
+        return this.returns.create(u.companyId, u.id || u.sub || u.userId, dto);
     }
     update(u, id, dto) {
-        return this.returns.updateStatus(u.companyId, id, dto.status);
+        return this.returns.updateStatus(u.companyId, u.id || u.sub || u.userId, id, dto.status);
     }
 };
 exports.ReturnsController = ReturnsController;

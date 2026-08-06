@@ -27,7 +27,8 @@ export class ReturnsController {
 
   @Post()
   create(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateReturnDto) {
-    return this.returns.create(u.companyId, dto);
+    // use u.id (or u.sub) — most common field name
+    return this.returns.create(u.companyId, (u as any).id || (u as any).sub || (u as any).userId, dto);
   }
 
   @Patch(':id')
@@ -36,6 +37,11 @@ export class ReturnsController {
     @Param('id') id: string,
     @Body() dto: UpdateReturnDto,
   ) {
-    return this.returns.updateStatus(u.companyId, id, dto.status);
+    return this.returns.updateStatus(
+      u.companyId,
+      (u as any).id || (u as any).sub || (u as any).userId,
+      id,
+      dto.status,
+    );
   }
 }

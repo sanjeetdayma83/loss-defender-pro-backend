@@ -1,18 +1,12 @@
-﻿import { Controller, Get, Post, Patch, Body, Param } from '@nestjs/common';
+﻿import { Controller, Get, Patch, Body, Param } from '@nestjs/common';
 import { ClaimsService } from './claims.service';
 import { CurrentUser, AuthenticatedUser } from '../common/decorators/current-user.decorator';
-import { IsString, IsOptional, IsUUID, IsNumber } from 'class-validator';
+import { IsString, IsOptional } from 'class-validator';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
-
-class CreateClaimDto {
-  @IsOptional() @IsUUID() orderId?: string;
-  @IsString() title: string;
-  @IsOptional() @IsString() reason?: string;
-  @IsOptional() @IsNumber() amount?: number;
-}
 
 class UpdateClaimDto {
   @IsString() status: string;
+  @IsOptional() @IsString() decisionNote?: string;
 }
 
 @ApiTags('claims')
@@ -26,9 +20,9 @@ export class ClaimsController {
     return this.claims.list(u.companyId);
   }
 
-  @Post()
-  create(@CurrentUser() u: AuthenticatedUser, @Body() dto: CreateClaimDto) {
-    return this.claims.create(u.companyId, u.sub, dto);
+  @Get(':id')
+  getOne(@CurrentUser() u: AuthenticatedUser, @Param('id') id: string) {
+    return this.claims.getOne(u.companyId, id);
   }
 
   @Patch(':id')
@@ -37,6 +31,7 @@ export class ClaimsController {
     @Param('id') id: string,
     @Body() dto: UpdateClaimDto,
   ) {
-    return this.claims.updateStatus(u.companyId, id, dto.status);
+    const actorId = (u as any).id || (u as any).sub || (u as any).userId;
+    return this.claims.updateStatus(u.companyId, actorId, id, dto.status, dto.decisionNote);
   }
 }

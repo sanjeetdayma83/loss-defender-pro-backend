@@ -18,33 +18,17 @@ const claims_service_1 = require("./claims.service");
 const current_user_decorator_1 = require("../common/decorators/current-user.decorator");
 const class_validator_1 = require("class-validator");
 const swagger_1 = require("@nestjs/swagger");
-class CreateClaimDto {
-}
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsUUID)(),
-    __metadata("design:type", String)
-], CreateClaimDto.prototype, "orderId", void 0);
-__decorate([
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreateClaimDto.prototype, "title", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsString)(),
-    __metadata("design:type", String)
-], CreateClaimDto.prototype, "reason", void 0);
-__decorate([
-    (0, class_validator_1.IsOptional)(),
-    (0, class_validator_1.IsNumber)(),
-    __metadata("design:type", Number)
-], CreateClaimDto.prototype, "amount", void 0);
 class UpdateClaimDto {
 }
 __decorate([
     (0, class_validator_1.IsString)(),
     __metadata("design:type", String)
 ], UpdateClaimDto.prototype, "status", void 0);
+__decorate([
+    (0, class_validator_1.IsOptional)(),
+    (0, class_validator_1.IsString)(),
+    __metadata("design:type", String)
+], UpdateClaimDto.prototype, "decisionNote", void 0);
 let ClaimsController = class ClaimsController {
     constructor(claims) {
         this.claims = claims;
@@ -52,11 +36,12 @@ let ClaimsController = class ClaimsController {
     list(u) {
         return this.claims.list(u.companyId);
     }
-    create(u, dto) {
-        return this.claims.create(u.companyId, u.sub, dto);
+    getOne(u, id) {
+        return this.claims.getOne(u.companyId, id);
     }
     update(u, id, dto) {
-        return this.claims.updateStatus(u.companyId, id, dto.status);
+        const actorId = u.id || u.sub || u.userId;
+        return this.claims.updateStatus(u.companyId, actorId, id, dto.status, dto.decisionNote);
     }
 };
 exports.ClaimsController = ClaimsController;
@@ -68,13 +53,13 @@ __decorate([
     __metadata("design:returntype", void 0)
 ], ClaimsController.prototype, "list", null);
 __decorate([
-    (0, common_1.Post)(),
+    (0, common_1.Get)(':id'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),
-    __param(1, (0, common_1.Body)()),
+    __param(1, (0, common_1.Param)('id')),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object, CreateClaimDto]),
+    __metadata("design:paramtypes", [Object, String]),
     __metadata("design:returntype", void 0)
-], ClaimsController.prototype, "create", null);
+], ClaimsController.prototype, "getOne", null);
 __decorate([
     (0, common_1.Patch)(':id'),
     __param(0, (0, current_user_decorator_1.CurrentUser)()),

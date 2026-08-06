@@ -35,14 +35,30 @@ let EvidenceService = class EvidenceService {
         const row = await this.prisma.evidence.findFirst({ where: { id, companyId } });
         if (!row)
             throw new common_1.NotFoundException('Evidence not found');
-        if (!row.packKey) {
+        const packKey = row.packKey;
+        if (!packKey) {
             return { configured: false, downloadUrl: null, message: 'No packKey yet' };
         }
-        const signed = await this.storage.presignGet(row.packKey);
-        return {
-            ...signed,
-            evidenceId: id,
-        };
+        const signed = await this.storage.presignGet(packKey);
+        return { ...signed, evidenceId: id };
+    }
+    async createFromRecording(companyId, orderId, recordingId, segmentCount = 1) {
+        let evidence = await this.prisma.evidence.create({
+            data: {
+                companyId,
+                orderId,
+                recordingId,
+                status: 'pending',
+                frameCount: segmentCount,
+            },
+        });
+        const packKey = this.storage.evidencePackKey(companyId, evidence.id);
+        const newStatus = this.storage.isConfigured() ? 'ready' : 'pending';
+        evidence = await this.prisma.evidence.update({
+            where: { id: evidence.id },
+            data: { packKey, status: newStatus },
+        });
+        return evidence;
     }
 };
 exports.EvidenceService = EvidenceService;
